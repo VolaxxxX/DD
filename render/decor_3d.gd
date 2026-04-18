@@ -62,7 +62,7 @@ func _corrupted(rng: DRNG, _corr: float) -> void:
 		var x := _frng(rng, -8, 8)
 		var z := _frng(rng, -7, -1)
 		var h := _frng(rng, 1.5, 4.0)
-		var spike := ConeMesh.new(); spike.top_radius = 0.05; spike.bottom_radius = 0.35; spike.height = h
+		var spike := CylinderMesh.new(); spike.top_radius = 0.05; spike.bottom_radius = 0.35; spike.height = h
 		_place(spike, Vector3(x, h * 0.5, z), Color(0.35, 0.05, 0.35), Vector3.ONE, 0.6)
 
 func _anomaly(rng: DRNG, _corr: float) -> void:

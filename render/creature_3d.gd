@@ -97,7 +97,7 @@ func _build_beast() -> void:
 	_add_part(leg, Vector3(0.35, 0.3, -0.2))
 	_add_part(leg, Vector3(-0.35, 0.3, 0.2))
 	_add_part(leg, Vector3(-0.35, 0.3, -0.2))
-	var tail := ConeMesh.new(); tail.top_radius = 0.02; tail.bottom_radius = 0.12; tail.height = 0.6
+	var tail := CylinderMesh.new(); tail.top_radius = 0.02; tail.bottom_radius = 0.12; tail.height = 0.6
 	_add_part(tail, Vector3(-0.8, 0.9, 0), Vector3.ONE, Vector3(0, 0, -60))
 
 func _build_undead() -> void:
@@ -176,7 +176,7 @@ func _build_draconic() -> void:
 	var wing := PrismMesh.new(); wing.size = Vector3(1.4, 1.2, 0.08)
 	_add_part(wing, Vector3(-0.1, 1.5, -0.5), Vector3.ONE, Vector3(0, 0, 30))
 	_add_part(wing, Vector3(-0.1, 1.5, 0.5), Vector3.ONE, Vector3(0, 180, -30))
-	var tail := ConeMesh.new(); tail.top_radius = 0.05; tail.bottom_radius = 0.25; tail.height = 1.2
+	var tail := CylinderMesh.new(); tail.top_radius = 0.05; tail.bottom_radius = 0.25; tail.height = 1.2
 	_add_part(tail, Vector3(-1.3, 1.0, 0), Vector3.ONE, Vector3(0, 0, -70))
 	var leg := CylinderMesh.new(); leg.top_radius = 0.15; leg.bottom_radius = 0.15; leg.height = 0.7
 	_add_part(leg, Vector3(0.4, 0.4, 0.3))
