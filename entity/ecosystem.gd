@@ -12,7 +12,7 @@ func _init(_rng: DRNG, _zone: Zone) -> void:
 	zone = _zone
 
 func populate() -> void:
-	roster = ArchetypeFactory.roster(rng.derive(0xR05), zone.biome, zone.chaos)
+	roster = ArchetypeFactory.roster(rng.derive(0xE05), zone.biome, zone.chaos)
 	var density := 12 + int(zone.chaos * 24.0)
 	for i in density:
 		var arch := _weighted_pick()

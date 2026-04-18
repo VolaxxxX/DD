@@ -27,5 +27,5 @@ func generate() -> void:
 	add_child(ecosystem)
 	ecosystem.populate()
 	if chaos > 0.7:
-		DragonSystem.maybe_manifest(self, rng.derive(0xDRA6))
+		DragonSystem.maybe_manifest(self, rng.derive(0xD4A6))
 	print("[ZONE %d] biome=%s chaos=%.2f corruption=%.2f" % [index, biome, chaos, corruption])

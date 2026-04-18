@@ -5,7 +5,7 @@ class_name DRNG extends RefCounted
 var _s: int
 
 func _init(seed: int) -> void:
-	_s = seed if seed != 0 else 0x9E3779B97F4A7C15
+	_s = seed if seed != 0 else 0x1E3779B97F4A7C15
 
 func next() -> int:
 	_s ^= _s >> 12
