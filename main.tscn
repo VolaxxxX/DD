@@ -1,39 +1,118 @@
 [gd_scene load_steps=3 format=3 uid="uid://c1aetherdriftmvp"]
 
 [ext_resource type="Script" path="res://main.gd" id="1_main"]
-[ext_resource type="Script" path="res://ui/hud.gd" id="2_hud"]
+[ext_resource type="Script" path="res://ui/game_ui.gd" id="2_ui"]
 
 [node name="Main" type="Node3D"]
 script = ExtResource("1_main")
 
+[node name="Stage" type="Node3D" parent="."]
+
 [node name="Camera3D" type="Camera3D" parent="."]
-transform = Transform3D(0.707, -0.408, 0.577, 0, 0.816, 0.577, -0.707, -0.408, 0.577, 14, 18, 14)
-projection = 1
-size = 24.0
+transform = Transform3D(1, 0, 0, 0, 0.95, 0.31, 0, -0.31, 0.95, 0, 2.2, 6.0)
+fov = 50.0
 
-[node name="HUD" type="CanvasLayer" parent="."]
-script = ExtResource("2_hud")
+[node name="GameUI" type="CanvasLayer" parent="."]
+script = ExtResource("2_ui")
 
-[node name="DangerPulse" type="ColorRect" parent="HUD"]
+[node name="Root" type="Control" parent="GameUI"]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-color = Color(1, 0.1, 0.1, 1)
 mouse_filter = 2
 
-[node name="OutcomeLabel" type="Label" parent="HUD"]
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -120.0
-offset_top = -40.0
-offset_right = 120.0
-offset_bottom = 40.0
+[node name="Fade" type="ColorRect" parent="GameUI/Root"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0, 1)
+mouse_filter = 2
+
+[node name="StatsBox" type="HBoxContainer" parent="GameUI/Root"]
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 10.0
+offset_bottom = 50.0
 grow_horizontal = 2
-grow_vertical = 2
-theme_override_font_sizes/font_size = 48
+alignment = 1
+theme_override_constants/separation = 40
+
+[node name="HPLabel" type="Label" parent="GameUI/Root/StatsBox"]
+theme_override_colors/font_color = Color(1, 0.5, 0.5, 1)
+theme_override_font_sizes/font_size = 24
+text = "VIE : ♥ ♥ ♥"
+
+[node name="ZoneLabel" type="Label" parent="GameUI/Root/StatsBox"]
+theme_override_colors/font_color = Color(0.9, 0.9, 1, 1)
+theme_override_font_sizes/font_size = 22
+text = "ZONE 1"
+
+[node name="StatLabel" type="Label" parent="GameUI/Root/StatsBox"]
+theme_override_colors/font_color = Color(1, 0.9, 0.5, 1)
+theme_override_font_sizes/font_size = 24
+text = "FORCE : ||||||||||"
+
+[node name="IntroLabel" type="Label" parent="GameUI/Root"]
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -400.0
+offset_top = 120.0
+offset_right = 400.0
+offset_bottom = 220.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 28
 horizontal_alignment = 1
 vertical_alignment = 1
+autowrap_mode = 2
+
+[node name="NarrativeBox" type="PanelContainer" parent="GameUI/Root"]
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 40.0
+offset_top = -340.0
+offset_right = -40.0
+offset_bottom = -220.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+
+[node name="Narrative" type="RichTextLabel" parent="GameUI/Root/NarrativeBox"]
+bbcode_enabled = true
 text = ""
+fit_content = true
+scroll_active = false
+theme_override_font_sizes/normal_font_size = 22
+
+[node name="ChoicesBox" type="VBoxContainer" parent="GameUI/Root"]
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 40.0
+offset_top = -210.0
+offset_right = -40.0
+offset_bottom = -20.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_constants/separation = 10
+
+[node name="Choice0" type="Button" parent="GameUI/Root/ChoicesBox"]
+custom_minimum_size = Vector2(0, 56)
+theme_override_font_sizes/font_size = 20
+text = ""
+autowrap_mode = 2
+
+[node name="Choice1" type="Button" parent="GameUI/Root/ChoicesBox"]
+custom_minimum_size = Vector2(0, 56)
+theme_override_font_sizes/font_size = 20
+text = ""
+autowrap_mode = 2
+
+[node name="Choice2" type="Button" parent="GameUI/Root/ChoicesBox"]
+custom_minimum_size = Vector2(0, 56)
+theme_override_font_sizes/font_size = 20
+text = ""
+autowrap_mode = 2

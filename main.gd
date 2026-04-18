@@ -1,18 +1,23 @@
 extends Node3D
-# Entry point. Wires together run, world, player, camera, and HUD.
+# Entry point. Wires world simulation + 3D presentation + choice UI.
 
+@onready var stage: Node3D = $Stage
 @onready var camera: Camera3D = $Camera3D
-@onready var hud: CanvasLayer = $HUD
+@onready var ui: CanvasLayer = $GameUI
 
 var orchestrator: RunOrchestrator
 var fate: FateEngine
 var resolver: EventResolver
-var player: Player
-var sim_timer: Timer
-var _zone_views: Dictionary = {}
+var director: SceneDirector
+var backdrop: Backdrop3D
+var decor: Decor3D
+var creature_node: Creature3D
+var _rng: DRNG
 
 func _ready() -> void:
 	var seed := int(Time.get_unix_time_from_system())
+	_rng = DRNG.new(seed ^ 0xCAFE)
+
 	orchestrator = RunOrchestrator.new()
 	add_child(orchestrator)
 	orchestrator.start_run(seed)
@@ -20,57 +25,76 @@ func _ready() -> void:
 	fate = FateEngine.new(DRNG.new(seed ^ 0xFA7E))
 	resolver = EventResolver.new(fate)
 
-	_build_zone_views()
-	_spawn_player()
-	_setup_camera()
-	_start_sim_ticker()
+	director = SceneDirector.new(orchestrator.world, resolver, _rng.derive(0xD12EC))
+	add_child(director)
 
+	_setup_camera()
+	_build_stage_for_active_zone()
+
+	ui.update_stats(director.hp, director.stat)
+	ui.update_zone(orchestrator.world.active_zone_index, orchestrator.world.active_zone().biome)
+
+	director.zone_intro.connect(_on_zone_intro)
+	director.encounter_presented.connect(_on_encounter)
+	director.narrative_logged.connect(_on_narrative)
+	director.creature_reaction.connect(_on_creature_reaction)
+	director.stats_changed.connect(_on_stats)
+	director.run_over.connect(_on_run_over)
+	ui.choice_selected.connect(_on_choice)
 	Bus.zone_changed.connect(_on_zone_changed)
 
-func _build_zone_views() -> void:
-	for z in orchestrator.world.zones:
-		var v := ZoneView.new()
-		v.position = Vector3(z.index * 200.0, 0, 0)
-		add_child(v)
-		v.build(z)
-		z.position = Vector3(z.index * 200.0, 0, 0)
-		_zone_views[z.index] = v
-
-func _spawn_player() -> void:
-	player = Player.new()
-	add_child(player)
-	player.setup(1, resolver)
-	player.position = orchestrator.world.active_zone().position + Vector3(0, 0, 0)
+	director.begin()
 
 func _setup_camera() -> void:
-	camera.projection = Camera3D.PROJECTION_ORTHOGONAL
-	camera.size = 24.0
-	camera.rotation_degrees = Vector3(-55, -45, 0)
-	camera.position = player.position + Vector3(14, 18, 14)
+	camera.projection = Camera3D.PROJECTION_PERSPECTIVE
+	camera.fov = 50.0
+	camera.position = Vector3(0, 2.2, 6.0)
+	camera.look_at(Vector3(0, 1.0, 0), Vector3.UP)
 
-func _process(_delta: float) -> void:
-	if player and camera:
-		var target := player.position + Vector3(14, 18, 14)
-		camera.position = camera.position.lerp(target, 0.12)
-
-func _start_sim_ticker() -> void:
-	sim_timer = Timer.new()
-	sim_timer.wait_time = 0.25
-	sim_timer.autostart = true
-	sim_timer.timeout.connect(_sim_tick)
-	add_child(sim_timer)
-
-func _sim_tick() -> void:
+func _build_stage_for_active_zone() -> void:
+	for child in stage.get_children(): child.queue_free()
 	var z := orchestrator.world.active_zone()
-	if z and z.ecosystem:
-		z.ecosystem.tick(player.position)
-	if Input.is_action_just_pressed("ui_page_down"):
-		orchestrator.world.advance_zone()
+	backdrop = Backdrop3D.new()
+	stage.add_child(backdrop)
+	backdrop.build(z.biome, z.corruption)
+	decor = Decor3D.new()
+	stage.add_child(decor)
+	decor.build(z.biome, z.corruption, _rng.derive(z.index + 100))
+
+func _spawn_creature(arch: Archetype) -> void:
+	if creature_node and is_instance_valid(creature_node):
+		creature_node.queue_free()
+	creature_node = Creature3D.new()
+	creature_node.position = Vector3(0, 0, 0)
+	stage.add_child(creature_node)
+	creature_node.build(arch)
+	creature_node.scale = Vector3.ZERO
+	var t := create_tween()
+	t.tween_property(creature_node, "scale", Vector3.ONE, 0.5).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+func _on_zone_intro(text: String, _biome: StringName) -> void:
+	ui.present_intro(text)
+
+func _on_encounter(enc: Encounter) -> void:
+	_spawn_creature(enc.creature.archetype)
+	ui.present_encounter(enc)
+
+func _on_narrative(text: String, tone: int, outcome: int) -> void:
+	ui.show_narrative(text, tone, outcome)
+
+func _on_creature_reaction(reaction: StringName) -> void:
+	if creature_node and is_instance_valid(creature_node):
+		creature_node.react(reaction)
+
+func _on_stats(hp: int, stat: int) -> void:
+	ui.update_stats(hp, stat)
+
+func _on_choice(idx: int) -> void:
+	director.choose(idx)
+
+func _on_run_over(cause: StringName) -> void:
+	ui.show_run_over(cause)
 
 func _on_zone_changed(idx: int, _seed: int) -> void:
-	var z := orchestrator.world.zones[idx]
-	player.position = z.position + Vector3(0, 0, 0)
-
-func get_active_ecosystem() -> Ecosystem:
-	var z := orchestrator.world.active_zone()
-	return z.ecosystem if z else null
+	ui.update_zone(idx, orchestrator.world.zones[idx].biome)
+	_build_stage_for_active_zone()

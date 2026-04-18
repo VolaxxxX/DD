@@ -1,89 +1,60 @@
 # AETHER DRIFT — SETUP (Débutant)
 
-Guide pas-à-pas pour lancer le projet. Suis les étapes dans l'ordre, tu n'as rien à coder.
+## 1. Installer Godot 4.3+
 
----
-
-## 1. Installer Godot 4.3
-
-1. Va sur https://godotengine.org/download
-2. Télécharge **Godot Engine 4.3 (Standard)** pour ton OS (Windows / macOS / Linux).
-3. Dézippe → lance `Godot_v4.3-stable_xxx` (pas besoin d'installer, c'est portable).
-
----
+https://godotengine.org/download — version **Standard** (pas .NET)
 
 ## 2. Ouvrir le projet
 
-1. Clone ce repo ou télécharge le ZIP de la branche `claude/mobile-game-mvp-9riFM`.
-2. Lance Godot → clique **Import**.
-3. Sélectionne le fichier `project.godot` à la racine du projet.
-4. Clique **Import & Edit**.
+1. Lance Godot → **Import** → sélectionne `project.godot` → **Import & Edit**
+2. Si Godot propose la migration 4.3 → 4.6, accepte.
 
----
+## 3. Jouer
 
-## 3. Lancer le jeu (PC test)
+Appuie **F5**. Choisis `main.tscn` si demandé.
 
-1. Dans Godot, appuie sur **F5** (ou l'icône ▶ en haut à droite).
-2. Si Godot demande la scène principale, choisis `main.tscn`.
-3. Le jeu démarre. Tu devrais voir :
-   - un terrain coloré (biome généré)
-   - des silhouettes (créatures) qui se baladent
-   - un personnage blanc (toi)
+### Comment on joue
 
-### Commandes clavier :
-- **ZQSD** ou **WASD** : se déplacer
-- **Espace** : interagir avec la créature la plus proche (combat ou dialogue selon son archétype)
-- **Page Down** : passer à la zone suivante
+- Tu vois une **créature 3D** au centre (humanoïde / bête / mort-vivant / construct / élémentaire / chose / fée / draconide — chacune est visuellement distincte).
+- Le décor change selon le biome (forêt / cité / ruines / corrompu / anomalie).
+- En bas, **3 phrases** apparaissent : ce sont tes choix.
+- Tu **cliques une phrase** (ou touches sur mobile) → narration du résultat → la créature réagit (tombe, fuit, mute…).
+- 4 rencontres par zone, 2 à 4 zones par run.
+- **Permadeath** : quand ta vie tombe à 0, la run se termine.
 
-Regarde la console Godot en bas : tu verras les logs `[ZONE]`, `[ECO]`, `[APEX]`, `[RUN]`.
+### Tons des choix (couleurs des boutons)
 
----
+- 🟥 **Rouge** = Agressif (attaque)
+- 🔵 **Bleu** = Diplomatique (parler — marche seulement si créature intelligente)
+- 🟡 **Jaune** = Prudent (fuir / se cacher)
+- 🟣 **Violet** = Curieux (observer — biomes mystérieux uniquement)
+
+Chaque choix est **un jet caché** : la force (FORCE), la difficulté de la créature, la corruption de la zone et le hasard décident. Tu ne vois **jamais** les chiffres — seulement les conséquences.
 
 ## 4. Export Android (plus tard)
 
-Quand tu es prêt à tester sur mobile :
+Godot : **Editor → Manage Export Templates** → Download → puis **Project → Export → Android**.
 
-1. Dans Godot : **Editor → Manage Export Templates** → Download.
-2. Installe **Android Studio** (pour le SDK) : https://developer.android.com/studio
-3. **Editor → Editor Settings → Export → Android** : renseigne les chemins du SDK.
-4. **Project → Export** → Add → **Android** → Export Project.
-5. Active **Use Gradle Build** dans les options Android.
-
----
-
-## 5. Structure des fichiers
+## 5. Structure du code
 
 ```
-project.godot           ← config Godot
-main.tscn / main.gd     ← scène principale
-core/                   ← seed, rng, event bus, orchestrator, memory
-world/                  ← génération zones
-entity/                 ← archétypes + IA + écosystème
-apex/                   ← dragons (modificateurs d'écosystème)
-fate/                   ← RNG caché + résolution d'événements
-net/                    ← multijoueur (ENet)
-coop/                   ← votes coop
-render/                 ← vues 2.5D
-ui/                     ← HUD
-player/                 ← personnage jouable
+core/           seed, RNG, event bus, orchestrator, mémoire persistante
+world/          génération de zones (biome, chaos, corruption)
+entity/         archétypes (8 familles × 6 raretés), FSM, écosystème
+apex/           système dragons (modificateurs d'écosystème)
+fate/           RNG caché (d20) + résolveur d'événements
+game/           phrase pool, Encounter, SceneDirector
+render/         Creature3D (formes 3D par famille), Decor3D, Backdrop3D, Animator
+ui/             game_ui (narration + boutons de choix)
+net/ coop/      multijoueur ENet + votes coop (MVP)
+player/         stats joueur
 ```
 
----
-
-## 6. Prochaines étapes
-
-Une fois que le jeu tourne chez toi :
-1. Dis-moi "**ça marche**" et on passe aux **assets** (vrais sprites de créatures).
-2. Ou bien "**ça plante**" + copie l'erreur de la console, je corrige.
-3. Ensuite on branche le **multijoueur LAN** pour tester à 2.
-
----
-
-## Dépannage rapide
+## 6. Dépannage
 
 | Problème | Solution |
 |---|---|
-| "Parser Error" dans un .gd | Vérifie que la version Godot est bien 4.3 (pas 4.2 ni 3.x) |
-| Écran noir au lancement | Console Godot → cherche `ERROR` rouge et colle-le moi |
-| Rien ne bouge | Les inputs ZQSD sont mappés ; clique sur la fenêtre avant de presser les touches |
-| Pas de créatures visibles | Zoom caméra : elles sont petites, regarde de près |
+| Erreurs "Parse Error" | Vérifie Godot 4.3+, puis **Project → Reload Current Project** |
+| Écran noir | Console en bas → colle-moi les lignes rouges |
+| Boutons ne réagissent pas | Clique sur la fenêtre avant |
+| Créature absente | Attends 2s (intro de zone s'affiche d'abord) |
