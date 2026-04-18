@@ -22,8 +22,15 @@ func _build_choices() -> Array[Dictionary]:
 	tones.append(PhrasePool.Tone.CAUTIOUS)
 	if zone.biome == &"anomaly" or zone.biome == &"corrupted" or zone.biome == &"ruins":
 		tones.append(PhrasePool.Tone.CURIOUS)
+	if creature.archetype.intelligence >= 30:
+		tones.append(PhrasePool.Tone.DECEPTIVE)
+	var fam := creature.archetype.family
+	var mystical_family := fam == Archetype.Family.FEY or fam == Archetype.Family.ABERRATION or fam == Archetype.Family.DRACONIC
+	var mystical_biome := zone.biome == &"anomaly" or zone.biome == &"corrupted"
+	if mystical_family or mystical_biome:
+		tones.append(PhrasePool.Tone.MYSTICAL)
 
-	# Always produce 3 choices; shuffle tones deterministically.
+	# Always produce 3 choices; trim randomly down to 3, pad with CAUTIOUS fallback.
 	var out: Array[Dictionary] = []
 	while tones.size() > 3: tones.remove_at(rng.range_i(0, tones.size()))
 	while tones.size() < 3: tones.append(PhrasePool.Tone.CAUTIOUS)
@@ -42,6 +49,8 @@ func _tone_to_kind(tone: int) -> int:
 		PhrasePool.Tone.DIPLOMATIC: return EventResolver.Kind.DIALOGUE
 		PhrasePool.Tone.CAUTIOUS:   return EventResolver.Kind.ENCOUNTER
 		PhrasePool.Tone.CURIOUS:    return EventResolver.Kind.ANOMALY
+		PhrasePool.Tone.DECEPTIVE:  return EventResolver.Kind.DIALOGUE
+		PhrasePool.Tone.MYSTICAL:   return EventResolver.Kind.ANOMALY
 		_: return EventResolver.Kind.ENCOUNTER
 
 func resolve(choice_idx: int, resolver: EventResolver, player_stat: int, coop_mod: int) -> Dictionary:
@@ -91,4 +100,18 @@ func _consequences(tone: int, outcome: int) -> Dictionary:
 				FateEngine.Outcome.MIXED:        pass
 				FateEngine.Outcome.FAIL:         c.stat_delta = -1
 				FateEngine.Outcome.CRIT_FAIL:    c.hp_delta = -1; c.mutate = true
+		PhrasePool.Tone.DECEPTIVE:
+			match outcome:
+				FateEngine.Outcome.CRIT_SUCCESS: c.creature_flees = true; c.stat_delta = 2
+				FateEngine.Outcome.SUCCESS:      c.creature_flees = true; c.stat_delta = 1
+				FateEngine.Outcome.MIXED:        c.creature_flees = true; c.hp_delta = -1
+				FateEngine.Outcome.FAIL:         c.hp_delta = -2
+				FateEngine.Outcome.CRIT_FAIL:    c.hp_delta = -3
+		PhrasePool.Tone.MYSTICAL:
+			match outcome:
+				FateEngine.Outcome.CRIT_SUCCESS: c.creature_flees = true; c.stat_delta = 2; c.mutate = true
+				FateEngine.Outcome.SUCCESS:      c.stat_delta = 1
+				FateEngine.Outcome.MIXED:        c.stat_delta = 1; c.hp_delta = -1
+				FateEngine.Outcome.FAIL:         c.hp_delta = -1
+				FateEngine.Outcome.CRIT_FAIL:    c.hp_delta = -2; c.mutate = true
 	return c

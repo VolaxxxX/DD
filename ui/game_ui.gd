@@ -16,10 +16,12 @@ signal choice_selected(index: int)
 var choice_buttons: Array[Button] = []
 
 const TONE_COLOR := {
-	0: Color(1.0, 0.45, 0.35),  # AGGRESSIVE
-	1: Color(0.75, 0.9, 1.0),   # DIPLOMATIC
-	2: Color(0.95, 0.95, 0.75), # CAUTIOUS
-	3: Color(0.85, 0.75, 1.0),  # CURIOUS
+	0: Color(1.0, 0.45, 0.35),  # AGGRESSIVE  rouge
+	1: Color(0.75, 0.9, 1.0),   # DIPLOMATIC  bleu
+	2: Color(0.95, 0.95, 0.75), # CAUTIOUS    jaune
+	3: Color(0.85, 0.75, 1.0),  # CURIOUS     violet
+	4: Color(0.85, 1.0, 0.55),  # DECEPTIVE   vert-or
+	5: Color(1.0, 0.65, 1.0),   # MYSTICAL    magenta
 }
 
 const OUTCOME_TINT := {

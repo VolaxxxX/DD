@@ -18,6 +18,8 @@ var _encounters_in_zone: int = 0
 var hp: int = 3
 var stat: int = 10
 var _awaiting_choice: bool = false
+var _elite_kills_this_run: int = 0
+var _world_boss_triggered: bool = false
 
 func _init(_world: WorldEngine, _resolver: EventResolver, _rng: DRNG) -> void:
 	world = _world
@@ -70,6 +72,8 @@ func _apply(result: Dictionary) -> void:
 	stat = maxi(1, stat)
 	if result.creature_dies:
 		creature_reaction.emit(&"die")
+		if int(current.creature.archetype.tier) >= Archetype.Tier.ELITE:
+			_elite_kills_this_run += 1
 		current.creature.kill()
 	elif result.creature_flees:
 		creature_reaction.emit(&"flee")
@@ -88,9 +92,19 @@ func _advance_zone() -> void:
 		run_over.emit(&"extrait")
 		return
 	world.advance_zone()
+	_maybe_trigger_world_boss()
 	_emit_zone_intro()
 	await _wait(2.0)
 	next_encounter()
+
+func _maybe_trigger_world_boss() -> void:
+	if _world_boss_triggered: return
+	var is_final := world.active_zone_index == world.zones.size() - 1
+	if not is_final: return
+	var boss: Dictionary = WorldBossSystem.maybe_trigger(world.memory, world.active_zone(), _elite_kills_this_run, rng.derive(0x80551))
+	if boss.is_empty(): return
+	_world_boss_triggered = true
+	zone_intro.emit(String(boss.intro), world.active_zone().biome)
 
 func _wait(seconds: float) -> void:
 	await Engine.get_main_loop().create_timer(seconds).timeout

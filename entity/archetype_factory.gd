@@ -14,18 +14,41 @@ static func roster(rng: DRNG, biome: StringName, chaos: float) -> Array[Archetyp
 	var families: Array = FAMILY_BY_BIOME.get(biome, [Archetype.Family.BEAST])
 	var size := 4 + int(chaos * 6.0)
 	for i in size:
-		var a := Archetype.new()
-		a.family = families[rng.range_i(0, families.size())]
-		a.tier = _tier_roll(rng, chaos)
-		a.role = _role_for(a.family, rng)
-		a.intelligence = rng.range_i(10, 90)
-		a.aggression = rng.range_i(10, 90 + int(chaos * 10))
-		a.ecology_weight = maxi(10, 100 - a.tier * 15)
-		a.influence_radius = 6.0 + a.tier * 2.0
-		a.id = StringName("a_%d_%d_%d" % [a.family, a.tier, rng.next() & 0xFFFF])
-		a.mutation_pool = _mut_pool(a.family, rng)
+		var tier := _tier_roll(rng, chaos)
+		var named: Array = CreatureRegistry.for_biome_and_tier(biome, tier)
+		var a: Archetype
+		if not named.is_empty() and rng.range_i(0, 100) < 75:
+			a = _from_template(named[rng.range_i(0, named.size())])
+		else:
+			a = _procedural(rng, families, tier, chaos)
 		out.append(a)
 	return out
+
+static func _from_template(t: Dictionary) -> Archetype:
+	var a := Archetype.new()
+	a.id = StringName(t.id)
+	a.family = int(t.family)
+	a.tier = int(t.tier)
+	a.role = int(t.role)
+	a.intelligence = int(t.intel)
+	a.aggression = int(t.aggr)
+	a.ecology_weight = maxi(10, 100 - a.tier * 15)
+	a.influence_radius = 6.0 + a.tier * 2.0
+	a.mutation_pool = []
+	return a
+
+static func _procedural(rng: DRNG, families: Array, tier: int, chaos: float) -> Archetype:
+	var a := Archetype.new()
+	a.family = families[rng.range_i(0, families.size())]
+	a.tier = tier
+	a.role = _role_for(a.family, rng)
+	a.intelligence = rng.range_i(10, 90)
+	a.aggression = rng.range_i(10, 90 + int(chaos * 10))
+	a.ecology_weight = maxi(10, 100 - a.tier * 15)
+	a.influence_radius = 6.0 + a.tier * 2.0
+	a.id = StringName("a_%d_%d_%d" % [a.family, a.tier, rng.next() & 0xFFFF])
+	a.mutation_pool = _mut_pool(a.family, rng)
+	return a
 
 static func _tier_roll(rng: DRNG, chaos: float) -> int:
 	var roll := rng.range_i(0, 100)

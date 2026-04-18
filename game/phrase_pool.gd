@@ -1,9 +1,9 @@
 class_name PhrasePool extends RefCounted
 # Pool of narrative phrases for choices and outcomes.
-# Tone integers: 0=AGGRESSIVE 1=DIPLOMATIC 2=CAUTIOUS 3=CURIOUS
+# Tone integers: 0=AGGRESSIVE 1=DIPLOMATIC 2=CAUTIOUS 3=CURIOUS 4=DECEPTIVE 5=MYSTICAL
 # Outcome integers match FateEngine.Outcome: 0=CRIT_FAIL 1=FAIL 2=MIXED 3=SUCCESS 4=CRIT_SUCCESS
 
-enum Tone { AGGRESSIVE, DIPLOMATIC, CAUTIOUS, CURIOUS }
+enum Tone { AGGRESSIVE, DIPLOMATIC, CAUTIOUS, CURIOUS, DECEPTIVE, MYSTICAL }
 
 static func choices_for(tone: int) -> Array:
 	match tone:
@@ -34,6 +34,20 @@ static func choices_for(tone: int) -> Array:
 			"Tu tends l'oreille — un son étrange sort de sa gorge.",
 			"Tu cherches du regard ce qu'il protège ainsi.",
 			"Tu poses une question à voix haute, pour voir.",
+		]
+		4: return [
+			"Tu lui montres une main vide en gardant l'autre sur ta dague.",
+			"Tu lui jures que tu n'es qu'un voyageur perdu. Tu comptes déjà ses dents.",
+			"Tu feins la blessure — un gémissement bien placé.",
+			"Tu parles de la route, du froid — pendant que tes doigts cherchent.",
+			"Tu lui proposes un marché que tu n'honoreras jamais.",
+		]
+		5: return [
+			"Tu traces un signe ancien dans la poussière, sans regarder.",
+			"Tu prononces un mot qui n'appartient à aucune langue vivante.",
+			"Tu fermes les yeux et laisses quelque chose d'autre regarder à ta place.",
+			"Tu poses la main sur le sol et écoutes ce que la terre te répond.",
+			"Tu offres une goutte de ton sang au vent. Juste une.",
 		]
 	return ["Tu fais un pas de côté."]
 
@@ -125,6 +139,50 @@ static func outcomes_for(tone: int, outcome: int) -> Array:
 			0: return [
 				"Tu as regardé trop profondément. Quelque chose t'a vu aussi.",
 				"Le fragment t'entaille la paume. %s se dresse. Tu as réveillé autre chose.",
+			]
+	elif tone == 4:  # DECEPTIVE
+		match outcome:
+			4: return [
+				"%s te croit. Tu repars avec ce qu'il avait. Il ne le saura qu'au matin.",
+				"Ton mensonge est si parfait que tu y crois presque toi-même. %s s'incline.",
+			]
+			3: return [
+				"%s doute, mais baisse la garde. C'est suffisant.",
+				"Tu obtiens ce que tu voulais. %s s'en va avec la moitié des pièces.",
+			]
+			2: return [
+				"%s devine une partie de la ruse. Tu gagnes quelque chose, tu perds autre chose.",
+				"Ton sourire tient. Juste assez. Tu passes.",
+			]
+			1: return [
+				"%s lit ton mensonge avant même que tu aies fini. Son visage change.",
+				"Ta dague tremble au mauvais moment. %s l'a vue.",
+			]
+			0: return [
+				"%s joue mieux que toi. Quand tu comprends, c'est déjà trop tard.",
+				"Le piège était pour toi dès le départ. %s sourit.",
+			]
+	elif tone == 5:  # MYSTICAL
+		match outcome:
+			4: return [
+				"Quelque chose répond. %s s'écarte, comme devant une porte.",
+				"Le signe tient. Le monde s'ouvre un instant — et se referme sur ton secret.",
+			]
+			3: return [
+				"Un frisson traverse l'air. %s recule, incertain.",
+				"Tu entends une voix qui n'est pas la tienne. Elle te donne une direction.",
+			]
+			2: return [
+				"Le rite fonctionne à moitié. Tu gagnes un fragment. Tu paies un fragment.",
+				"Quelque chose écoute, mais ne répond pas. Pas encore.",
+			]
+			1: return [
+				"Les mots te résistent. %s sent ta faiblesse et s'approche.",
+				"Le vent refuse ton offrande. Ta paume saigne pour rien.",
+			]
+			0: return [
+				"Tu as prononcé ce qu'il ne fallait pas. Quelque chose de vieux te regarde maintenant.",
+				"Le signe se retourne contre toi. %s n'a plus besoin de bouger.",
 			]
 	return ["Rien ne se passe."]
 
