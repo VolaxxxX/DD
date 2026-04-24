@@ -1,18 +1,28 @@
 class_name Encounter extends RefCounted
 # One creature encounter: builds phrase choices and resolves them.
+# Death is situational (rolled per CRIT_FAIL based on creature tier, tone, current injuries),
+# not a hp counter. Most bad outcomes inflict an injury instead.
 
 var zone: Zone
 var creature: Creature
 var rng: DRNG
+var player: PlayerState
 var choices: Array[Dictionary] = []  # [{tone, text, kind}]
 var creature_name: String
 
-func _init(_zone: Zone, _creature: Creature, _rng: DRNG) -> void:
+func _init(_zone: Zone, _creature: Creature, _rng: DRNG, _player: PlayerState) -> void:
 	zone = _zone
 	creature = _creature
 	rng = _rng
-	creature_name = PhrasePool.family_descriptor(creature.archetype.family, creature.archetype.tier)
+	player = _player
+	creature_name = _resolve_name()
 	choices = _build_choices()
+
+func _resolve_name() -> String:
+	if creature.archetype.id != &"":
+		var named := CreatureRegistry.name_for_id(creature.archetype.id)
+		if named != "l'entité": return named
+	return PhrasePool.family_descriptor(creature.archetype.family, creature.archetype.tier)
 
 func _build_choices() -> Array[Dictionary]:
 	var tones: Array[int] = []
@@ -30,12 +40,17 @@ func _build_choices() -> Array[Dictionary]:
 	if mystical_family or mystical_biome:
 		tones.append(PhrasePool.Tone.MYSTICAL)
 
-	# Always produce 3 choices; trim randomly down to 3, pad with CAUTIOUS fallback.
-	var out: Array[Dictionary] = []
-	while tones.size() > 3: tones.remove_at(rng.range_i(0, tones.size()))
-	while tones.size() < 3: tones.append(PhrasePool.Tone.CAUTIOUS)
-
+	# Strip tones locked by current injuries.
+	var allowed: Array[int] = []
 	for t in tones:
+		if not player.tone_locked(t): allowed.append(t)
+	if allowed.is_empty(): allowed.append(PhrasePool.Tone.CAUTIOUS)
+
+	var out: Array[Dictionary] = []
+	while allowed.size() > 3: allowed.remove_at(rng.range_i(0, allowed.size()))
+	while allowed.size() < 3: allowed.append(PhrasePool.Tone.CAUTIOUS)
+
+	for t in allowed:
 		out.append({
 			"tone": t,
 			"text": PhrasePool.pick_choice(rng, t),
@@ -53,12 +68,13 @@ func _tone_to_kind(tone: int) -> int:
 		PhrasePool.Tone.MYSTICAL:   return EventResolver.Kind.ANOMALY
 		_: return EventResolver.Kind.ENCOUNTER
 
-func resolve(choice_idx: int, resolver: EventResolver, player_stat: int, coop_mod: int) -> Dictionary:
+func resolve(choice_idx: int, resolver: EventResolver, coop_mod: int) -> Dictionary:
 	var choice: Dictionary = choices[choice_idx]
 	var tone: int = choice.tone
 	var difficulty: int = 10 + creature.archetype.aggression / 10 + int(zone.chaos * 5)
 	var world_mod: int = -int(zone.corruption * 3)
-	var r: Dictionary = resolver.resolve(choice.kind, player_stat, difficulty, coop_mod, world_mod, [creature.id])
+	var actor_stat: int = player.effective_force() + player.tone_modifier(tone)
+	var r: Dictionary = resolver.resolve(choice.kind, actor_stat, difficulty, coop_mod, world_mod, [creature.id])
 	var outcome: int = r.outcome
 
 	var narrative: String = PhrasePool.pick_outcome(rng, tone, outcome, creature_name)
@@ -69,49 +85,62 @@ func resolve(choice_idx: int, resolver: EventResolver, player_stat: int, coop_mo
 	return cons
 
 func _consequences(tone: int, outcome: int) -> Dictionary:
-	# hp_delta, stat_delta, creature_dies, creature_flees, mutate, memory
-	var c := {"hp_delta": 0, "stat_delta": 0, "creature_dies": false, "creature_flees": false, "mutate": false}
-	match tone:
-		PhrasePool.Tone.AGGRESSIVE:
-			match outcome:
-				FateEngine.Outcome.CRIT_SUCCESS: c.creature_dies = true; c.stat_delta = 1
-				FateEngine.Outcome.SUCCESS:      c.creature_dies = true
-				FateEngine.Outcome.MIXED:        c.hp_delta = -1; c.creature_flees = true
-				FateEngine.Outcome.FAIL:         c.hp_delta = -1
-				FateEngine.Outcome.CRIT_FAIL:    c.hp_delta = -2; c.mutate = true
-		PhrasePool.Tone.DIPLOMATIC:
-			match outcome:
-				FateEngine.Outcome.CRIT_SUCCESS: c.creature_flees = true; c.stat_delta = 1
-				FateEngine.Outcome.SUCCESS:      c.creature_flees = true
-				FateEngine.Outcome.MIXED:        c.creature_flees = true
-				FateEngine.Outcome.FAIL:         c.hp_delta = -1
-				FateEngine.Outcome.CRIT_FAIL:    c.hp_delta = -2
-		PhrasePool.Tone.CAUTIOUS:
-			match outcome:
-				FateEngine.Outcome.CRIT_SUCCESS: c.creature_flees = true
-				FateEngine.Outcome.SUCCESS:      c.creature_flees = true
-				FateEngine.Outcome.MIXED:        c.creature_flees = true
-				FateEngine.Outcome.FAIL:         c.hp_delta = -1
-				FateEngine.Outcome.CRIT_FAIL:    c.hp_delta = -2
-		PhrasePool.Tone.CURIOUS:
-			match outcome:
-				FateEngine.Outcome.CRIT_SUCCESS: c.stat_delta = 2; c.creature_flees = true
-				FateEngine.Outcome.SUCCESS:      c.stat_delta = 1
-				FateEngine.Outcome.MIXED:        pass
-				FateEngine.Outcome.FAIL:         c.stat_delta = -1
-				FateEngine.Outcome.CRIT_FAIL:    c.hp_delta = -1; c.mutate = true
-		PhrasePool.Tone.DECEPTIVE:
-			match outcome:
-				FateEngine.Outcome.CRIT_SUCCESS: c.creature_flees = true; c.stat_delta = 2
-				FateEngine.Outcome.SUCCESS:      c.creature_flees = true; c.stat_delta = 1
-				FateEngine.Outcome.MIXED:        c.creature_flees = true; c.hp_delta = -1
-				FateEngine.Outcome.FAIL:         c.hp_delta = -2
-				FateEngine.Outcome.CRIT_FAIL:    c.hp_delta = -3
-		PhrasePool.Tone.MYSTICAL:
-			match outcome:
-				FateEngine.Outcome.CRIT_SUCCESS: c.creature_flees = true; c.stat_delta = 2; c.mutate = true
-				FateEngine.Outcome.SUCCESS:      c.stat_delta = 1
-				FateEngine.Outcome.MIXED:        c.stat_delta = 1; c.hp_delta = -1
-				FateEngine.Outcome.FAIL:         c.hp_delta = -1
-				FateEngine.Outcome.CRIT_FAIL:    c.hp_delta = -2; c.mutate = true
+	var c := {
+		"stat_delta": 0,
+		"creature_dies": false, "creature_flees": false, "mutate": false,
+		"injury": &"", "fatal": false,
+	}
+	match outcome:
+		FateEngine.Outcome.CRIT_SUCCESS:
+			match tone:
+				PhrasePool.Tone.AGGRESSIVE: c.creature_dies = true; c.stat_delta = 1
+				PhrasePool.Tone.DIPLOMATIC: c.creature_flees = true; c.stat_delta = 1
+				PhrasePool.Tone.CAUTIOUS:   c.creature_flees = true
+				PhrasePool.Tone.CURIOUS:    c.creature_flees = true; c.stat_delta = 2
+				PhrasePool.Tone.DECEPTIVE:  c.creature_flees = true; c.stat_delta = 2
+				PhrasePool.Tone.MYSTICAL:   c.creature_flees = true; c.stat_delta = 2; c.mutate = true
+		FateEngine.Outcome.SUCCESS:
+			match tone:
+				PhrasePool.Tone.AGGRESSIVE: c.creature_dies = true
+				PhrasePool.Tone.DIPLOMATIC: c.creature_flees = true
+				PhrasePool.Tone.CAUTIOUS:   c.creature_flees = true
+				PhrasePool.Tone.CURIOUS:    c.stat_delta = 1
+				PhrasePool.Tone.DECEPTIVE:  c.creature_flees = true; c.stat_delta = 1
+				PhrasePool.Tone.MYSTICAL:   c.stat_delta = 1
+		FateEngine.Outcome.MIXED:
+			match tone:
+				PhrasePool.Tone.AGGRESSIVE: c.creature_flees = true; c.injury = InjuryRegistry.pick_for(rng, tone, zone.biome)
+				PhrasePool.Tone.DIPLOMATIC: c.creature_flees = true
+				PhrasePool.Tone.CAUTIOUS:   c.creature_flees = true
+				PhrasePool.Tone.CURIOUS:    pass
+				PhrasePool.Tone.DECEPTIVE:  c.creature_flees = true; c.injury = InjuryRegistry.pick_for(rng, tone, zone.biome)
+				PhrasePool.Tone.MYSTICAL:   c.stat_delta = 1; c.injury = InjuryRegistry.pick_for(rng, tone, zone.biome)
+		FateEngine.Outcome.FAIL:
+			c.injury = InjuryRegistry.pick_for(rng, tone, zone.biome)
+			if tone == PhrasePool.Tone.CURIOUS: c.stat_delta = -1
+		FateEngine.Outcome.CRIT_FAIL:
+			c.mutate = (tone == PhrasePool.Tone.CURIOUS or tone == PhrasePool.Tone.MYSTICAL)
+			c.injury = InjuryRegistry.pick_for(rng, tone, zone.biome)
+			c.fatal = _roll_fatal(tone)
 	return c
+
+func _roll_fatal(tone: int) -> bool:
+	# Death chance on CRIT_FAIL — scales with creature tier, tone risk, current injuries, corruption.
+	var base := 5
+	match int(creature.archetype.tier):
+		Archetype.Tier.COMMON:    base = 4
+		Archetype.Tier.UNCOMMON:  base = 8
+		Archetype.Tier.RARE:      base = 16
+		Archetype.Tier.ELITE:     base = 32
+		Archetype.Tier.APEX:      base = 55
+		Archetype.Tier.MYTHIC:    base = 85
+	var tone_mult := 1.0
+	match tone:
+		PhrasePool.Tone.AGGRESSIVE: tone_mult = 1.7
+		PhrasePool.Tone.DECEPTIVE:  tone_mult = 1.4
+		PhrasePool.Tone.MYSTICAL:   tone_mult = 1.3
+		PhrasePool.Tone.CURIOUS:    tone_mult = 1.1
+		PhrasePool.Tone.DIPLOMATIC: tone_mult = 0.6
+		PhrasePool.Tone.CAUTIOUS:   tone_mult = 0.4
+	var threshold := int(base * tone_mult) + player.injuries.size() * 12 + int(zone.corruption * 15)
+	return rng.range_i(0, 100) < threshold

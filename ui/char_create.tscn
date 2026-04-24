@@ -1,0 +1,126 @@
+[gd_scene load_steps=2 format=3 uid="uid://baethercreate"]
+
+[ext_resource type="Script" path="res://ui/char_create.gd" id="1_cc"]
+
+[node name="CharCreate" type="Node3D"]
+script = ExtResource("1_cc")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.97, 0.26, 0, -0.26, 0.97, 0, 1.4, 4.0)
+fov = 45.0
+
+[node name="KeyLight" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.81, -0.32, 0.50, 0, 0.84, 0.54, -0.59, -0.43, 0.69, 0, 0, 0)
+light_energy = 1.1
+light_color = Color(1, 0.96, 0.88, 1)
+
+[node name="FillLight" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.71, 0.30, -0.64, 0, 0.91, 0.42, 0.71, -0.30, 0.64, 0, 0, 0)
+light_energy = 0.4
+light_color = Color(0.7, 0.85, 1, 1)
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+
+[node name="PreviewAnchor" type="Node3D" parent="."]
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="Root" type="Control" parent="UI"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+
+[node name="Title" type="Label" parent="UI/Root"]
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 20.0
+offset_bottom = 70.0
+grow_horizontal = 2
+theme_override_colors/font_color = Color(1, 0.95, 0.85, 1)
+theme_override_font_sizes/font_size = 36
+text = "AETHER  DRIFT"
+horizontal_alignment = 1
+
+[node name="Subtitle" type="Label" parent="UI/Root"]
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 70.0
+offset_bottom = 100.0
+grow_horizontal = 2
+theme_override_colors/font_color = Color(0.75, 0.75, 0.85, 1)
+theme_override_font_sizes/font_size = 16
+text = "Choisis qui tu seras."
+horizontal_alignment = 1
+
+[node name="Panel" type="PanelContainer" parent="UI/Root"]
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -360.0
+offset_top = -460.0
+offset_right = 360.0
+offset_bottom = -30.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="V" type="VBoxContainer" parent="UI/Root/Panel"]
+theme_override_constants/separation = 12
+
+[node name="NameRow" type="HBoxContainer" parent="UI/Root/Panel/V"]
+theme_override_constants/separation = 12
+
+[node name="NameLabel" type="Label" parent="UI/Root/Panel/V/NameRow"]
+custom_minimum_size = Vector2(80, 0)
+theme_override_font_sizes/font_size = 18
+text = "NOM"
+
+[node name="NameEdit" type="LineEdit" parent="UI/Root/Panel/V/NameRow"]
+size_flags_horizontal = 3
+custom_minimum_size = Vector2(0, 40)
+theme_override_font_sizes/font_size = 20
+placeholder_text = "Voyageur"
+max_length = 16
+
+[node name="ClassRow" type="HBoxContainer" parent="UI/Root/Panel/V"]
+alignment = 1
+theme_override_constants/separation = 16
+
+[node name="Prev" type="Button" parent="UI/Root/Panel/V/ClassRow"]
+custom_minimum_size = Vector2(70, 50)
+theme_override_font_sizes/font_size = 24
+text = "<"
+
+[node name="Spacer" type="Control" parent="UI/Root/Panel/V/ClassRow"]
+custom_minimum_size = Vector2(220, 0)
+
+[node name="Next" type="Button" parent="UI/Root/Panel/V/ClassRow"]
+custom_minimum_size = Vector2(70, 50)
+theme_override_font_sizes/font_size = 24
+text = ">"
+
+[node name="ClassName" type="Label" parent="UI/Root/Panel/V"]
+theme_override_colors/font_color = Color(1, 0.95, 0.85, 1)
+theme_override_font_sizes/font_size = 30
+text = ""
+horizontal_alignment = 1
+
+[node name="Tagline" type="Label" parent="UI/Root/Panel/V"]
+theme_override_colors/font_color = Color(0.85, 0.85, 0.95, 1)
+theme_override_font_sizes/font_size = 16
+text = ""
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="Stats" type="RichTextLabel" parent="UI/Root/Panel/V"]
+custom_minimum_size = Vector2(0, 130)
+bbcode_enabled = true
+theme_override_font_sizes/normal_font_size = 16
+fit_content = true
+
+[node name="Play" type="Button" parent="UI/Root/Panel/V"]
+custom_minimum_size = Vector2(0, 60)
+theme_override_font_sizes/font_size = 22
+text = "ENTRER DANS LA DÉRIVE"

@@ -1,5 +1,5 @@
 extends CanvasLayer
-# Main game UI: narrative panel, choice buttons, stat icons.
+# Main game UI: narrative panel, choice buttons, status bar with class + injuries.
 
 signal choice_selected(index: int)
 
@@ -8,28 +8,29 @@ signal choice_selected(index: int)
 @onready var choice0: Button = $Root/ChoicesBox/Choice0
 @onready var choice1: Button = $Root/ChoicesBox/Choice1
 @onready var choice2: Button = $Root/ChoicesBox/Choice2
-@onready var hp_label: Label = $Root/StatsBox/HPLabel
+@onready var name_label: Label = $Root/StatsBox/NameLabel
 @onready var stat_label: Label = $Root/StatsBox/StatLabel
 @onready var zone_label: Label = $Root/StatsBox/ZoneLabel
+@onready var injuries_box: HBoxContainer = $Root/InjuriesBox
 @onready var fade: ColorRect = $Root/Fade
 
 var choice_buttons: Array[Button] = []
 
 const TONE_COLOR := {
-	0: Color(1.0, 0.45, 0.35),  # AGGRESSIVE  rouge
-	1: Color(0.75, 0.9, 1.0),   # DIPLOMATIC  bleu
-	2: Color(0.95, 0.95, 0.75), # CAUTIOUS    jaune
-	3: Color(0.85, 0.75, 1.0),  # CURIOUS     violet
-	4: Color(0.85, 1.0, 0.55),  # DECEPTIVE   vert-or
-	5: Color(1.0, 0.65, 1.0),   # MYSTICAL    magenta
+	0: Color(1.0, 0.45, 0.35),
+	1: Color(0.75, 0.9, 1.0),
+	2: Color(0.95, 0.95, 0.75),
+	3: Color(0.85, 0.75, 1.0),
+	4: Color(0.85, 1.0, 0.55),
+	5: Color(1.0, 0.65, 1.0),
 }
 
 const OUTCOME_TINT := {
-	0: Color(1.0, 0.25, 0.25), # CRIT_FAIL
-	1: Color(1.0, 0.55, 0.30), # FAIL
-	2: Color(1.0, 0.95, 0.55), # MIXED
-	3: Color(0.55, 1.0, 0.55), # SUCCESS
-	4: Color(0.55, 0.95, 1.0), # CRIT_SUCCESS
+	0: Color(1.0, 0.25, 0.25),
+	1: Color(1.0, 0.55, 0.30),
+	2: Color(1.0, 0.95, 0.55),
+	3: Color(0.55, 1.0, 0.55),
+	4: Color(0.55, 0.95, 1.0),
 }
 
 func _ready() -> void:
@@ -41,6 +42,10 @@ func _ready() -> void:
 	narrative.text = ""
 	intro_label.text = ""
 	fade.modulate.a = 0.0
+
+func set_player(p: PlayerState) -> void:
+	name_label.text = "%s — %s" % [p.name, String(p.class_data.name)]
+	update_stats(p.effective_force(), p.injuries)
 
 func present_intro(text: String) -> void:
 	_hide_choices()
@@ -72,23 +77,23 @@ func show_narrative(text: String, _tone: int, outcome: int) -> void:
 	narrative.text = text
 	_flash_fade(OUTCOME_TINT.get(outcome, Color.WHITE), 0.25 if outcome == 2 else 0.5)
 
-func update_stats(hp: int, stat: int) -> void:
-	hp_label.text = "VIE : " + _hearts(hp)
-	stat_label.text = "FORCE : " + _bars(stat, 20)
+func update_stats(force: int, injuries: Array) -> void:
+	stat_label.text = "FORCE  %d" % force
+	_render_injuries(injuries)
+
+func _render_injuries(injuries: Array) -> void:
+	for c in injuries_box.get_children(): c.queue_free()
+	for inj_id in injuries:
+		var inj: Dictionary = InjuryRegistry.by_id(inj_id)
+		if inj.is_empty(): continue
+		var lbl := Label.new()
+		lbl.text = String(inj.name)
+		lbl.add_theme_color_override("font_color", inj.color)
+		lbl.add_theme_font_size_override("font_size", 16)
+		injuries_box.add_child(lbl)
 
 func update_zone(index: int, biome: StringName) -> void:
-	zone_label.text = "ZONE %d — %s" % [index + 1, String(biome).to_upper()]
-
-func _hearts(hp: int) -> String:
-	var s := ""
-	for i in maxi(0, hp): s += "♥ "
-	return s.strip_edges() if s else "—"
-
-func _bars(v: int, maxv: int) -> String:
-	var filled := clampi(v, 0, maxv)
-	var s := ""
-	for i in filled: s += "|"
-	return s
+	zone_label.text = "Z.%d  %s" % [index + 1, String(biome).to_upper()]
 
 func show_run_over(cause: StringName) -> void:
 	_hide_choices()

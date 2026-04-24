@@ -1,5 +1,5 @@
 extends Node3D
-# Entry point. Wires world simulation + 3D presentation + choice UI.
+# Entry point: shows character creation, then starts the run.
 
 @onready var stage: Node3D = $Stage
 @onready var camera: Camera3D = $Camera3D
@@ -12,9 +12,30 @@ var director: SceneDirector
 var backdrop: Backdrop3D
 var decor: Decor3D
 var creature_node: Creature3D
+var player_state: PlayerState
 var _rng: DRNG
+var _char_create_root: Node3D
+var _started: bool = false
 
 func _ready() -> void:
+	_show_char_create()
+
+func _show_char_create() -> void:
+	ui.visible = false
+	_char_create_root = preload("res://ui/char_create.tscn").instantiate()
+	add_child(_char_create_root)
+	_char_create_root.character_chosen.connect(_on_char_chosen)
+
+func _on_char_chosen(name: String, kind: int) -> void:
+	player_state = PlayerState.new()
+	player_state.setup(name, kind)
+	if _char_create_root and is_instance_valid(_char_create_root):
+		_char_create_root.queue_free()
+	ui.visible = true
+	_start_game()
+
+func _start_game() -> void:
+	_started = true
 	var seed := int(Time.get_unix_time_from_system())
 	_rng = DRNG.new(seed ^ 0xCAFE)
 
@@ -25,13 +46,13 @@ func _ready() -> void:
 	fate = FateEngine.new(DRNG.new(seed ^ 0xFA7E))
 	resolver = EventResolver.new(fate)
 
-	director = SceneDirector.new(orchestrator.world, resolver, _rng.derive(0xD12EC))
+	director = SceneDirector.new(orchestrator.world, resolver, _rng.derive(0xD12EC), player_state)
 	add_child(director)
 
 	_setup_camera()
 	_build_stage_for_active_zone()
 
-	ui.update_stats(director.hp, director.stat)
+	ui.set_player(player_state)
 	ui.update_zone(orchestrator.world.active_zone_index, orchestrator.world.active_zone().biome)
 
 	director.zone_intro.connect(_on_zone_intro)
@@ -86,8 +107,8 @@ func _on_creature_reaction(reaction: StringName) -> void:
 	if creature_node and is_instance_valid(creature_node):
 		creature_node.react(reaction)
 
-func _on_stats(hp: int, stat: int) -> void:
-	ui.update_stats(hp, stat)
+func _on_stats(force: int, injuries: Array) -> void:
+	ui.update_stats(force, injuries)
 
 func _on_choice(idx: int) -> void:
 	director.choose(idx)
