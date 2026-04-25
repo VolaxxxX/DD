@@ -26,9 +26,9 @@ func _show_char_create() -> void:
 	add_child(_char_create_root)
 	_char_create_root.character_chosen.connect(_on_char_chosen)
 
-func _on_char_chosen(name: String, kind: int) -> void:
+func _on_char_chosen(name: String, kind: int, stats: Dictionary) -> void:
 	player_state = PlayerState.new()
-	player_state.setup(name, kind)
+	player_state.setup(name, kind, stats)
 	if _char_create_root and is_instance_valid(_char_create_root):
 		_char_create_root.queue_free()
 	ui.visible = true
@@ -96,9 +96,16 @@ func _spawn_creature(arch: Archetype) -> void:
 func _on_zone_intro(text: String, _biome: StringName) -> void:
 	ui.present_intro(text)
 
-func _on_encounter(enc: Encounter) -> void:
-	_spawn_creature(enc.creature.archetype)
-	ui.present_encounter(enc)
+func _on_encounter(enc) -> void:
+	if enc is SituationEncounter:
+		if creature_node and is_instance_valid(creature_node):
+			creature_node.queue_free()
+			creature_node = null
+		ui.present_intro(String(enc.template.title))
+		ui.present_encounter(enc)
+	else:
+		_spawn_creature(enc.creature.archetype)
+		ui.present_encounter(enc)
 
 func _on_narrative(text: String, tone: int, outcome: int) -> void:
 	ui.show_narrative(text, tone, outcome)

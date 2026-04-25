@@ -57,7 +57,7 @@ func present_intro(text: String) -> void:
 	t.tween_interval(1.6)
 	t.tween_property(intro_label, "modulate:a", 0.0, 0.8)
 
-func present_encounter(enc: Encounter) -> void:
+func present_encounter(enc) -> void:
 	narrative.text = ""
 	_show_choices()
 	for i in choice_buttons.size():

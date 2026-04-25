@@ -1,7 +1,7 @@
 class_name Zone extends Node3D
 # A single procedural zone: biome, chaos, corruption, ecosystem.
 
-const BIOMES := [&"forest", &"city", &"ruins", &"corrupted", &"anomaly"]
+const BIOMES := [&"forest", &"city", &"ruins", &"corrupted", &"anomaly", &"swamp", &"highland", &"crypt", &"coast"]
 
 var rng: DRNG
 var memory: WorldMemory

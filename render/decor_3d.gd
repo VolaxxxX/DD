@@ -9,6 +9,10 @@ func build(biome: StringName, corruption: float, rng: DRNG) -> void:
 		&"ruins":     _ruins(rng, corruption)
 		&"corrupted": _corrupted(rng, corruption)
 		&"anomaly":   _anomaly(rng, corruption)
+		&"swamp":     _swamp(rng, corruption)
+		&"highland":  _highland(rng, corruption)
+		&"crypt":     _crypt(rng, corruption)
+		&"coast":     _coast(rng, corruption)
 		_:            _forest(rng, corruption)
 
 func _place(mesh: Mesh, pos: Vector3, color: Color, scale_v: Vector3 = Vector3.ONE, emission: float = 0.0, rough: float = 0.85, rot_y: float = 0.0) -> void:
@@ -35,6 +39,10 @@ func _grass_tufts(biome: StringName, rng: DRNG) -> void:
 		"ruins":     color = Color(0.40, 0.36, 0.25)
 		"corrupted": color = Color(0.30, 0.10, 0.25)
 		"anomaly":   color = Color(0.18, 0.25, 0.45)
+		"swamp":     color = Color(0.15, 0.30, 0.18)
+		"highland":  color = Color(0.30, 0.40, 0.20)
+		"crypt":     color = Color(0.15, 0.14, 0.15)
+		"coast":     color = Color(0.55, 0.48, 0.30)
 	for i in 24:
 		var x := _frng(rng, -10, 10)
 		var z := _frng(rng, -9, 0.5)
@@ -137,6 +145,88 @@ func _anomaly(rng: DRNG, _corr: float) -> void:
 	# Warp floor
 	var plate := BoxMesh.new(); plate.size = Vector3(20, 0.1, 12)
 	_place(plate, Vector3(0, -0.05, -3), Color(0.10, 0.12, 0.30), Vector3.ONE, 0.5, 0.2)
+
+func _swamp(rng: DRNG, _corr: float) -> void:
+	# Stagnant water plane + dead twisted trees + lily pads + mist orbs.
+	var water := PlaneMesh.new(); water.size = Vector2(40, 25)
+	_place(water, Vector3(0, 0.05, -3), Color(0.10, 0.18, 0.14), Vector3.ONE, 0.2, 0.25)
+	for i in 7:
+		var x := _frng(rng, -8, 8); var z := _frng(rng, -7, -1)
+		var h := _frng(rng, 2.5, 4.0)
+		var trunk := CylinderMesh.new()
+		trunk.top_radius = 0.10; trunk.bottom_radius = 0.22; trunk.height = h
+		_place(trunk, Vector3(x, h * 0.5, z), Color(0.18, 0.14, 0.10), Vector3.ONE, 0.0, 0.95, _frng(rng, 0, 0.4))
+		# bare twisted branches
+		var branch := CylinderMesh.new()
+		branch.top_radius = 0.04; branch.bottom_radius = 0.07; branch.height = 0.9
+		_place(branch, Vector3(x + 0.3, h * 0.85, z), Color(0.20, 0.15, 0.10), Vector3.ONE, 0.0, 0.95, 0.0)
+		_place(branch, Vector3(x - 0.3, h * 0.7, z + 0.2), Color(0.20, 0.15, 0.10), Vector3.ONE, 0.0, 0.95, 0.0)
+	# lily pads
+	for i in 8:
+		var pad := CylinderMesh.new(); pad.top_radius = 0.30; pad.bottom_radius = 0.30; pad.height = 0.04
+		_place(pad, Vector3(_frng(rng, -7, 7), 0.07, _frng(rng, -6, -1)), Color(0.20, 0.40, 0.18))
+	# mist orbs
+	for i in 5:
+		var orb := SphereMesh.new(); orb.radius = 0.18; orb.height = 0.36
+		_place(orb, Vector3(_frng(rng, -6, 6), _frng(rng, 0.4, 1.4), _frng(rng, -5, -1)), Color(0.55, 0.65, 0.50), Vector3.ONE, 1.4)
+
+func _highland(rng: DRNG, _corr: float) -> void:
+	# Distant mountain silhouettes + boulders + tall grass + windswept tree.
+	for i in 5:
+		var mountain := PrismMesh.new()
+		var mw := _frng(rng, 3.5, 6.0)
+		mountain.size = Vector3(mw, _frng(rng, 4.0, 7.0), mw * 0.8)
+		var x := _frng(rng, -14, 14); var z := _frng(rng, -14, -8)
+		_place(mountain, Vector3(x, mountain.size.y * 0.5, z), Color(0.25, 0.28, 0.32), Vector3.ONE, 0.0, 0.95, _frng(rng, 0, 6.28))
+	for i in 7:
+		var rock := SphereMesh.new()
+		var r := _frng(rng, 0.4, 0.9); rock.radius = r; rock.height = r * 1.4
+		_place(rock, Vector3(_frng(rng, -8, 8), r * 0.5, _frng(rng, -6, -1)), Color(0.40, 0.42, 0.38))
+	# A single twisted tree
+	var trunk := CylinderMesh.new()
+	trunk.top_radius = 0.18; trunk.bottom_radius = 0.30; trunk.height = 2.4
+	_place(trunk, Vector3(-3, 1.2, -2), Color(0.30, 0.22, 0.15))
+	var canopy := SphereMesh.new(); canopy.radius = 0.95; canopy.height = 1.0
+	_place(canopy, Vector3(-3, 2.6, -2), Color(0.20, 0.32, 0.18), Vector3(1.4, 0.6, 1.0))
+
+func _crypt(rng: DRNG, _corr: float) -> void:
+	# Stone tomb walls + sarcophagi + candles + cobwebs (bars).
+	for i in 4:
+		var wall := BoxMesh.new()
+		wall.size = Vector3(_frng(rng, 1.5, 3.5), _frng(rng, 2.0, 3.0), 0.4)
+		var x := _frng(rng, -7, 7); var z := _frng(rng, -7, -3)
+		_place(wall, Vector3(x, wall.size.y * 0.5, z), Color(0.18, 0.17, 0.18), Vector3.ONE, 0.0, 0.9)
+	for i in 4:
+		var sarco := BoxMesh.new(); sarco.size = Vector3(0.8, 0.6, 1.8)
+		_place(sarco, Vector3(_frng(rng, -5, 5), 0.3, _frng(rng, -5, -1)), Color(0.30, 0.28, 0.26))
+	for i in 6:
+		var cx := _frng(rng, -6, 6); var cz := _frng(rng, -5, -1)
+		var candle := CylinderMesh.new(); candle.top_radius = 0.04; candle.bottom_radius = 0.04; candle.height = 0.25
+		_place(candle, Vector3(cx, 0.13, cz), Color(0.85, 0.80, 0.65))
+		var flame := SphereMesh.new(); flame.radius = 0.06; flame.height = 0.12
+		_place(flame, Vector3(cx, 0.30, cz), Color(1.0, 0.55, 0.20), Vector3.ONE, 4.0)
+	# Stone arch
+	var arch_l := BoxMesh.new(); arch_l.size = Vector3(0.4, 3.0, 0.4)
+	_place(arch_l, Vector3(-1.6, 1.5, -2), Color(0.22, 0.20, 0.20))
+	_place(arch_l, Vector3(1.6, 1.5, -2), Color(0.22, 0.20, 0.20))
+	var arch_top := BoxMesh.new(); arch_top.size = Vector3(3.4, 0.4, 0.4)
+	_place(arch_top, Vector3(0, 3.2, -2), Color(0.22, 0.20, 0.20))
+
+func _coast(rng: DRNG, _corr: float) -> void:
+	# Sea horizon + rocky outcrops + driftwood + gulls (small white triangles).
+	var sea := PlaneMesh.new(); sea.size = Vector2(60, 30)
+	_place(sea, Vector3(0, 0.04, -10), Color(0.15, 0.30, 0.40), Vector3.ONE, 0.4, 0.15)
+	for i in 5:
+		var rock := SphereMesh.new()
+		var r := _frng(rng, 0.6, 1.4); rock.radius = r; rock.height = r * 1.3
+		_place(rock, Vector3(_frng(rng, -10, 10), r * 0.4, _frng(rng, -8, -3)), Color(0.30, 0.30, 0.32))
+	for i in 4:
+		var log := CylinderMesh.new(); log.top_radius = 0.10; log.bottom_radius = 0.12; log.height = 1.4
+		_place(log, Vector3(_frng(rng, -6, 6), 0.10, _frng(rng, -3, -1)), Color(0.40, 0.30, 0.20), Vector3.ONE, 0.0, 0.95, _frng(rng, 0, 6.28))
+	# distant gulls
+	for i in 6:
+		var gull := PrismMesh.new(); gull.size = Vector3(0.30, 0.08, 0.10)
+		_place(gull, Vector3(_frng(rng, -10, 10), _frng(rng, 4, 7), _frng(rng, -12, -6)), Color(0.95, 0.95, 0.95), Vector3.ONE, 0.5)
 
 func _frng(rng: DRNG, lo: float, hi: float) -> float:
 	var span := int((hi - lo) * 100.0)

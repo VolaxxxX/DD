@@ -4,15 +4,21 @@ class_name PlayerState extends RefCounted
 var name: String = "Voyageur"
 var class_kind: int = PlayerClass.Kind.SOLDAT
 var class_data: Dictionary = {}
-var stat: int = 10                          # FORCE base
+var stats: Dictionary = {}                  # stat_key -> int
 var injuries: Array[StringName] = []
 var alive: bool = true
 
-func setup(p_name: String, kind: int) -> void:
+func setup(p_name: String, kind: int, p_stats: Dictionary = {}) -> void:
 	name = p_name if p_name.strip_edges() != "" else "Voyageur"
 	class_kind = kind
 	class_data = PlayerClass.by_kind(kind)
-	stat = int(class_data.force)
+	stats.clear()
+	if p_stats.is_empty():
+		for k in PlayerClass.stat_keys():
+			stats[k] = int(class_data.base_stats.get(k, 8))
+	else:
+		for k in PlayerClass.stat_keys():
+			stats[k] = int(p_stats.get(k, class_data.base_stats.get(k, 8)))
 	injuries.clear()
 	alive = true
 
@@ -20,7 +26,6 @@ func has_injury(id: StringName) -> bool:
 	return id in injuries
 
 func add_injury(id: StringName) -> bool:
-	# Returns true if newly added.
 	if has_injury(id): return false
 	var resist: Array = class_data.get("injury_resist", [])
 	if id in resist: return false
@@ -33,12 +38,22 @@ func tone_locked(tone: int) -> bool:
 		if int(inj.get("lock_tone", -1)) == tone: return true
 	return false
 
-func effective_force() -> int:
-	var s := stat
+func stat(key: StringName) -> int:
+	return int(stats.get(key, 8))
+
+func effective_stat(key: StringName) -> int:
+	var s := stat(key)
 	for inj_id in injuries:
 		var inj: Dictionary = InjuryRegistry.by_id(inj_id)
-		s -= int(inj.get("force_penalty", 0))
+		if String(inj.get("affects_stat", "")) == String(key):
+			s -= int(inj.get("force_penalty", 0))
+		elif inj.get("affects_stat", "") == "" and key == &"force":
+			s -= int(inj.get("force_penalty", 0))
 	return maxi(1, s)
+
+func effective_force() -> int:
+	# Backwards-compat for HUD.
+	return effective_stat(&"force")
 
 func tone_modifier(tone: int) -> int:
 	var bonus: Array = class_data.get("tone_bonus", [])
@@ -46,3 +61,12 @@ func tone_modifier(tone: int) -> int:
 	if tone in bonus: return 2
 	if tone in malus: return -2
 	return 0
+
+func roll_stat_for_tone(tone: int) -> int:
+	# Tone-driven roll: use the tone's primary stat + class affinity bonus.
+	var key: StringName = PlayerClass.tone_stat(tone)
+	return effective_stat(key) + tone_modifier(tone)
+
+func endurance_mitigation() -> int:
+	# Higher endurance reduces fatal threshold.
+	return int(stat(&"endurance") / 3)

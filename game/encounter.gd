@@ -73,7 +73,7 @@ func resolve(choice_idx: int, resolver: EventResolver, coop_mod: int) -> Diction
 	var tone: int = choice.tone
 	var difficulty: int = 10 + creature.archetype.aggression / 10 + int(zone.chaos * 5)
 	var world_mod: int = -int(zone.corruption * 3)
-	var actor_stat: int = player.effective_force() + player.tone_modifier(tone)
+	var actor_stat: int = player.roll_stat_for_tone(tone)
 	var r: Dictionary = resolver.resolve(choice.kind, actor_stat, difficulty, coop_mod, world_mod, [creature.id])
 	var outcome: int = r.outcome
 
@@ -143,4 +143,5 @@ func _roll_fatal(tone: int) -> bool:
 		PhrasePool.Tone.DIPLOMATIC: tone_mult = 0.6
 		PhrasePool.Tone.CAUTIOUS:   tone_mult = 0.4
 	var threshold := int(base * tone_mult) + player.injuries.size() * 12 + int(zone.corruption * 15)
+	threshold -= player.endurance_mitigation()
 	return rng.range_i(0, 100) < threshold

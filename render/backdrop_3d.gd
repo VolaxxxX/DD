@@ -7,6 +7,10 @@ const BIOME_SKY_TOP := {
 	&"ruins":     Color(0.32, 0.22, 0.18),
 	&"corrupted": Color(0.22, 0.05, 0.20),
 	&"anomaly":   Color(0.05, 0.10, 0.30),
+	&"swamp":     Color(0.15, 0.20, 0.18),
+	&"highland":  Color(0.30, 0.40, 0.55),
+	&"crypt":     Color(0.05, 0.05, 0.08),
+	&"coast":     Color(0.20, 0.30, 0.40),
 }
 const BIOME_SKY_HORIZON := {
 	&"forest":    Color(0.78, 0.72, 0.55),
@@ -14,6 +18,10 @@ const BIOME_SKY_HORIZON := {
 	&"ruins":     Color(0.85, 0.65, 0.45),
 	&"corrupted": Color(0.55, 0.20, 0.35),
 	&"anomaly":   Color(0.40, 0.30, 0.85),
+	&"swamp":     Color(0.60, 0.55, 0.40),
+	&"highland":  Color(0.85, 0.80, 0.75),
+	&"crypt":     Color(0.20, 0.18, 0.25),
+	&"coast":     Color(0.85, 0.70, 0.55),
 }
 const BIOME_GROUND := {
 	&"forest":    Color(0.15, 0.22, 0.12),
@@ -21,6 +29,10 @@ const BIOME_GROUND := {
 	&"ruins":     Color(0.30, 0.25, 0.20),
 	&"corrupted": Color(0.20, 0.06, 0.18),
 	&"anomaly":   Color(0.08, 0.10, 0.22),
+	&"swamp":     Color(0.12, 0.18, 0.10),
+	&"highland":  Color(0.22, 0.25, 0.18),
+	&"crypt":     Color(0.10, 0.09, 0.10),
+	&"coast":     Color(0.55, 0.50, 0.40),
 }
 const BIOME_LIGHT_TINT := {
 	&"forest":    Color(1.00, 0.96, 0.85),
@@ -28,6 +40,10 @@ const BIOME_LIGHT_TINT := {
 	&"ruins":     Color(1.00, 0.85, 0.65),
 	&"corrupted": Color(0.85, 0.70, 1.00),
 	&"anomaly":   Color(0.75, 0.85, 1.00),
+	&"swamp":     Color(0.80, 0.95, 0.75),
+	&"highland":  Color(1.00, 0.95, 0.90),
+	&"crypt":     Color(0.55, 0.55, 0.75),
+	&"coast":     Color(1.00, 0.92, 0.78),
 }
 
 var ground: MeshInstance3D

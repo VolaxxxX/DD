@@ -1,12 +1,13 @@
 extends Node3D
-# Character creation screen: name + class picker with live 3D preview.
+# Character creation: name + class picker + stat point allocation + 3D preview.
 
-signal character_chosen(name: String, kind: int)
+signal character_chosen(name: String, kind: int, stats: Dictionary)
 
 @onready var name_edit: LineEdit = $UI/Root/Panel/V/NameRow/NameEdit
 @onready var class_label: Label = $UI/Root/Panel/V/ClassName
 @onready var tagline_label: Label = $UI/Root/Panel/V/Tagline
-@onready var stats_label: RichTextLabel = $UI/Root/Panel/V/Stats
+@onready var stats_grid: GridContainer = $UI/Root/Panel/V/StatsGrid
+@onready var points_label: Label = $UI/Root/Panel/V/PointsLabel
 @onready var prev_btn: Button = $UI/Root/Panel/V/ClassRow/Prev
 @onready var next_btn: Button = $UI/Root/Panel/V/ClassRow/Next
 @onready var play_btn: Button = $UI/Root/Panel/V/Play
@@ -15,42 +16,93 @@ signal character_chosen(name: String, kind: int)
 var _classes: Array
 var _idx: int = 0
 var _avatar: Player3D
+var _stats: Dictionary = {}
+var _points_left: int = 0
+var _stat_value_labels: Dictionary = {}     # key -> Label
+var _stat_plus_buttons: Dictionary = {}     # key -> Button
+var _stat_minus_buttons: Dictionary = {}    # key -> Button
+var _base_for_class: Dictionary = {}        # cached base stats for current class
 
 func _ready() -> void:
 	_classes = PlayerClass.all()
 	prev_btn.pressed.connect(_prev)
 	next_btn.pressed.connect(_next)
 	play_btn.pressed.connect(_confirm)
-	_refresh()
+	_build_stat_rows()
+	_load_class(_idx)
 	_spin_avatar()
 
 func _spin_avatar() -> void:
 	var t := create_tween().set_loops()
 	t.tween_property(preview_anchor, "rotation:y", TAU, 8.0)
 
+func _build_stat_rows() -> void:
+	stats_grid.columns = 4
+	for k in PlayerClass.stat_keys():
+		var name_lbl := Label.new()
+		name_lbl.text = PlayerClass.stat_label(k)
+		name_lbl.add_theme_font_size_override("font_size", 16)
+		name_lbl.custom_minimum_size = Vector2(120, 0)
+		stats_grid.add_child(name_lbl)
+
+		var minus := Button.new()
+		minus.text = "-"
+		minus.custom_minimum_size = Vector2(36, 36)
+		var key := k
+		minus.pressed.connect(func(): _adjust(key, -1))
+		stats_grid.add_child(minus)
+		_stat_minus_buttons[k] = minus
+
+		var val_lbl := Label.new()
+		val_lbl.text = "8"
+		val_lbl.add_theme_font_size_override("font_size", 18)
+		val_lbl.custom_minimum_size = Vector2(36, 0)
+		val_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		stats_grid.add_child(val_lbl)
+		_stat_value_labels[k] = val_lbl
+
+		var plus := Button.new()
+		plus.text = "+"
+		plus.custom_minimum_size = Vector2(36, 36)
+		plus.pressed.connect(func(): _adjust(key, 1))
+		stats_grid.add_child(plus)
+		_stat_plus_buttons[k] = plus
+
+func _load_class(idx: int) -> void:
+	var c: Dictionary = _classes[idx]
+	_base_for_class = c.base_stats.duplicate()
+	_stats.clear()
+	for k in PlayerClass.stat_keys():
+		_stats[k] = int(_base_for_class.get(k, 8))
+	_points_left = PlayerClass.ALLOC_POINTS
+	_refresh()
+
 func _refresh() -> void:
 	var c: Dictionary = _classes[_idx]
 	class_label.text = String(c.name)
 	tagline_label.text = String(c.tagline)
-	var bonus_names := _tone_names(c.tone_bonus)
-	var malus_names := _tone_names(c.tone_malus)
-	var resist_names: Array[String] = []
-	for r in c.injury_resist:
-		var inj: Dictionary = InjuryRegistry.by_id(r)
-		if not inj.is_empty(): resist_names.append(String(inj.name))
-	var lines := PackedStringArray()
-	lines.append("[b]FORCE[/b]  %d" % int(c.force))
-	if not bonus_names.is_empty(): lines.append("[color=#9fffa8]Affinités[/color]  " + ", ".join(bonus_names))
-	if not malus_names.is_empty(): lines.append("[color=#ff8b8b]Faiblesses[/color]  " + ", ".join(malus_names))
-	if not resist_names.is_empty(): lines.append("[color=#a0c8ff]Résistance[/color]  " + ", ".join(resist_names))
-	stats_label.text = "\n".join(lines)
+	points_label.text = "POINTS À RÉPARTIR : %d" % _points_left
+	for k in PlayerClass.stat_keys():
+		var v: int = int(_stats[k])
+		var base: int = int(_base_for_class.get(k, 8))
+		var lbl: Label = _stat_value_labels[k]
+		lbl.text = str(v)
+		if v > base:    lbl.add_theme_color_override("font_color", Color(0.55, 1.0, 0.55))
+		elif v < base:  lbl.add_theme_color_override("font_color", Color(1.0, 0.55, 0.55))
+		else:           lbl.add_theme_color_override("font_color", Color(1, 1, 1))
+		_stat_plus_buttons[k].disabled = (_points_left <= 0) or (v >= PlayerClass.STAT_MAX)
+		_stat_minus_buttons[k].disabled = (v <= base) or (v <= PlayerClass.STAT_MIN)
 	_rebuild_avatar()
 
-func _tone_names(arr: Array) -> Array[String]:
-	var labels := {0: "Agressif", 1: "Diplomate", 2: "Prudent", 3: "Curieux", 4: "Trompeur", 5: "Mystique"}
-	var out: Array[String] = []
-	for t in arr: out.append(labels.get(int(t), "?"))
-	return out
+func _adjust(k: StringName, delta: int) -> void:
+	var v: int = int(_stats[k]) + delta
+	var base: int = int(_base_for_class.get(k, 8))
+	if delta > 0 and _points_left <= 0: return
+	if v < maxi(base, PlayerClass.STAT_MIN): return
+	if v > PlayerClass.STAT_MAX: return
+	_stats[k] = v
+	_points_left -= delta
+	_refresh()
 
 func _rebuild_avatar() -> void:
 	if _avatar and is_instance_valid(_avatar):
@@ -61,13 +113,13 @@ func _rebuild_avatar() -> void:
 
 func _prev() -> void:
 	_idx = (_idx - 1 + _classes.size()) % _classes.size()
-	_refresh()
+	_load_class(_idx)
 
 func _next() -> void:
 	_idx = (_idx + 1) % _classes.size()
-	_refresh()
+	_load_class(_idx)
 
 func _confirm() -> void:
 	var n := name_edit.text.strip_edges()
 	if n == "": n = "Voyageur"
-	character_chosen.emit(n, int(_classes[_idx].kind))
+	character_chosen.emit(n, int(_classes[_idx].kind), _stats.duplicate())

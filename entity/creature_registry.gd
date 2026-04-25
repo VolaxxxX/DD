@@ -40,7 +40,7 @@ static func templates() -> Array:
 		{"id": &"blood_crow_swarm", "name": "la nuée aux yeux rouges", "family": F_BEAST, "tier": T_UNCOMMON, "role": R_SCAVENGER, "intel": 30, "aggr": 60, "biomes": [&"forest", &"ruins", &"city"]},
 		{"id": &"plague_hound", "name": "le chien-de-peste", "family": F_BEAST, "tier": T_UNCOMMON, "role": R_PREDATOR, "intel": 25, "aggr": 80, "biomes": [&"corrupted"]},
 		{"id": &"sandstalker", "name": "le rôdeur de sable", "family": F_BEAST, "tier": T_RARE, "role": R_PREDATOR, "intel": 40, "aggr": 85, "biomes": [&"ruins"]},
-		{"id": &"mother_leech", "name": "la sangsue-mère", "family": F_BEAST, "tier": T_RARE, "role": R_TERRITORIAL, "intel": 20, "aggr": 60, "biomes": [&"corrupted"]},
+		{"id": &"mother_leech", "name": "la sangsue-mère", "family": F_BEAST, "tier": T_RARE, "role": R_TERRITORIAL, "intel": 20, "aggr": 60, "biomes": [&"corrupted", &"swamp"]},
 		{"id": &"old_wood_stag", "name": "le cerf-du-bois-ancien", "family": F_BEAST, "tier": T_ELITE, "role": R_APEX, "intel": 90, "aggr": 15, "biomes": [&"forest"]},
 
 		# --- UNDEAD ---
@@ -79,6 +79,26 @@ static func templates() -> Array:
 		{"id": &"dream_weaver", "name": "la tisseuse-de-rêves", "family": F_FEY, "tier": T_RARE, "role": R_MODIFIER, "intel": 90, "aggr": 30, "biomes": [&"anomaly"]},
 		{"id": &"market_faer", "name": "le marchand-fée", "family": F_FEY, "tier": T_RARE, "role": R_MODIFIER, "intel": 85, "aggr": 25, "biomes": [&"forest", &"city", &"ruins"]},
 		{"id": &"hollow_child", "name": "l'enfant-creux", "family": F_FEY, "tier": T_APEX, "role": R_MODIFIER, "intel": 60, "aggr": 35, "biomes": [&"forest", &"anomaly"]},
+
+		# --- SWAMP ---
+		{"id": &"bog_witch", "name": "la sorcière-des-marais", "family": F_HUMANOID, "tier": T_RARE, "role": R_MODIFIER, "intel": 80, "aggr": 35, "biomes": [&"swamp"]},
+		{"id": &"will_o_wisp", "name": "le feu-follet", "family": F_ELEMENTAL, "tier": T_COMMON, "role": R_MODIFIER, "intel": 35, "aggr": 30, "biomes": [&"swamp"]},
+		{"id": &"toad_king", "name": "le roi-crapaud", "family": F_BEAST, "tier": T_ELITE, "role": R_TERRITORIAL, "intel": 50, "aggr": 70, "biomes": [&"swamp"]},
+
+		# --- HIGHLAND ---
+		{"id": &"mountain_lion", "name": "le lion-de-pierre", "family": F_BEAST, "tier": T_UNCOMMON, "role": R_PREDATOR, "intel": 35, "aggr": 80, "biomes": [&"highland"]},
+		{"id": &"sky_skald", "name": "le scalde-du-ciel", "family": F_HUMANOID, "tier": T_RARE, "role": R_MODIFIER, "intel": 75, "aggr": 40, "biomes": [&"highland"]},
+		{"id": &"giant_eagle", "name": "l'aigle-géant", "family": F_BEAST, "tier": T_RARE, "role": R_PREDATOR, "intel": 50, "aggr": 65, "biomes": [&"highland", &"coast"]},
+
+		# --- CRYPT ---
+		{"id": &"tomb_ghoul", "name": "le goule-des-tombes", "family": F_UNDEAD, "tier": T_COMMON, "role": R_PREDATOR, "intel": 30, "aggr": 70, "biomes": [&"crypt", &"ruins"]},
+		{"id": &"sealed_lord", "name": "le seigneur-scellé", "family": F_UNDEAD, "tier": T_ELITE, "role": R_APEX, "intel": 90, "aggr": 50, "biomes": [&"crypt"]},
+		{"id": &"crypt_wraith", "name": "la spectre-des-cryptes", "family": F_UNDEAD, "tier": T_UNCOMMON, "role": R_MODIFIER, "intel": 65, "aggr": 50, "biomes": [&"crypt"]},
+
+		# --- COAST ---
+		{"id": &"drowned_sailor", "name": "le marin-noyé", "family": F_UNDEAD, "tier": T_COMMON, "role": R_PREDATOR, "intel": 35, "aggr": 60, "biomes": [&"coast"]},
+		{"id": &"reef_priestess", "name": "la prêtresse-du-récif", "family": F_HUMANOID, "tier": T_RARE, "role": R_MODIFIER, "intel": 80, "aggr": 30, "biomes": [&"coast"]},
+		{"id": &"tide_horror", "name": "l'horreur-des-marées", "family": F_ABERRATION, "tier": T_ELITE, "role": R_PREDATOR, "intel": 55, "aggr": 75, "biomes": [&"coast"]},
 	]
 
 static func for_biome_and_tier(biome: StringName, tier: int) -> Array:
@@ -95,6 +115,10 @@ static func fallback_family_for_biome(biome: StringName) -> int:
 		"ruins":     return F_UNDEAD
 		"corrupted": return F_ABERRATION
 		"anomaly":   return F_ABERRATION
+		"swamp":     return F_BEAST
+		"highland":  return F_BEAST
+		"crypt":     return F_UNDEAD
+		"coast":     return F_HUMANOID
 		_:           return F_BEAST
 
 static func name_for_id(id: StringName) -> String:

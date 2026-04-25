@@ -221,6 +221,10 @@ static func biome_intro(biome: StringName, corruption: float) -> String:
 		"ruins":     base = "Tu marches entre des pierres qui ont connu des siècles."
 		"corrupted": base = "La terre est malade. Le sol palpite sous tes pieds."
 		"anomaly":   base = "Rien ici n'obéit aux règles que tu connais."
+		"swamp":     base = "L'eau croupit. Chaque pas libère une odeur ancienne."
+		"highland":  base = "Le vent te coupe le souffle. Le ciel est immense, indifférent."
+		"crypt":     base = "L'air sent la pierre humide. Tu n'entends plus que ta propre respiration."
+		"coast":     base = "Le sel pique les yeux. Quelque chose, au loin, n'est pas du bois flotté."
 		_:           base = "Tu avances."
 	if corruption > 0.6: base += " Quelque chose te regarde sans yeux."
 	return base

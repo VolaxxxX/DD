@@ -1,7 +1,7 @@
 class_name SceneDirector extends Node
 # Orchestrates the encounter flow with class-aware player + injury system.
 
-signal encounter_presented(encounter: Encounter)
+signal encounter_presented(encounter)
 signal narrative_logged(text: String, tone: int, outcome: int)
 signal zone_intro(text: String, biome: StringName)
 signal creature_reaction(reaction: StringName)
@@ -41,14 +41,21 @@ func next_encounter() -> void:
 		_advance_zone()
 		return
 	var z := world.active_zone()
-	var alive: Array[Creature] = []
-	for c in z.ecosystem.creatures:
-		if c.alive: alive.append(c)
-	if alive.is_empty():
-		_advance_zone()
-		return
-	var pick: Creature = alive[rng.range_i(0, alive.size())]
-	current = Encounter.new(z, pick, rng.derive(_encounters_in_zone + 1), player)
+	var er := rng.derive(_encounters_in_zone + 1)
+	# 30% situation, 70% creature.
+	var as_situation := er.range_i(0, 100) < 30 and _encounters_in_zone > 0
+	if as_situation:
+		var tpl: Dictionary = SituationRegistry.pick(er, z.biome)
+		current = SituationEncounter.new(z, er, player, tpl)
+	else:
+		var alive: Array[Creature] = []
+		for c in z.ecosystem.creatures:
+			if c.alive: alive.append(c)
+		if alive.is_empty():
+			_advance_zone()
+			return
+		var pick: Creature = alive[er.range_i(0, alive.size())]
+		current = Encounter.new(z, pick, er, player)
 	_awaiting_choice = true
 	encounter_presented.emit(current)
 
@@ -66,26 +73,32 @@ func choose(idx: int) -> void:
 	next_encounter()
 
 func _apply(result: Dictionary) -> void:
-	if int(result.stat_delta) != 0:
-		player.stat = maxi(1, player.stat + int(result.stat_delta))
+	var stat_delta: int = int(result.get("stat_delta", 0))
+	if stat_delta != 0:
+		var stat_key: StringName = result.get("stat", &"force")
+		player.stats[stat_key] = maxi(1, int(player.stats.get(stat_key, 8)) + stat_delta)
 	var inj_id: StringName = result.get("injury", &"")
 	if inj_id != &"":
 		if player.add_injury(inj_id):
 			injury_added.emit(inj_id)
+	var heal_id: StringName = result.get("heal", &"")
+	if heal_id != &"" and heal_id in player.injuries:
+		player.injuries.erase(heal_id)
 	if bool(result.get("fatal", false)):
 		player.alive = false
-	if result.creature_dies:
+	var has_creature: bool = current.creature != null
+	if has_creature and result.get("creature_dies", false):
 		creature_reaction.emit(&"die")
 		if int(current.creature.archetype.tier) >= Archetype.Tier.ELITE:
 			_elite_kills_this_run += 1
 		current.creature.kill()
-	elif result.creature_flees:
+	elif has_creature and result.get("creature_flees", false):
 		creature_reaction.emit(&"flee")
 		current.creature.kill()
-	elif result.mutate:
+	elif has_creature and result.get("mutate", false):
 		creature_reaction.emit(&"mutate")
 		current.creature.apply_mutation()
-	else:
+	elif has_creature:
 		creature_reaction.emit(&"hit")
 	stats_changed.emit(player.effective_force(), player.injuries.duplicate())
 
