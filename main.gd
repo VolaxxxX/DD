@@ -83,6 +83,23 @@ func _build_stage_for_active_zone() -> void:
 	decor = Decor3D.new()
 	stage.add_child(decor)
 	decor.build(z.biome, z.corruption, _rng.derive(z.index + 100))
+	if z.dragon_id != &"":
+		_dragon_flyby(z.dragon_id, z.dragon_intro)
+
+func _dragon_flyby(id: StringName, intro: String) -> void:
+	var dragon := Dragon3D.new()
+	stage.add_child(dragon)
+	dragon.build(id)
+	dragon.position = Vector3(-22, 7, -8)
+	dragon.scale = Vector3.ONE * 0.85
+	if intro != "":
+		ui.present_intro(intro)
+	var t := create_tween().set_parallel(true)
+	t.tween_property(dragon, "position", Vector3(22, 9, -10), 6.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	t.tween_property(dragon, "rotation:y", -0.4, 6.0)
+	# Auto-cleanup
+	get_tree().create_timer(6.5).timeout.connect(func():
+		if is_instance_valid(dragon): dragon.queue_free())
 
 func _spawn_creature(arch: Archetype) -> void:
 	if boss_node and is_instance_valid(boss_node):

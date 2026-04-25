@@ -11,6 +11,8 @@ var biome: StringName
 var chaos: float
 var corruption: float
 var ecosystem: Ecosystem
+var dragon_id: StringName = &""
+var dragon_intro: String = ""
 
 func _init(_rng: DRNG, _mem: WorldMemory, _idx: int) -> void:
 	rng = _rng
