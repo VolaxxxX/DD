@@ -34,19 +34,96 @@ const EYE_COLOR := {
 	Archetype.Family.DRACONIC:   Color(1.00, 0.45, 0.15),
 }
 
+# Per-id visual overrides.  Each entry can carry: color, accent, eye, scale,
+# and a list of "feats" — discrete decorations added on top of the family base.
+const ID_VISUAL := {
+	# --- HUMANOID ---
+	&"gutter_scavenger":  {"color": Color(0.40, 0.35, 0.25), "feats": [&"hood", &"dagger_held"]},
+	&"hooded_outlaw":     {"color": Color(0.30, 0.25, 0.20), "feats": [&"hood", &"sword_held"]},
+	&"ash_inquisitor":    {"color": Color(0.85, 0.85, 0.80), "feats": [&"mask", &"halo"]},
+	&"sunken_hermit":     {"color": Color(0.45, 0.40, 0.30), "feats": [&"hood", &"staff_held"]},
+	&"flesh_broker":      {"color": Color(0.60, 0.20, 0.20), "feats": [&"mask", &"vines"]},
+	&"nameless_pilgrim":  {"color": Color(0.20, 0.20, 0.25), "feats": [&"hood", &"halo", &"staff_held"]},
+	&"bog_witch":         {"color": Color(0.20, 0.30, 0.18), "feats": [&"hood", &"staff_held", &"flame_aura"]},
+	&"sky_skald":         {"color": Color(0.65, 0.60, 0.45), "feats": [&"crown", &"staff_held"]},
+	&"reef_priestess":    {"color": Color(0.30, 0.55, 0.65), "feats": [&"halo", &"vines"]},
+
+	# --- BEAST ---
+	&"dire_wolf":         {"color": Color(0.30, 0.22, 0.18), "eye": Color(1.0, 0.20, 0.20), "feats": [&"fangs", &"spikes_back"]},
+	&"thornback_stag":    {"color": Color(0.50, 0.30, 0.18), "feats": [&"antlers", &"spikes_back"]},
+	&"blood_crow_swarm":  {"color": Color(0.20, 0.10, 0.10), "feats": [&"swarm_orbs"]},
+	&"plague_hound":      {"color": Color(0.45, 0.55, 0.30), "feats": [&"fangs", &"flame_aura"]},
+	&"sandstalker":       {"color": Color(0.75, 0.65, 0.40), "feats": [&"fangs", &"tail_blade"]},
+	&"mother_leech":      {"color": Color(0.55, 0.20, 0.20), "feats": [&"many_eyes"]},
+	&"old_wood_stag":     {"color": Color(0.35, 0.45, 0.20), "feats": [&"antlers", &"halo", &"vines"]},
+	&"mountain_lion":     {"color": Color(0.55, 0.45, 0.30), "feats": [&"fangs"]},
+	&"giant_eagle":       {"color": Color(0.75, 0.70, 0.55), "feats": [&"wings_pair"]},
+	&"toad_king":         {"color": Color(0.30, 0.55, 0.25), "feats": [&"crown", &"fangs"]},
+
+	# --- UNDEAD ---
+	&"wight":             {"color": Color(0.55, 0.55, 0.55), "feats": [&"hood"]},
+	&"ash_revenant":      {"color": Color(0.30, 0.20, 0.18), "feats": [&"flame_aura"]},
+	&"bone_choir":        {"color": Color(0.85, 0.82, 0.72), "feats": [&"skull_stack"]},
+	&"drowned_herald":    {"color": Color(0.30, 0.40, 0.45), "feats": [&"hood", &"halo"]},
+	&"lich_scholar":      {"color": Color(0.35, 0.30, 0.50), "feats": [&"hood", &"book_floating"]},
+	&"whisper_shade":     {"color": Color(0.05, 0.05, 0.10), "eye": Color(1.0, 1.0, 1.0), "feats": [&"hood"]},
+	&"tomb_ghoul":        {"color": Color(0.45, 0.40, 0.30), "feats": [&"fangs"]},
+	&"sealed_lord":       {"color": Color(0.20, 0.20, 0.30), "feats": [&"crown", &"sword_held", &"halo"]},
+	&"crypt_wraith":      {"color": Color(0.20, 0.25, 0.30), "feats": [&"hood", &"flame_aura"]},
+	&"drowned_sailor":    {"color": Color(0.30, 0.35, 0.45), "feats": [&"vines"]},
+
+	# --- CONSTRUCT ---
+	&"clockwork_sentinel":{"color": Color(0.55, 0.45, 0.25), "feats": [&"gear_face", &"sword_held"]},
+	&"marble_guardian":   {"color": Color(0.85, 0.82, 0.78), "feats": [&"crown"]},
+	&"thought_engine":    {"color": Color(0.30, 0.35, 0.50), "feats": [&"glow_orb"]},
+	&"stitched_golem":    {"color": Color(0.55, 0.30, 0.30), "feats": [&"vines", &"fangs"]},
+	&"singing_automaton": {"color": Color(0.60, 0.55, 0.30), "feats": [&"halo", &"glow_orb"]},
+
+	# --- ELEMENTAL ---
+	&"ember_sprite":      {"color": Color(1.0, 0.55, 0.20), "feats": [&"flame_aura"]},
+	&"frost_herald":      {"color": Color(0.65, 0.85, 1.0), "feats": [&"halo"]},
+	&"stone_lord":        {"color": Color(0.55, 0.50, 0.45), "feats": [&"crown"]},
+	&"storm_rider":       {"color": Color(0.45, 0.55, 0.85), "feats": [&"halo", &"flame_aura"]},
+	&"void_spark":        {"color": Color(0.20, 0.05, 0.30), "feats": [&"halo", &"glow_orb"]},
+	&"will_o_wisp":       {"color": Color(0.65, 1.0, 0.85), "feats": [&"flame_aura", &"glow_orb"]},
+
+	# --- ABERRATION ---
+	&"mind_thief":        {"color": Color(0.35, 0.20, 0.55), "feats": [&"third_eye", &"many_eyes"]},
+	&"fleshwarp":         {"color": Color(0.55, 0.25, 0.30), "feats": [&"vines", &"fangs"]},
+	&"thousand_eye":      {"color": Color(0.30, 0.20, 0.45), "feats": [&"many_eyes", &"third_eye"]},
+	&"echo_parasite":     {"color": Color(0.50, 0.30, 0.70), "feats": [&"swarm_orbs"]},
+	&"the_nameless":      {"color": Color(0.05, 0.02, 0.12), "feats": [&"halo", &"third_eye"]},
+	&"tessellation":      {"color": Color(0.45, 0.45, 0.85), "feats": [&"halo", &"glow_orb"]},
+	&"tide_horror":       {"color": Color(0.20, 0.30, 0.40), "feats": [&"many_eyes", &"vines"]},
+
+	# --- FEY ---
+	&"thorn_duchess":     {"color": Color(0.60, 0.30, 0.55), "feats": [&"crown", &"vines"]},
+	&"pale_jester":       {"color": Color(0.95, 0.95, 0.85), "feats": [&"mask", &"bell"]},
+	&"dream_weaver":      {"color": Color(0.85, 0.65, 1.0), "feats": [&"halo", &"glow_orb"]},
+	&"market_faer":       {"color": Color(0.95, 0.80, 0.50), "feats": [&"crown", &"glow_orb"]},
+	&"hollow_child":      {"color": Color(0.85, 0.85, 0.90), "feats": [&"mask"]},
+}
+
 var archetype: Archetype
 var body: Node3D
 var _parts: Array[MeshInstance3D] = []
 var _material: StandardMaterial3D
 var _accent: StandardMaterial3D
 var _animator: Animator
+var _eye_color: Color = Color(1, 1, 1)
+var _head_pos: Vector3 = Vector3(0, 1.6, 0)
+var _head_radius: float = 0.20
 
 func build(_arch: Archetype) -> void:
 	archetype = _arch
 	body = Node3D.new()
 	add_child(body)
-	_material = _make_material(FAMILY_COLOR.get(archetype.family, Color.WHITE), 0.7, false)
-	_accent = _make_material(FAMILY_ACCENT.get(archetype.family, Color.WHITE), 0.6, false)
+	var override: Dictionary = ID_VISUAL.get(archetype.id, {})
+	var col: Color = override.get("color", FAMILY_COLOR.get(archetype.family, Color.WHITE))
+	var acc: Color = override.get("accent", FAMILY_ACCENT.get(archetype.family, Color.WHITE))
+	_eye_color = override.get("eye", EYE_COLOR.get(archetype.family, Color.WHITE))
+	_material = _make_material(col, 0.7, false)
+	_accent = _make_material(acc, 0.6, false)
 	match archetype.family:
 		Archetype.Family.HUMANOID:   _build_humanoid()
 		Archetype.Family.BEAST:      _build_beast()
@@ -56,6 +133,7 @@ func build(_arch: Archetype) -> void:
 		Archetype.Family.ABERRATION: _build_aberration()
 		Archetype.Family.FEY:        _build_fey()
 		Archetype.Family.DRACONIC:   _build_draconic()
+	_apply_feats(override.get("feats", []))
 	_apply_tier_scale()
 	_animator = Animator.new()
 	add_child(_animator)
@@ -101,15 +179,16 @@ func _add_eye(pos: Vector3, radius: float = 0.05) -> void:
 	var eye := SphereMesh.new()
 	eye.radius = radius; eye.height = radius * 2
 	var glow := StandardMaterial3D.new()
-	glow.albedo_color = EYE_COLOR.get(archetype.family, Color(1, 1, 1))
+	glow.albedo_color = _eye_color
 	glow.emission_enabled = true
-	glow.emission = EYE_COLOR.get(archetype.family, Color(1, 1, 1))
+	glow.emission = _eye_color
 	glow.emission_energy_multiplier = 4.0
 	_add(eye, pos, glow)
 
 # ---------- Family builders ----------
 
 func _build_humanoid() -> void:
+	_head_pos = Vector3(0, 1.65, 0); _head_radius = 0.22
 	var head := SphereMesh.new(); head.radius = 0.22; head.height = 0.44
 	_add(head, Vector3(0, 1.65, 0))
 	var torso := CapsuleMesh.new(); torso.radius = 0.24; torso.height = 0.85
@@ -130,6 +209,7 @@ func _build_humanoid() -> void:
 	_add_eye(Vector3(0.07, 1.70, 0.20), 0.035)
 
 func _build_beast() -> void:
+	_head_pos = Vector3(0.78, 0.85, 0); _head_radius = 0.30
 	var torso := CapsuleMesh.new(); torso.radius = 0.38; torso.height = 1.3
 	_add(torso, Vector3(0, 0.7, 0), _material, Vector3.ONE, Vector3(0, 0, 90))
 	var head := SphereMesh.new(); head.radius = 0.30; head.height = 0.6
@@ -150,6 +230,7 @@ func _build_beast() -> void:
 	_add_eye(Vector3(0.92, 0.95, -0.18), 0.05)
 
 func _build_undead() -> void:
+	_head_pos = Vector3(0, 1.55, 0); _head_radius = 0.20
 	var hood := SphereMesh.new(); hood.radius = 0.30; hood.height = 0.55
 	_add(hood, Vector3(0, 1.55, 0), _accent, Vector3(1, 1.1, 1))
 	var skull := SphereMesh.new(); skull.radius = 0.20; skull.height = 0.40
@@ -166,6 +247,7 @@ func _build_undead() -> void:
 	_add_eye(Vector3(0.07, 1.55, 0.30), 0.04)
 
 func _build_construct() -> void:
+	_head_pos = Vector3(0, 1.55, 0); _head_radius = 0.19
 	var base := BoxMesh.new(); base.size = Vector3(0.75, 0.4, 0.55)
 	_add(base, Vector3(0, 0.2, 0), _accent)
 	var core := BoxMesh.new(); core.size = Vector3(0.60, 0.85, 0.50)
@@ -183,6 +265,7 @@ func _build_construct() -> void:
 	_add_eye(Vector3(0, 1.55, 0.21), 0.07)
 
 func _build_elemental() -> void:
+	_head_pos = Vector3(0, 1.45, 0); _head_radius = 0.30
 	var core := SphereMesh.new(); core.radius = 0.38; core.height = 0.76
 	_add(core, Vector3(0, 1.1, 0))
 	var halo := TorusMesh.new(); halo.inner_radius = 0.45; halo.outer_radius = 0.55
@@ -195,6 +278,7 @@ func _build_elemental() -> void:
 	_add(orb, Vector3(-0.30, 0.7, -0.15))
 
 func _build_aberration() -> void:
+	_head_pos = Vector3(0, 1.30, 0); _head_radius = 0.40
 	var main := SphereMesh.new(); main.radius = 0.50; main.height = 1.0
 	_add(main, Vector3(0, 1.0, 0))
 	var nub := SphereMesh.new(); nub.radius = 0.16; nub.height = 0.32
@@ -210,6 +294,7 @@ func _build_aberration() -> void:
 		_add_eye(off, 0.05)
 
 func _build_fey() -> void:
+	_head_pos = Vector3(0, 1.55, 0); _head_radius = 0.17
 	var head := SphereMesh.new(); head.radius = 0.17; head.height = 0.34
 	_add(head, Vector3(0, 1.55, 0))
 	var torso := CapsuleMesh.new(); torso.radius = 0.15; torso.height = 0.7
@@ -227,6 +312,7 @@ func _build_fey() -> void:
 	_add_eye(Vector3(0.06, 1.58, 0.16), 0.030)
 
 func _build_draconic() -> void:
+	_head_pos = Vector3(1.45, 1.85, 0); _head_radius = 0.28
 	var torso := CapsuleMesh.new(); torso.radius = 0.50; torso.height = 1.9
 	_add(torso, Vector3(0, 0.95, 0), _material, Vector3.ONE, Vector3(0, 0, 90))
 	var neck := CylinderMesh.new(); neck.top_radius = 0.22; neck.bottom_radius = 0.36; neck.height = 0.85
@@ -256,6 +342,179 @@ func _build_draconic() -> void:
 func _apply_tier_scale() -> void:
 	var s := 1.0 + float(archetype.tier) * 0.12
 	body.scale = Vector3.ONE * s
+
+# ---------- Decoration feats ----------
+
+func _apply_feats(feats: Array) -> void:
+	for f in feats:
+		match String(f):
+			"horns":           _feat_horns()
+			"antlers":         _feat_antlers()
+			"crown":           _feat_crown()
+			"halo":            _feat_halo()
+			"hood":            _feat_hood()
+			"mask":            _feat_mask()
+			"fangs":           _feat_fangs()
+			"spikes_back":     _feat_spikes_back()
+			"sword_held":      _feat_weapon(&"sword")
+			"staff_held":      _feat_weapon(&"staff")
+			"dagger_held":     _feat_weapon(&"dagger")
+			"book_floating":   _feat_book_floating()
+			"third_eye":       _feat_third_eye()
+			"many_eyes":       _feat_many_eyes()
+			"swarm_orbs":      _feat_swarm_orbs()
+			"glow_orb":        _feat_glow_orb()
+			"flame_aura":      _feat_flame_aura()
+			"vines":           _feat_vines()
+			"bell":            _feat_bell()
+			"tail_blade":      _feat_tail_blade()
+			"skull_stack":     _feat_skull_stack()
+			"gear_face":       _feat_gear_face()
+			"wings_pair":      _feat_wings_pair()
+
+func _feat_horns() -> void:
+	var horn := PrismMesh.new(); horn.size = Vector3(0.08, 0.30, 0.08)
+	_add(horn, _head_pos + Vector3(_head_radius * 0.5, _head_radius * 0.9, 0), _accent, Vector3.ONE, Vector3(0, 0, -15))
+	_add(horn, _head_pos + Vector3(-_head_radius * 0.5, _head_radius * 0.9, 0), _accent, Vector3.ONE, Vector3(0, 0, 15))
+
+func _feat_antlers() -> void:
+	for side in [-1, 1]:
+		var base := CylinderMesh.new(); base.top_radius = 0.03; base.bottom_radius = 0.05; base.height = 0.45
+		_add(base, _head_pos + Vector3(side * _head_radius * 0.6, _head_radius * 1.1, 0), _accent, Vector3.ONE, Vector3(0, 0, side * -25))
+		var fork := CylinderMesh.new(); fork.top_radius = 0.02; fork.bottom_radius = 0.03; fork.height = 0.30
+		_add(fork, _head_pos + Vector3(side * 0.32, _head_radius * 1.5, 0), _accent, Vector3.ONE, Vector3(0, 0, side * -55))
+		_add(fork, _head_pos + Vector3(side * 0.20, _head_radius * 1.7, 0.05), _accent, Vector3.ONE, Vector3(0, 0, side * -10))
+
+func _feat_crown() -> void:
+	var ring := TorusMesh.new(); ring.inner_radius = _head_radius * 0.75; ring.outer_radius = _head_radius * 1.0
+	_add(ring, _head_pos + Vector3(0, _head_radius * 0.95, 0), _accent, Vector3.ONE, Vector3(0, 0, 0))
+	for i in 5:
+		var ang := i * TAU / 5.0
+		var spike := PrismMesh.new(); spike.size = Vector3(0.06, 0.18, 0.06)
+		_add(spike, _head_pos + Vector3(cos(ang) * _head_radius * 0.85, _head_radius * 1.2, sin(ang) * _head_radius * 0.85), _accent)
+
+func _feat_halo() -> void:
+	var halo := TorusMesh.new(); halo.inner_radius = _head_radius * 1.4; halo.outer_radius = _head_radius * 1.7
+	var glow := StandardMaterial3D.new()
+	glow.albedo_color = Color(1, 0.95, 0.7); glow.emission_enabled = true
+	glow.emission = Color(1, 0.95, 0.7); glow.emission_energy_multiplier = 3.0
+	_add(halo, _head_pos + Vector3(0, _head_radius * 1.3, 0), glow, Vector3.ONE, Vector3(90, 0, 0))
+
+func _feat_hood() -> void:
+	var hood := SphereMesh.new(); hood.radius = _head_radius * 1.3; hood.height = _head_radius * 2.2
+	_add(hood, _head_pos + Vector3(0, _head_radius * 0.2, -_head_radius * 0.2), _accent, Vector3(1, 1.1, 1))
+
+func _feat_mask() -> void:
+	var mask := BoxMesh.new(); mask.size = Vector3(_head_radius * 1.7, _head_radius * 1.2, 0.06)
+	_add(mask, _head_pos + Vector3(0, 0, _head_radius * 0.95), _accent)
+
+func _feat_fangs() -> void:
+	var f := PrismMesh.new(); f.size = Vector3(0.04, 0.10, 0.04)
+	_add(f, _head_pos + Vector3(0.06, -_head_radius * 0.15, _head_radius * 0.95), _accent, Vector3.ONE, Vector3(180, 0, 0))
+	_add(f, _head_pos + Vector3(-0.06, -_head_radius * 0.15, _head_radius * 0.95), _accent, Vector3.ONE, Vector3(180, 0, 0))
+
+func _feat_spikes_back() -> void:
+	for i in 5:
+		var s := PrismMesh.new(); s.size = Vector3(0.08, 0.18, 0.08)
+		_add(s, Vector3(0, 1.05 + i * 0.05, -0.2 - i * 0.10), _accent)
+
+func _feat_weapon(kind: StringName) -> void:
+	# Right hand position approximated for humanoids; for others use offset from torso.
+	var base_pos: Vector3 = Vector3(0.42, 0.85, 0.0)
+	if archetype.family != Archetype.Family.HUMANOID:
+		base_pos = _head_pos + Vector3(_head_radius * 1.5, -_head_radius, 0)
+	match String(kind):
+		"sword":
+			var blade := BoxMesh.new(); blade.size = Vector3(0.05, 0.75, 0.04)
+			_add(blade, base_pos, _accent, Vector3.ONE, Vector3(0, 0, 5))
+			var hilt := BoxMesh.new(); hilt.size = Vector3(0.18, 0.06, 0.06)
+			_add(hilt, base_pos + Vector3(0, -0.40, 0), _accent)
+		"staff":
+			var rod := CylinderMesh.new(); rod.top_radius = 0.04; rod.bottom_radius = 0.04; rod.height = 1.6
+			_add(rod, base_pos + Vector3(0, 0.20, 0), _accent)
+			var orb := SphereMesh.new(); orb.radius = 0.10; orb.height = 0.20
+			var glow := StandardMaterial3D.new()
+			glow.albedo_color = _eye_color; glow.emission_enabled = true
+			glow.emission = _eye_color; glow.emission_energy_multiplier = 4.0
+			_add(orb, base_pos + Vector3(0, 1.0, 0), glow)
+		"dagger":
+			var blade := BoxMesh.new(); blade.size = Vector3(0.04, 0.34, 0.03)
+			_add(blade, base_pos, _accent)
+			var hilt := BoxMesh.new(); hilt.size = Vector3(0.12, 0.05, 0.05)
+			_add(hilt, base_pos + Vector3(0, -0.18, 0), _accent)
+
+func _feat_book_floating() -> void:
+	var book := BoxMesh.new(); book.size = Vector3(0.30, 0.04, 0.22)
+	_add(book, _head_pos + Vector3(0.4, -0.1, 0), _accent, Vector3.ONE, Vector3(0, 25, 10))
+	var page := BoxMesh.new(); page.size = Vector3(0.28, 0.02, 0.20)
+	var glow := StandardMaterial3D.new()
+	glow.albedo_color = Color(1, 0.95, 0.7); glow.emission_enabled = true
+	glow.emission = Color(1, 0.95, 0.7); glow.emission_energy_multiplier = 2.0
+	_add(page, _head_pos + Vector3(0.4, -0.07, 0), glow, Vector3.ONE, Vector3(0, 25, 10))
+
+func _feat_third_eye() -> void:
+	_add_eye(_head_pos + Vector3(0, _head_radius * 0.7, _head_radius * 1.0), 0.06)
+
+func _feat_many_eyes() -> void:
+	for i in 6:
+		var ang := i * TAU / 6.0
+		_add_eye(_head_pos + Vector3(cos(ang) * _head_radius * 0.95, _head_radius * 0.4 + sin(ang) * _head_radius * 0.5, _head_radius * 0.95), 0.045)
+
+func _feat_swarm_orbs() -> void:
+	for i in 8:
+		var ang := i * TAU / 8.0
+		var orb := SphereMesh.new(); orb.radius = 0.12; orb.height = 0.24
+		var glow := StandardMaterial3D.new()
+		glow.albedo_color = _material.albedo_color; glow.emission_enabled = true
+		glow.emission = _eye_color; glow.emission_energy_multiplier = 2.0
+		_add(orb, Vector3(cos(ang) * 0.7, 1.0 + sin(ang) * 0.4, sin(ang) * 0.7), glow)
+
+func _feat_glow_orb() -> void:
+	var orb := SphereMesh.new(); orb.radius = 0.18; orb.height = 0.36
+	var glow := StandardMaterial3D.new()
+	glow.albedo_color = _eye_color; glow.emission_enabled = true
+	glow.emission = _eye_color; glow.emission_energy_multiplier = 5.0
+	_add(orb, _head_pos + Vector3(0.55, 0.0, 0.0), glow)
+
+func _feat_flame_aura() -> void:
+	for i in 5:
+		var ang := i * TAU / 5.0
+		var f := SphereMesh.new(); f.radius = 0.10; f.height = 0.20
+		var glow := StandardMaterial3D.new()
+		glow.albedo_color = Color(1, 0.55, 0.20); glow.emission_enabled = true
+		glow.emission = Color(1, 0.55, 0.20); glow.emission_energy_multiplier = 4.0
+		_add(f, Vector3(cos(ang) * 0.6, 0.4 + sin(i) * 0.2, sin(ang) * 0.6), glow)
+
+func _feat_vines() -> void:
+	for i in 4:
+		var v := CylinderMesh.new(); v.top_radius = 0.02; v.bottom_radius = 0.04; v.height = 0.7
+		var ang := i * TAU / 4.0
+		_add(v, Vector3(cos(ang) * 0.25, 0.7, sin(ang) * 0.25), _accent, Vector3.ONE, Vector3(15, rad_to_deg(ang), 5))
+
+func _feat_bell() -> void:
+	var stem := CylinderMesh.new(); stem.top_radius = 0.02; stem.bottom_radius = 0.02; stem.height = 0.30
+	_add(stem, _head_pos + Vector3(0, _head_radius * 1.6, 0), _accent)
+	var bell := SphereMesh.new(); bell.radius = 0.10; bell.height = 0.16
+	_add(bell, _head_pos + Vector3(0, _head_radius * 1.85, 0), _accent)
+
+func _feat_tail_blade() -> void:
+	var blade := PrismMesh.new(); blade.size = Vector3(0.20, 0.40, 0.06)
+	var pos := Vector3(-1.0, 0.85, 0) if archetype.family != Archetype.Family.HUMANOID else Vector3(0, 0.4, -0.4)
+	_add(blade, pos, _accent, Vector3.ONE, Vector3(0, 0, 30))
+
+func _feat_skull_stack() -> void:
+	for i in 4:
+		var skull := SphereMesh.new(); skull.radius = 0.16 - i * 0.02; skull.height = (0.16 - i * 0.02) * 2
+		_add(skull, Vector3(0, 0.4 + i * 0.35, 0), _accent)
+
+func _feat_gear_face() -> void:
+	var gear := TorusMesh.new(); gear.inner_radius = 0.10; gear.outer_radius = 0.18
+	_add(gear, _head_pos + Vector3(0, 0, _head_radius * 0.9), _accent, Vector3.ONE, Vector3(90, 0, 0))
+
+func _feat_wings_pair() -> void:
+	var w := PrismMesh.new(); w.size = Vector3(1.2, 0.8, 0.05)
+	_add(w, Vector3(0, 1.2, -0.4), _material, Vector3.ONE, Vector3(0, 0, 20))
+	_add(w, Vector3(0, 1.2, 0.4), _material, Vector3.ONE, Vector3(0, 180, -20))
 
 func react(reaction: StringName) -> void:
 	if _animator == null: return

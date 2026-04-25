@@ -51,11 +51,14 @@ static func _procedural(rng: DRNG, families: Array, tier: int, chaos: float) -> 
 	return a
 
 static func _tier_roll(rng: DRNG, chaos: float) -> int:
-	var roll := rng.range_i(0, 100)
-	if roll < int(50 - chaos * 30): return Archetype.Tier.COMMON
-	if roll < 80: return Archetype.Tier.UNCOMMON
-	if roll < 95: return Archetype.Tier.RARE
-	return Archetype.Tier.ELITE
+	var roll := rng.range_i(0, 1000)
+	var common_cap := int(500 - chaos * 250)        # 25..50%
+	if roll < common_cap:        return Archetype.Tier.COMMON
+	if roll < 800:               return Archetype.Tier.UNCOMMON   # ~30%
+	if roll < 920:               return Archetype.Tier.RARE       # ~12%
+	if roll < 980:               return Archetype.Tier.ELITE      # ~6%
+	if roll < 998:               return Archetype.Tier.APEX       # ~1.8%
+	return Archetype.Tier.MYTHIC                                  # ~0.2%
 
 static func _role_for(fam: int, rng: DRNG) -> int:
 	match fam:

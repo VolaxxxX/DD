@@ -7,6 +7,7 @@ signal zone_intro(text: String, biome: StringName)
 signal creature_reaction(reaction: StringName)
 signal stats_changed(force: int, injuries: Array)
 signal injury_added(injury_id: StringName)
+signal world_boss_spawned(boss: Dictionary)
 signal run_over(cause: StringName)
 
 const ENCOUNTERS_PER_ZONE := 4
@@ -120,7 +121,8 @@ func _maybe_trigger_world_boss() -> void:
 	var boss: Dictionary = WorldBossSystem.maybe_trigger(world.memory, world.active_zone(), _elite_kills_this_run, rng.derive(0x80551))
 	if boss.is_empty(): return
 	_world_boss_triggered = true
-	zone_intro.emit(String(boss.intro), world.active_zone().biome)
+	world_boss_spawned.emit(boss)
+	zone_intro.emit("[%s]\n%s" % [String(boss.title).to_upper(), String(boss.intro)], world.active_zone().biome)
 
 func _wait(seconds: float) -> void:
 	await Engine.get_main_loop().create_timer(seconds).timeout

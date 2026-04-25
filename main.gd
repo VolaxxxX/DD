@@ -12,6 +12,7 @@ var director: SceneDirector
 var backdrop: Backdrop3D
 var decor: Decor3D
 var creature_node: Creature3D
+var boss_node: WorldBoss3D
 var player_state: PlayerState
 var _rng: DRNG
 var _char_create_root: Node3D
@@ -61,6 +62,7 @@ func _start_game() -> void:
 	director.creature_reaction.connect(_on_creature_reaction)
 	director.stats_changed.connect(_on_stats)
 	director.run_over.connect(_on_run_over)
+	director.world_boss_spawned.connect(_on_world_boss)
 	ui.choice_selected.connect(_on_choice)
 	Bus.zone_changed.connect(_on_zone_changed)
 
@@ -83,6 +85,10 @@ func _build_stage_for_active_zone() -> void:
 	decor.build(z.biome, z.corruption, _rng.derive(z.index + 100))
 
 func _spawn_creature(arch: Archetype) -> void:
+	if boss_node and is_instance_valid(boss_node):
+		boss_node.queue_free()
+		boss_node = null
+		_setup_camera()
 	if creature_node and is_instance_valid(creature_node):
 		creature_node.queue_free()
 	creature_node = Creature3D.new()
@@ -126,3 +132,23 @@ func _on_run_over(cause: StringName) -> void:
 func _on_zone_changed(idx: int, _seed: int) -> void:
 	ui.update_zone(idx, orchestrator.world.zones[idx].biome)
 	_build_stage_for_active_zone()
+
+func _on_world_boss(boss: Dictionary) -> void:
+	if creature_node and is_instance_valid(creature_node):
+		creature_node.queue_free()
+		creature_node = null
+	if boss_node and is_instance_valid(boss_node):
+		boss_node.queue_free()
+	boss_node = WorldBoss3D.new()
+	boss_node.position = Vector3(0, 0, -2)
+	stage.add_child(boss_node)
+	boss_node.build(StringName(boss.id))
+	boss_node.scale = Vector3.ZERO
+	# Cinematic: camera pulls back, boss scales up.
+	var t := create_tween().set_parallel(true)
+	t.tween_property(boss_node, "scale", Vector3.ONE, 1.6).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	t.tween_property(camera, "position", Vector3(0, 4.5, 12.0), 1.8).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	t.tween_property(camera, "fov", 60.0, 1.8)
+	# Slow rotate around boss for awe
+	var spin := create_tween().set_loops()
+	spin.tween_property(boss_node, "rotation:y", TAU, 30.0)
