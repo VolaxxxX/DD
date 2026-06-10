@@ -106,6 +106,118 @@ static func all() -> Array:
 			 "good": {"narr": "Tu t'éloignes. Bien plus tard, tu entends quelque chose hurler là-bas."},
 			 "bad":  {"narr": "Tu t'éloignes. Mais la trace est aussi devant toi maintenant."}},
 		 ]},
+
+		# --- WELL: deep, dark water ---
+		{"id": &"deep_well",
+		 "title": "Un puits creusé droit dans la pierre. L'eau est immobile.",
+		 "biomes": [&"ruins", &"city", &"crypt", &"highland"],
+		 "choices": [
+			{"tone": T_CURI, "text": "Tu te penches au bord. Tu vois ton reflet — puis autre chose.",
+			 "good": {"stat_delta": 2, "stat": &"instinct", "narr": "L'autre visage te dit ce que tu dois savoir, puis disparaît."},
+			 "bad":  {"injury": &"curse", "narr": "L'autre visage te sourit. Tu te recules. Trop tard."}},
+			{"tone": T_MYST, "text": "Tu murmures ton nom dans le puits.",
+			 "good": {"heal": &"exhaustion", "narr": "Le puits te répond avec ta propre voix, plus jeune. Tu retrouves un souffle ancien."},
+			 "bad":  {"injury": &"terror", "narr": "Le puits te répond avec ta voix, mais elle dit autre chose que ce que tu as dit."}},
+			{"tone": T_CAUT, "text": "Tu jettes une pierre et tu écoutes le fond.",
+			 "good": {"narr": "Tu comptes longtemps. Tu apprends la profondeur. Tu pars rassuré."},
+			 "bad":  {"narr": "Tu n'entends jamais la pierre toucher le fond."}},
+		 ]},
+
+		# --- BEGGAR: starving child ---
+		{"id": &"beggar_child",
+		 "title": "Un enfant assis sur la route. Maigre. Silencieux.",
+		 "biomes": [&"city", &"ruins", &"coast", &"highland"],
+		 "choices": [
+			{"tone": T_DIPL, "text": "Tu lui donnes la moitié de tes vivres.",
+			 "good": {"stat_delta": 1, "stat": &"charisme", "narr": "Il te regarde sans parler. Plus tard, tu trouveras une pièce dans ta poche que tu n'avais pas."},
+			 "bad":  {"injury": &"exhaustion", "narr": "Il avale tout en silence puis détale. Tu réalises ce que tu viens de céder."}},
+			{"tone": T_DECE, "text": "Tu lui demandes son nom — et tu fouilles son baluchon.",
+			 "good": {"stat_delta": 2, "stat": &"vivacite", "narr": "Tu trouves quelque chose de précieux. L'enfant pleure mais ne te suit pas."},
+			 "bad":  {"injury": &"curse", "narr": "L'enfant lève les yeux. Ils sont trop vieux. Bien trop vieux."}},
+			{"tone": T_CAUT, "text": "Tu fais semblant de ne pas le voir et tu passes.",
+			 "good": {"narr": "Tu passes. Tu n'es ni meilleur ni pire qu'avant."},
+			 "bad":  {"injury": &"terror", "narr": "Tu sens son regard sur ta nuque pendant des kilomètres."}},
+		 ]},
+
+		# --- FORK: two roads ---
+		{"id": &"crossroads",
+		 "title": "Le chemin se divise. À gauche, le silence. À droite, des oiseaux.",
+		 "biomes": [&"forest", &"highland", &"swamp", &"ruins"],
+		 "choices": [
+			{"tone": T_CURI, "text": "Tu vas vers le silence.",
+			 "good": {"stat_delta": 1, "stat": &"esprit", "narr": "Tu trouves quelque chose qu'on n'avait pas voulu que tu trouves."},
+			 "bad":  {"injury": &"terror", "narr": "Le silence n'était pas un silence. C'était une attente."}},
+			{"tone": T_CAUT, "text": "Tu vas vers les oiseaux.",
+			 "good": {"stat_delta": 1, "stat": &"vivacite", "narr": "Tu marches dans le chant. La route est sûre, pour aujourd'hui."},
+			 "bad":  {"injury": &"bleeding", "narr": "Les oiseaux s'arrêtent net. Ce n'était pas pour toi qu'ils chantaient."}},
+			{"tone": T_MYST, "text": "Tu fermes les yeux et tu suis ce qui tire en toi.",
+			 "good": {"stat_delta": 2, "stat": &"instinct", "narr": "Tu prends la troisième route — celle qu'on ne voit qu'en fermant les yeux."},
+			 "bad":  {"injury": &"curse", "narr": "Tu marches longtemps. Tu te retrouves au même carrefour. Trois fois."}},
+		 ]},
+
+		# --- BURNING TREE: tree on fire, no smoke ---
+		{"id": &"burning_tree",
+		 "title": "Un arbre brûle. Sans fumée. Sans chaleur.",
+		 "biomes": [&"forest", &"highland", &"anomaly", &"corrupted"],
+		 "choices": [
+			{"tone": T_MYST, "text": "Tu poses la main sur l'écorce. La flamme passe à travers toi.",
+			 "good": {"stat_delta": 2, "stat": &"esprit", "narr": "Tu sens un savoir vieux te traverser. Tu n'oseras pas le partager."},
+			 "bad":  {"injury": &"curse", "narr": "La flamme te traverse, oui. Mais elle laisse quelque chose en passant."}},
+			{"tone": T_AGGR, "text": "Tu abats l'arbre. La flamme cesse net.",
+			 "good": {"stat_delta": 1, "stat": &"force", "narr": "L'arbre tombe en silence. La flamme s'éteint. Le monde semble plus simple."},
+			 "bad":  {"injury": &"bleeding", "narr": "L'arbre saigne. Pas de la sève. Du sang. Il te frappe au passage."}},
+			{"tone": T_CAUT, "text": "Tu détournes le regard et continues.",
+			 "good": {"narr": "Tu pars. Plus tard, tu ne sauras plus dire si tu l'as vraiment vu."},
+			 "bad":  {"injury": &"terror", "narr": "Tu pars. L'arbre marche derrière toi pendant six pas. Tu n'oses pas te retourner."}},
+		 ]},
+
+		# --- ANIMAL CARCASS: still warm ---
+		{"id": &"warm_carcass",
+		 "title": "Une carcasse encore tiède. Aucune trace autour.",
+		 "biomes": [&"forest", &"highland", &"swamp", &"corrupted"],
+		 "choices": [
+			{"tone": T_CURI, "text": "Tu examines les plaies. Ce qui a tué cela n'est pas une bête.",
+			 "good": {"stat_delta": 1, "stat": &"instinct", "narr": "Tu comprends quelque chose sur le tueur. Tu saluras peut-être l'éviter."},
+			 "bad":  {"injury": &"terror", "narr": "Tu comprends quelque chose sur le tueur. Tu n'aurais pas dû."}},
+			{"tone": T_AGGR, "text": "Tu prends la viande. Tant pis pour le reste.",
+			 "good": {"heal": &"exhaustion", "narr": "Tu manges. Tu repars plus solide. C'est ce qu'il fallait."},
+			 "bad":  {"injury": &"poison", "narr": "Tu manges. Quelque chose dans la chair n'aurait pas dû être mangé."}},
+			{"tone": T_CAUT, "text": "Tu pars sans toucher. Tu pars vite.",
+			 "good": {"narr": "Tu pars. C'est probablement la meilleure décision que tu aies prise aujourd'hui."},
+			 "bad":  {"narr": "Tu pars. Quelque chose te suit du regard depuis l'arbre voisin."}},
+		 ]},
+
+		# --- DOUBLE: someone who looks like you ---
+		{"id": &"the_double",
+		 "title": "Au bout du chemin, quelqu'un. Il a ton visage.",
+		 "biomes": [&"anomaly", &"corrupted", &"swamp", &"crypt"],
+		 "choices": [
+			{"tone": T_AGGR, "text": "Tu l'attaques sans hésiter. Il n'y a pas de place pour deux toi.",
+			 "good": {"stat_delta": 1, "stat": &"force", "narr": "Tu le frappes. Il s'effrite comme du verre noir. Tu emportes un éclat."},
+			 "bad":  {"injury": &"bleeding", "narr": "Tu frappes ton propre visage. Tu sens la coupure sur le tien."}},
+			{"tone": T_DIPL, "text": "Tu lui parles. Tu lui demandes qui il est.",
+			 "good": {"stat_delta": 2, "stat": &"esprit", "narr": "Il te répond doucement. Il t'apprend quelque chose que tu avais oublié."},
+			 "bad":  {"injury": &"curse", "narr": "Il répète chacun de tes mots, à l'envers. Puis il prend ton ombre."}},
+			{"tone": T_CAUT, "text": "Tu détournes les yeux et tu passes très loin de lui.",
+			 "good": {"narr": "Tu passes. Il reste là, immobile. Tu ne te retournes pas."},
+			 "bad":  {"injury": &"terror", "narr": "Tu passes. Tu sens qu'il a pris ta place dans le chemin que tu viens de quitter."}},
+		 ]},
+
+		# --- BROKEN STATUE: half-buried saint ---
+		{"id": &"broken_statue",
+		 "title": "Une statue brisée à demi enterrée. Le visage manque.",
+		 "biomes": [&"ruins", &"crypt", &"city", &"forest"],
+		 "choices": [
+			{"tone": T_DIPL, "text": "Tu redresses ce que tu peux. Tu nettoies la pierre.",
+			 "good": {"heal": &"terror", "narr": "Tu fais un geste petit, juste. Quelque chose en toi se réaligne."},
+			 "bad":  {"injury": &"exhaustion", "narr": "Tu travailles longtemps. Tu ne sais plus pourquoi. Tu n'as rien gagné."}},
+			{"tone": T_DECE, "text": "Tu cherches dans le socle. Les statues cachent souvent.",
+			 "good": {"stat_delta": 2, "stat": &"vivacite", "narr": "Tu trouves un creux. Dans le creux, quelque chose qu'on avait laissé pour toi."},
+			 "bad":  {"injury": &"curse", "narr": "Tu trouves un creux. Quelque chose y était. Maintenant ça te suit."}},
+			{"tone": T_MYST, "text": "Tu poses ton front contre la pierre. Tu écoutes.",
+			 "good": {"stat_delta": 1, "stat": &"esprit", "narr": "La pierre te raconte la guerre qu'elle a vue. C'était il y a longtemps."},
+			 "bad":  {"injury": &"terror", "narr": "La pierre se souvient. Elle veut que tu te souviennes aussi."}},
+		 ]},
 	]
 
 static func for_biome(biome: StringName) -> Array:
