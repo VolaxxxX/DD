@@ -14,6 +14,7 @@ var decor: Decor3D
 var creature_node: Creature3D
 var boss_node: WorldBoss3D
 var player_state: PlayerState
+var players: Array = []
 var _rng: DRNG
 var _char_create_root: Node3D
 var _started: bool = false
@@ -25,11 +26,15 @@ func _show_char_create() -> void:
 	ui.visible = false
 	_char_create_root = preload("res://ui/char_create.tscn").instantiate()
 	add_child(_char_create_root)
-	_char_create_root.character_chosen.connect(_on_char_chosen)
+	_char_create_root.characters_ready.connect(_on_characters_ready)
 
-func _on_char_chosen(name: String, kind: int, stats: Dictionary) -> void:
-	player_state = PlayerState.new()
-	player_state.setup(name, kind, stats)
+func _on_characters_ready(player_defs: Array) -> void:
+	players.clear()
+	for d in player_defs:
+		var p := PlayerState.new()
+		p.setup(String(d.name), int(d.kind), d.stats)
+		players.append(p)
+	player_state = players[0]
 	if _char_create_root and is_instance_valid(_char_create_root):
 		_char_create_root.queue_free()
 	ui.visible = true
@@ -47,8 +52,9 @@ func _start_game() -> void:
 	fate = FateEngine.new(DRNG.new(seed ^ 0xFA7E))
 	resolver = EventResolver.new(fate)
 
-	director = SceneDirector.new(orchestrator.world, resolver, _rng.derive(0xD12EC), player_state)
+	director = SceneDirector.new(orchestrator.world, resolver, _rng.derive(0xD12EC), players)
 	add_child(director)
+	director.turn_changed.connect(func(p: PlayerState): ui.set_player(p))
 
 	_setup_camera()
 	_build_stage_for_active_zone()

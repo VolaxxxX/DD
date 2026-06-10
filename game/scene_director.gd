@@ -15,18 +15,38 @@ const ENCOUNTERS_PER_ZONE := 4
 var world: WorldEngine
 var resolver: EventResolver
 var rng: DRNG
-var player: PlayerState
+var players: Array = []          # Array[PlayerState] — 1 (solo) or 2 (duo)
+var active_idx: int = 0
 var current: Encounter
 var _encounters_in_zone: int = 0
 var _awaiting_choice: bool = false
 var _elite_kills_this_run: int = 0
 var _world_boss_triggered: bool = false
 
-func _init(_world: WorldEngine, _resolver: EventResolver, _rng: DRNG, _player: PlayerState) -> void:
+signal turn_changed(player: PlayerState)
+
+var player: PlayerState:
+	get: return players[active_idx]
+
+func _init(_world: WorldEngine, _resolver: EventResolver, _rng: DRNG, _players: Array) -> void:
 	world = _world
 	resolver = _resolver
 	rng = _rng
-	player = _player
+	players = _players
+
+func _rotate_player() -> void:
+	if players.size() < 2: return
+	var tries := 0
+	while tries < players.size():
+		active_idx = (active_idx + 1) % players.size()
+		if players[active_idx].alive: break
+		tries += 1
+	turn_changed.emit(player)
+
+func _all_dead() -> bool:
+	for p in players:
+		if p.alive: return false
+	return true
 
 func begin() -> void:
 	_emit_zone_intro()
@@ -44,6 +64,7 @@ func next_encounter() -> void:
 	if _encounters_in_zone >= ENCOUNTERS_PER_ZONE:
 		_advance_zone()
 		return
+	_rotate_player()
 	var z := world.active_zone()
 	var er := rng.derive(_encounters_in_zone + 1)
 	# 30% situation, 70% creature.
@@ -76,11 +97,26 @@ func choose(idx: int) -> void:
 		_encounters_in_zone += 1
 		next_encounter()
 		return
-	var result: Dictionary = current.resolve(idx, resolver, 0)
+	var coop_mod: int = 0
+	if players.size() > 1 and not _all_dead():
+		var both_alive := true
+		for p in players:
+			if not p.alive: both_alive = false
+		if both_alive: coop_mod = 1
+	var result: Dictionary = current.resolve(idx, resolver, coop_mod)
 	narrative_logged.emit(result.narrative, result.tone, result.outcome)
 	_apply(result)
 	if not player.alive:
-		run_over.emit(StringName("tué par %s" % current.creature_name))
+		if _all_dead():
+			run_over.emit(StringName("tué par %s" % current.creature_name))
+			return
+		# Duo: the survivor carries on, marked by grief.
+		for p in players:
+			if p.alive: p.add_injury(&"terror")
+		narrative_logged.emit("Ton compagnon ne se relève pas. Tu continues seul, et quelque chose en toi reste là-bas.", 1, 1)
+		await _wait(2.5)
+		_encounters_in_zone += 1
+		next_encounter()
 		return
 	# If encounter triggered a followup dialogue, present its choices instead of moving on.
 	if result.get("has_followup", false) and current is Encounter:

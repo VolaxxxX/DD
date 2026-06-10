@@ -1,7 +1,7 @@
 extends Node3D
 # Character creation: name + class picker + stat point allocation + 3D preview.
 
-signal character_chosen(name: String, kind: int, stats: Dictionary)
+signal characters_ready(player_defs: Array)  # [{name, kind, stats}] — 1 (solo) ou 2 (duo)
 
 @onready var name_edit: LineEdit = $UI/Root/Panel/V/NameRow/NameEdit
 @onready var class_label: Label = $UI/Root/Panel/V/ClassName
@@ -22,15 +22,33 @@ var _stat_value_labels: Dictionary = {}     # key -> Label
 var _stat_plus_buttons: Dictionary = {}     # key -> Button
 var _stat_minus_buttons: Dictionary = {}    # key -> Button
 var _base_for_class: Dictionary = {}        # cached base stats for current class
+var _duo: bool = false
+var _collected: Array = []                  # player defs already confirmed
+var _duo_btn: CheckButton
 
 func _ready() -> void:
 	_classes = PlayerClass.all()
 	prev_btn.pressed.connect(_prev)
 	next_btn.pressed.connect(_next)
 	play_btn.pressed.connect(_confirm)
+	_duo_btn = CheckButton.new()
+	_duo_btn.text = "MODE DUO (à deux sur ce téléphone)"
+	_duo_btn.add_theme_font_size_override("font_size", 16)
+	_duo_btn.toggled.connect(func(on: bool): _duo = on; _update_play_label())
+	var v := $UI/Root/Panel/V
+	v.add_child(_duo_btn)
+	v.move_child(_duo_btn, 1)
 	_build_stat_rows()
 	_load_class(_idx)
 	_spin_avatar()
+
+func _update_play_label() -> void:
+	if _duo and _collected.is_empty():
+		play_btn.text = "VALIDER JOUEUR 1"
+	elif _duo:
+		play_btn.text = "VALIDER JOUEUR 2 — ENTRER"
+	else:
+		play_btn.text = "ENTRER DANS LA DÉRIVE"
 
 func _spin_avatar() -> void:
 	var t := create_tween().set_loops()
@@ -121,5 +139,14 @@ func _next() -> void:
 
 func _confirm() -> void:
 	var n := name_edit.text.strip_edges()
-	if n == "": n = "Voyageur"
-	character_chosen.emit(n, int(_classes[_idx].kind), _stats.duplicate())
+	if n == "": n = "Voyageur" if _collected.is_empty() else "Compagnon"
+	_collected.append({"name": n, "kind": int(_classes[_idx].kind), "stats": _stats.duplicate()})
+	if _duo and _collected.size() < 2:
+		# Reset the form for player 2.
+		name_edit.text = ""
+		_duo_btn.disabled = true
+		_idx = (_idx + 1) % _classes.size()
+		_load_class(_idx)
+		_update_play_label()
+		return
+	characters_ready.emit(_collected)
