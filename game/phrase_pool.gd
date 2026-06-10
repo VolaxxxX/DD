@@ -327,11 +327,19 @@ static func outcomes_for(tone: int, outcome: int) -> Array:
 	return ["Rien ne se passe."]
 
 static func pick_choice(rng: DRNG, tone: int) -> String:
-	var arr: Array = choices_for(tone)
+	var arr: Array
+	match Lang.code:
+		"en": arr = PhrasePoolEN.choices_for(tone)
+		"id": arr = PhrasePoolID.choices_for(tone)
+		_:    arr = choices_for(tone)
 	return arr[rng.range_i(0, arr.size())]
 
 static func pick_outcome(rng: DRNG, tone: int, outcome: int, creature_name: String) -> String:
-	var arr: Array = outcomes_for(tone, outcome)
+	var arr: Array
+	match Lang.code:
+		"en": arr = PhrasePoolEN.outcomes_for(tone, outcome)
+		"id": arr = PhrasePoolID.outcomes_for(tone, outcome)
+		_:    arr = outcomes_for(tone, outcome)
 	var tpl: String = arr[rng.range_i(0, arr.size())]
 	return tpl % creature_name
 
@@ -354,6 +362,9 @@ static func family_descriptor(family: int, tier: int) -> String:
 	return base
 
 static func biome_intro(biome: StringName, corruption: float) -> String:
+	match Lang.code:
+		"en": return PhrasePoolEN.biome_intro(biome, corruption)
+		"id": return PhrasePoolID.biome_intro(biome, corruption)
 	var base := ""
 	match String(biome):
 		"forest":    base = "Tu entres dans la forêt. Les feuilles étouffent tes pas."

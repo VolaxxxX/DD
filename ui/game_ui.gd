@@ -78,7 +78,7 @@ func show_narrative(text: String, _tone: int, outcome: int) -> void:
 	_flash_fade(OUTCOME_TINT.get(outcome, Color.WHITE), 0.25 if outcome == 2 else 0.5)
 
 func update_stats(force: int, injuries: Array) -> void:
-	stat_label.text = "FORCE  %d" % force
+	stat_label.text = "%s  %d" % [Lang.ui("force"), force]
 	_render_injuries(injuries)
 
 func _render_injuries(injuries: Array) -> void:
@@ -98,7 +98,7 @@ func update_zone(index: int, biome: StringName) -> void:
 func show_run_over(cause: StringName) -> void:
 	_hide_choices()
 	narrative.modulate = Color(1, 0.4, 0.4)
-	narrative.text = "\n\n[center][b]FIN DU PÉRIPLE[/b]\n%s[/center]" % cause
+	narrative.text = "\n\n[center][b]%s[/b]\n%s[/center]" % [Lang.ui("run_over"), cause]
 	fade.color = Color(0, 0, 0)
 	var t := create_tween()
 	t.tween_property(fade, "modulate:a", 0.6, 1.5)

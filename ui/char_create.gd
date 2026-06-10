@@ -27,12 +27,32 @@ var _collected: Array = []                  # player defs already confirmed
 var _duo_btn: CheckButton
 
 func _ready() -> void:
+	Lang.load_pref()
 	_classes = PlayerClass.all()
 	prev_btn.pressed.connect(_prev)
 	next_btn.pressed.connect(_next)
 	play_btn.pressed.connect(_confirm)
+	# Language row: FR | EN | ID
+	var lang_row := HBoxContainer.new()
+	lang_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	lang_row.add_theme_constant_override("separation", 12)
+	for lc in ["fr", "en", "id"]:
+		var b := Button.new()
+		b.text = lc.to_upper()
+		b.custom_minimum_size = Vector2(64, 40)
+		var code := lc
+		b.pressed.connect(func():
+			Lang.code = code
+			Lang.save_pref()
+			_update_play_label()
+			_duo_btn.text = Lang.ui("duo")
+			_refresh())
+		lang_row.add_child(b)
+	var v0 := $UI/Root/Panel/V
+	v0.add_child(lang_row)
+	v0.move_child(lang_row, 0)
 	_duo_btn = CheckButton.new()
-	_duo_btn.text = "MODE DUO (à deux sur ce téléphone)"
+	_duo_btn.text = Lang.ui("duo")
 	_duo_btn.add_theme_font_size_override("font_size", 16)
 	_duo_btn.toggled.connect(func(on: bool): _duo = on; _update_play_label())
 	var v := $UI/Root/Panel/V
@@ -44,11 +64,11 @@ func _ready() -> void:
 
 func _update_play_label() -> void:
 	if _duo and _collected.is_empty():
-		play_btn.text = "VALIDER JOUEUR 1"
+		play_btn.text = Lang.ui("p1_ok")
 	elif _duo:
-		play_btn.text = "VALIDER JOUEUR 2 — ENTRER"
+		play_btn.text = Lang.ui("p2_ok")
 	else:
-		play_btn.text = "ENTRER DANS LA DÉRIVE"
+		play_btn.text = Lang.ui("enter")
 
 func _spin_avatar() -> void:
 	var t := create_tween().set_loops()
@@ -99,7 +119,7 @@ func _refresh() -> void:
 	var c: Dictionary = _classes[_idx]
 	class_label.text = String(c.name)
 	tagline_label.text = String(c.tagline)
-	points_label.text = "POINTS À RÉPARTIR : %d" % _points_left
+	points_label.text = Lang.ui("points") % _points_left
 	for k in PlayerClass.stat_keys():
 		var v: int = int(_stats[k])
 		var base: int = int(_base_for_class.get(k, 8))

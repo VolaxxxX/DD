@@ -108,12 +108,12 @@ func choose(idx: int) -> void:
 	_apply(result)
 	if not player.alive:
 		if _all_dead():
-			run_over.emit(StringName("tué par %s" % current.creature_name))
+			run_over.emit(StringName("%s %s" % [Lang.ui("killed_by"), current.creature_name]))
 			return
 		# Duo: the survivor carries on, marked by grief.
 		for p in players:
 			if p.alive: p.add_injury(&"terror")
-		narrative_logged.emit("Ton compagnon ne se relève pas. Tu continues seul, et quelque chose en toi reste là-bas.", 1, 1)
+		narrative_logged.emit(Lang.ui("grief"), 1, 1)
 		await _wait(2.5)
 		_encounters_in_zone += 1
 		next_encounter()
