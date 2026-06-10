@@ -78,8 +78,32 @@ func resolve(choice_idx: int, resolver: EventResolver, coop_mod: int) -> Diction
 	difficulty += BiomeRules.tone_difficulty_mod(zone.biome, tone)
 	var stat_key: StringName = PlayerClass.tone_stat(tone)
 	var actor_stat: int = player.roll_stat_for_tone(tone) + BiomeRules.stat_mod(zone.biome, stat_key)
+	# Dragon presence bends the odds.
+	match zone.dragon_effect:
+		"slow_flight":
+			if tone == PhrasePool.Tone.CAUTIOUS: difficulty += zone.dragon_value
+		"peace_truce":
+			if tone == PhrasePool.Tone.DIPLOMATIC: difficulty -= zone.dragon_value
+		"deceptive_boost":
+			if tone == PhrasePool.Tone.DECEPTIVE: difficulty -= zone.dragon_value
+		"guided_instinct":
+			if stat_key == &"instinct": actor_stat += zone.dragon_value
 	var r: Dictionary = resolver.resolve(choice.kind, actor_stat, difficulty, coop_mod, world_mod, [creature.id])
 	var outcome: int = r.outcome
+	# Outcome-warping dragons.
+	match zone.dragon_effect:
+		"swingy_rolls":
+			if outcome == FateEngine.Outcome.SUCCESS and rng.chance(zone.dragon_value, 100):
+				outcome = FateEngine.Outcome.CRIT_SUCCESS
+			elif outcome == FateEngine.Outcome.FAIL and rng.chance(zone.dragon_value, 100):
+				outcome = FateEngine.Outcome.CRIT_FAIL
+		"mixed_becomes_fail":
+			if outcome == FateEngine.Outcome.MIXED: outcome = FateEngine.Outcome.FAIL
+		"free_crit_cursed":
+			if outcome == FateEngine.Outcome.CRIT_FAIL and not zone.dragon_gift_used:
+				zone.dragon_gift_used = true
+				outcome = FateEngine.Outcome.MIXED
+				player.add_injury(&"curse")
 
 	var narrative: String = PhrasePool.pick_outcome(rng, tone, outcome, creature_name)
 	var cons := _consequences(tone, outcome)

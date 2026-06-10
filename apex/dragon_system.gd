@@ -1,7 +1,6 @@
 class_name DragonSystem extends RefCounted
-# Apex ecosystem modifiers — atmospheric forces with a brief 3D flyby.
-
-enum Kind { CHROMATIC, METALLIC, EXOTIC }
+# Dragons are world forces. Each one applies its OWN effect to the zone,
+# stored on the zone so encounters can consult it on every roll.
 
 static func maybe_manifest(zone: Zone, rng: DRNG) -> void:
 	var killed: Dictionary = zone.memory.data.get("killed_apex", {})
@@ -14,18 +13,29 @@ static func maybe_manifest(zone: Zone, rng: DRNG) -> void:
 	var dragon: Dictionary = DragonRegistry.pick(rng, zone.chaos)
 	zone.dragon_id = StringName(dragon.id)
 	zone.dragon_intro = String(dragon.intro)
-	_apply_modifier(zone, int(dragon.lineage))
+	zone.dragon_effect = String(dragon.zone_effect)
+	zone.dragon_value = int(dragon.value)
+	_apply_manifest_effect(zone, rng)
 	Bus.apex_manifested.emit(int(dragon.lineage), zone.index)
-	print("[DRAGON] zone=%d id=%s" % [zone.index, String(dragon.id)])
+	print("[DRAGON] zone=%d id=%s effect=%s" % [zone.index, String(dragon.id), zone.dragon_effect])
 
-static func _apply_modifier(zone: Zone, kind: int) -> void:
-	match kind:
-		Kind.CHROMATIC:
+static func _apply_manifest_effect(zone: Zone, rng: DRNG) -> void:
+	# One-shot effects applied at manifestation. Persistent roll effects are
+	# read from zone.dragon_effect by Encounter at resolve time.
+	match zone.dragon_effect:
+		"aggression_boost":
 			for a in zone.ecosystem.roster:
-				a.aggression = mini(100, a.aggression + 25)
-		Kind.METALLIC:
+				a.aggression = mini(100, a.aggression + zone.dragon_value)
+		"intel_boost":
 			for a in zone.ecosystem.roster:
-				a.intelligence = mini(100, a.intelligence + 25)
-		Kind.EXOTIC:
-			zone.corruption = clampf(zone.corruption + 0.3, 0.0, 1.0)
-
+				a.intelligence = mini(100, a.intelligence + zone.dragon_value)
+		"corruption_double":
+			zone.corruption = clampf(zone.corruption * 2.0, 0.0, 1.0)
+		"delete_creature":
+			# The Unlit Wyrm erases. One creature simply never existed.
+			if zone.ecosystem.creatures.size() > 1:
+				var idx := rng.range_i(0, zone.ecosystem.creatures.size())
+				var victim: Creature = zone.ecosystem.creatures[idx]
+				victim.alive = false
+		_:
+			pass

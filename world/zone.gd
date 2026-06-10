@@ -13,6 +13,9 @@ var corruption: float
 var ecosystem: Ecosystem
 var dragon_id: StringName = &""
 var dragon_intro: String = ""
+var dragon_effect: String = ""
+var dragon_value: int = 0
+var dragon_gift_used: bool = false   # for free_crit_cursed
 
 func _init(_rng: DRNG, _mem: WorldMemory, _idx: int) -> void:
 	rng = _rng
