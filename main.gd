@@ -94,8 +94,31 @@ func _build_stage_for_active_zone() -> void:
 	decor = Decor3D.new()
 	stage.add_child(decor)
 	decor.build(z.biome, z.corruption, _rng.derive(z.index + 100))
+	_rebuild_player_avatars()
 	if z.dragon_id != &"":
 		_dragon_flyby(z.dragon_id, z.dragon_intro)
+
+var avatar_nodes: Array = []   # Player3D, one per player
+
+func _rebuild_player_avatars() -> void:
+	for a in avatar_nodes:
+		if is_instance_valid(a): a.queue_free()
+	avatar_nodes.clear()
+	for i in players.size():
+		var av := Player3D.new()
+		var x := -3.6 if i == 0 else 3.6
+		av.position = Vector3(x, 0, 1.2)
+		av.scale = Vector3.ONE * 0.85
+		av.rotation_degrees.y = 25.0 if i == 0 else -25.0
+		stage.add_child(av)
+		av.build(players[i].class_data)
+		av.apply_injuries(players[i].injuries)
+		avatar_nodes.append(av)
+
+func _refresh_avatars_injuries() -> void:
+	for i in players.size():
+		if i < avatar_nodes.size() and is_instance_valid(avatar_nodes[i]):
+			avatar_nodes[i].apply_injuries(players[i].injuries)
 
 func _dragon_flyby(id: StringName, intro: String) -> void:
 	var dragon := Dragon3D.new()
@@ -164,6 +187,7 @@ func _on_creature_reaction(reaction: StringName) -> void:
 
 func _on_stats(force: int, injuries: Array) -> void:
 	ui.update_stats(force, injuries)
+	_refresh_avatars_injuries()
 
 func _on_choice(idx: int) -> void:
 	director.choose(idx)

@@ -1,26 +1,35 @@
 class_name Player3D extends Node3D
-# Stylised player avatar built from primitives. Used in char-create preview and (optionally) in-game.
+# Stylised player avatar built from primitives. Used in char-create preview AND in-game.
+# Reacts to injuries (slumps, bleeds, frosts, etc.) via apply_injuries().
 
 var class_data: Dictionary
 var skin_color: Color = Color(0.92, 0.78, 0.65)
 var hair_color: Color = Color(0.30, 0.20, 0.15)
+var _body_mi: MeshInstance3D
+var _root: Node3D
+var _injury_overlays: Node3D                 # everything added by injuries
+var _tremor_tween: Tween
 
 func build(cls: Dictionary, p_skin: Color = Color(0.92, 0.78, 0.65), p_hair: Color = Color(0.30, 0.20, 0.15)) -> void:
 	class_data = cls
 	skin_color = p_skin
 	hair_color = p_hair
 	for c in get_children(): c.queue_free()
+	_root = Node3D.new()
+	add_child(_root)
 	_build_body()
 	_build_head()
 	_build_arms()
 	_build_legs()
 	_build_accessory()
+	_injury_overlays = Node3D.new()
+	add_child(_injury_overlays)
 
 func _build_body() -> void:
 	var body := CapsuleMesh.new()
 	body.radius = 0.22
 	body.height = 0.85
-	_add_part(body, Vector3(0, 0.95, 0), class_data.body_color, 0.7)
+	_body_mi = _add_part(body, Vector3(0, 0.95, 0), class_data.body_color, 0.7)
 
 func _build_head() -> void:
 	var head := SphereMesh.new()
@@ -86,7 +95,7 @@ func _build_accessory() -> void:
 			blade.size = Vector3(0.04, 0.32, 0.02)
 			_add_part(blade, Vector3(0.40, 0.65, 0), Color(0.75, 0.75, 0.85), 0.2, Vector3.ONE, Vector3(0, 0, 5))
 
-func _add_part(mesh: Mesh, pos: Vector3, color: Color, rough: float = 0.7, scale: Vector3 = Vector3.ONE, rot_deg: Vector3 = Vector3.ZERO, emission: Color = Color(0, 0, 0)) -> void:
+func _add_part(mesh: Mesh, pos: Vector3, color: Color, rough: float = 0.7, scale: Vector3 = Vector3.ONE, rot_deg: Vector3 = Vector3.ZERO, emission: Color = Color(0, 0, 0)) -> MeshInstance3D:
 	var mi := MeshInstance3D.new()
 	mi.mesh = mesh
 	mi.position = pos
@@ -100,4 +109,77 @@ func _add_part(mesh: Mesh, pos: Vector3, color: Color, rough: float = 0.7, scale
 		mat.emission = emission
 		mat.emission_energy_multiplier = 1.5
 	mi.material_override = mat
-	add_child(mi)
+	_root.add_child(mi)
+	return mi
+
+# ----------------------- Injury reactions -----------------------
+
+func apply_injuries(injuries: Array) -> void:
+	# Wipe any previous overlay nodes and rebuild from scratch.
+	if _injury_overlays == null: return
+	for c in _injury_overlays.get_children(): c.queue_free()
+	if _tremor_tween and _tremor_tween.is_valid(): _tremor_tween.kill()
+	_root.rotation_degrees = Vector3.ZERO
+	_root.position = Vector3.ZERO
+
+	var has_exhaustion := false
+	for inj_id in injuries:
+		match String(inj_id):
+			"bleeding":    _add_blood()
+			"broken_arm":  _add_sling()
+			"terror":      _start_tremor()
+			"curse":       _add_curse_wisps()
+			"poison":      _tint_body(Color(0.55, 0.85, 0.50), 0.45)
+			"exhaustion":  has_exhaustion = true
+	if has_exhaustion:
+		_root.rotation_degrees.x = 8.0     # slump forward
+		_root.position.y = -0.05
+
+func _overlay(mesh: Mesh, pos: Vector3, color: Color, emission_e: float = 0.0, scale_v: Vector3 = Vector3.ONE) -> MeshInstance3D:
+	var mi := MeshInstance3D.new()
+	mi.mesh = mesh; mi.position = pos; mi.scale = scale_v
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = color; mat.roughness = 0.5
+	if emission_e > 0.0:
+		mat.emission_enabled = true; mat.emission = color
+		mat.emission_energy_multiplier = emission_e
+	mi.material_override = mat
+	_injury_overlays.add_child(mi)
+	return mi
+
+func _add_blood() -> void:
+	for i in 5:
+		var drop := SphereMesh.new(); drop.radius = 0.025; drop.height = 0.05
+		var pos := Vector3(-0.1 + i * 0.05, 1.0 - i * 0.15, 0.22)
+		_overlay(drop, pos, Color(0.55, 0.05, 0.05), 0.5)
+
+func _add_sling() -> void:
+	# White bandage across the chest + the right arm dangling lower.
+	var sling := BoxMesh.new(); sling.size = Vector3(0.5, 0.07, 0.03)
+	_overlay(sling, Vector3(0, 1.05, 0.20), Color(0.85, 0.82, 0.75), 0.0, Vector3.ONE).rotation_degrees = Vector3(0, 0, -22)
+	# Dangling arm: small capsule replacing the bent posture.
+	var arm := CapsuleMesh.new(); arm.radius = 0.07; arm.height = 0.5
+	_overlay(arm, Vector3(0.30, 0.80, 0.18), class_data.body_color.darkened(0.3), 0.0, Vector3.ONE).rotation_degrees = Vector3(0, 0, -45)
+
+func _start_tremor() -> void:
+	_tremor_tween = create_tween().set_loops()
+	_tremor_tween.tween_property(_root, "position:x", 0.015, 0.05)
+	_tremor_tween.tween_property(_root, "position:x", -0.015, 0.05)
+	_tremor_tween.tween_property(_root, "position:x", 0.0, 0.05)
+
+func _add_curse_wisps() -> void:
+	for i in 4:
+		var ang := i * TAU / 4.0
+		var w := SphereMesh.new(); w.radius = 0.06; w.height = 0.12
+		_overlay(w, Vector3(cos(ang) * 0.4, 1.7 + sin(i) * 0.1, sin(ang) * 0.4), Color(0.55, 0.20, 0.85), 3.0)
+
+func _tint_body(tint: Color, mix: float) -> void:
+	# Retint the body mesh by replacing its material.
+	if _body_mi == null: return
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = class_data.body_color.lerp(tint, mix)
+	mat.roughness = 0.65
+	mat.emission_enabled = true
+	mat.emission = tint
+	mat.emission_energy_multiplier = 0.6
+	_body_mi.material_override = mat

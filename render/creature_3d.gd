@@ -122,8 +122,23 @@ func build(_arch: Archetype) -> void:
 	var col: Color = override.get("color", FAMILY_COLOR.get(archetype.family, Color.WHITE))
 	var acc: Color = override.get("accent", FAMILY_ACCENT.get(archetype.family, Color.WHITE))
 	_eye_color = override.get("eye", EYE_COLOR.get(archetype.family, Color.WHITE))
+	# Per-individual variance: deterministic jitter from the spawn seed so each
+	# instance of the same creature looks subtly distinct.
+	var seed_h: int = (Time.get_ticks_usec() * 2654435761) & 0xFFFFFFFF
+	var hue_shift: float = (float(seed_h % 1000) / 1000.0 - 0.5) * 0.08
+	var sat_shift: float = (float((seed_h >> 10) % 1000) / 1000.0 - 0.5) * 0.10
+	var val_shift: float = (float((seed_h >> 20) % 1000) / 1000.0 - 0.5) * 0.10
+	col = _shift_color(col, hue_shift, sat_shift, val_shift)
+	acc = _shift_color(acc, hue_shift * 0.5, sat_shift, val_shift)
 	_material = _make_material(col, 0.7, false)
 	_accent = _make_material(acc, 0.6, false)
+	body.scale = Vector3.ONE * (0.95 + float((seed_h >> 4) % 1000) / 10000.0)
+
+static func _shift_color(c: Color, dh: float, ds: float, dv: float) -> Color:
+	var h := c.h + dh
+	var s := clampf(c.s + ds, 0.0, 1.0)
+	var v := clampf(c.v + dv, 0.0, 1.0)
+	return Color.from_hsv(fposmod(h, 1.0), s, v, c.a)
 	match archetype.family:
 		Archetype.Family.HUMANOID:   _build_humanoid()
 		Archetype.Family.BEAST:      _build_beast()
@@ -516,10 +531,31 @@ func _feat_wings_pair() -> void:
 	_add(w, Vector3(0, 1.2, -0.4), _material, Vector3.ONE, Vector3(0, 0, 20))
 	_add(w, Vector3(0, 1.2, 0.4), _material, Vector3.ONE, Vector3(0, 180, -20))
 
+var _mutation_count: int = 0
+
+func _add_mutation_mark() -> void:
+	# Adds a small visible "mutation": an extra glowing eye on the head, a vine
+	# on the body, or a twisted growth, cycling through forms.
+	_mutation_count += 1
+	match _mutation_count % 3:
+		0:
+			# extra eye on the head
+			_add_eye(_head_pos + Vector3(_head_radius * 0.6, _head_radius * 0.8, _head_radius * 0.5), 0.05)
+		1:
+			# twisted vine from torso
+			var vine := CylinderMesh.new(); vine.top_radius = 0.04; vine.bottom_radius = 0.08; vine.height = 0.45
+			_add(vine, Vector3(0.20, 0.85, 0.20), _accent, Vector3.ONE, Vector3(35, 0, 25))
+		2:
+			# bulbous growth on the head
+			var nub := SphereMesh.new(); nub.radius = 0.10; nub.height = 0.20
+			_add(nub, _head_pos + Vector3(-_head_radius * 0.6, _head_radius * 0.5, 0), _accent)
+
 func react(reaction: StringName) -> void:
 	if _animator == null: return
 	match reaction:
 		&"die":    _animator.play_die()
 		&"flee":   _animator.play_flee()
 		&"hit":    _animator.play_hit()
-		&"mutate": _animator.play_mutate()
+		&"mutate":
+			_add_mutation_mark()
+			_animator.play_mutate()
