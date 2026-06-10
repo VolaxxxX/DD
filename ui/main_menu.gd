@@ -1,0 +1,46 @@
+extends Node3D
+# Main menu: TIARA title, slow-rotating dragon centerpiece, new game / bestiary / lang / quit.
+
+signal start_new_game()
+signal open_bestiary()
+
+@onready var title_label: Label = $UI/Root/Title
+@onready var tagline_label: Label = $UI/Root/Tagline
+@onready var new_btn: Button = $UI/Root/Buttons/NewBtn
+@onready var codex_btn: Button = $UI/Root/Buttons/CodexBtn
+@onready var quit_btn: Button = $UI/Root/Buttons/QuitBtn
+@onready var fr_btn: Button = $UI/Root/Buttons/LangRow/FR
+@onready var en_btn: Button = $UI/Root/Buttons/LangRow/EN
+@onready var id_btn: Button = $UI/Root/Buttons/LangRow/ID
+@onready var anchor: Node3D = $Anchor
+
+var _dragon: Dragon3D
+
+func _ready() -> void:
+	Lang.load_pref()
+	new_btn.pressed.connect(func(): start_new_game.emit())
+	codex_btn.pressed.connect(func(): open_bestiary.emit())
+	quit_btn.pressed.connect(func(): get_tree().quit())
+	fr_btn.pressed.connect(func(): _set_lang("fr"))
+	en_btn.pressed.connect(func(): _set_lang("en"))
+	id_btn.pressed.connect(func(): _set_lang("id"))
+	# Showcase dragon (a metallic gold one — bright, regal).
+	_dragon = Dragon3D.new()
+	anchor.add_child(_dragon)
+	_dragon.build(&"lawbringer")
+	_dragon.position = Vector3(0, 0.5, -3.0)
+	_dragon.scale = Vector3.ONE * 0.6
+	var spin := create_tween().set_loops()
+	spin.tween_property(anchor, "rotation:y", TAU, 22.0)
+	_refresh_lang()
+
+func _set_lang(c: String) -> void:
+	Lang.code = c
+	Lang.save_pref()
+	_refresh_lang()
+
+func _refresh_lang() -> void:
+	tagline_label.text = Lang.ui("tagline")
+	new_btn.text = Lang.ui("menu_new")
+	codex_btn.text = Lang.ui("menu_codex")
+	quit_btn.text = Lang.ui("menu_quit")

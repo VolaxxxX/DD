@@ -1,0 +1,102 @@
+[gd_scene load_steps=2 format=3 uid="uid://tiaramenu01"]
+
+[ext_resource type="Script" path="res://ui/main_menu.gd" id="1_mm"]
+
+[node name="MainMenu" type="Node3D"]
+script = ExtResource("1_mm")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.94, 0.34, 0, -0.34, 0.94, 0, 1.6, 5.5)
+fov = 45.0
+
+[node name="Key" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.81, -0.32, 0.50, 0, 0.84, 0.54, -0.59, -0.43, 0.69, 0, 0, 0)
+light_energy = 1.1
+light_color = Color(1, 0.93, 0.80, 1)
+
+[node name="Rim" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.71, 0.30, -0.64, 0, 0.91, 0.42, 0.71, -0.30, 0.64, 0, 0, 0)
+light_energy = 0.5
+light_color = Color(0.75, 0.85, 1, 1)
+
+[node name="WorldEnv" type="WorldEnvironment" parent="."]
+
+[node name="Anchor" type="Node3D" parent="."]
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="Root" type="Control" parent="UI"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+
+[node name="Title" type="Label" parent="UI/Root"]
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 60.0
+offset_bottom = 180.0
+grow_horizontal = 2
+theme_override_colors/font_color = Color(1, 0.92, 0.78, 1)
+theme_override_font_sizes/font_size = 92
+text = "TIARA"
+horizontal_alignment = 1
+
+[node name="Tagline" type="Label" parent="UI/Root"]
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 170.0
+offset_bottom = 210.0
+grow_horizontal = 2
+theme_override_colors/font_color = Color(0.85, 0.80, 0.90, 1)
+theme_override_font_sizes/font_size = 18
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="Buttons" type="VBoxContainer" parent="UI/Root"]
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -200.0
+offset_top = -320.0
+offset_right = 200.0
+offset_bottom = -80.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_constants/separation = 14
+
+[node name="NewBtn" type="Button" parent="UI/Root/Buttons"]
+custom_minimum_size = Vector2(0, 60)
+theme_override_font_sizes/font_size = 22
+text = "NOUVELLE DÉRIVE"
+
+[node name="CodexBtn" type="Button" parent="UI/Root/Buttons"]
+custom_minimum_size = Vector2(0, 56)
+theme_override_font_sizes/font_size = 20
+text = "BESTIAIRE"
+
+[node name="LangRow" type="HBoxContainer" parent="UI/Root/Buttons"]
+alignment = 1
+theme_override_constants/separation = 10
+
+[node name="FR" type="Button" parent="UI/Root/Buttons/LangRow"]
+custom_minimum_size = Vector2(76, 44)
+theme_override_font_sizes/font_size = 18
+text = "FR"
+
+[node name="EN" type="Button" parent="UI/Root/Buttons/LangRow"]
+custom_minimum_size = Vector2(76, 44)
+theme_override_font_sizes/font_size = 18
+text = "EN"
+
+[node name="ID" type="Button" parent="UI/Root/Buttons/LangRow"]
+custom_minimum_size = Vector2(76, 44)
+theme_override_font_sizes/font_size = 18
+text = "ID"
+
+[node name="QuitBtn" type="Button" parent="UI/Root/Buttons"]
+custom_minimum_size = Vector2(0, 44)
+theme_override_font_sizes/font_size = 16
+text = "QUITTER"

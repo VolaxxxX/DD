@@ -19,8 +19,36 @@ var _rng: DRNG
 var _char_create_root: Node3D
 var _started: bool = false
 
+var _menu_root: Node3D
+var _bestiary_root: Node3D
+
 func _ready() -> void:
+	_show_main_menu()
+
+func _show_main_menu() -> void:
+	ui.visible = false
+	_clear_overlays()
+	_menu_root = preload("res://ui/main_menu.tscn").instantiate()
+	add_child(_menu_root)
+	_menu_root.start_new_game.connect(_on_menu_new_game)
+	_menu_root.open_bestiary.connect(_on_menu_bestiary)
+
+func _on_menu_new_game() -> void:
+	_clear_overlays()
 	_show_char_create()
+
+func _on_menu_bestiary() -> void:
+	_clear_overlays()
+	_bestiary_root = preload("res://ui/bestiary.tscn").instantiate()
+	add_child(_bestiary_root)
+	_bestiary_root.back_pressed.connect(func(): _show_main_menu())
+
+func _clear_overlays() -> void:
+	for n in [_menu_root, _bestiary_root, _char_create_root]:
+		if n and is_instance_valid(n): n.queue_free()
+	_menu_root = null
+	_bestiary_root = null
+	_char_create_root = null
 
 func _show_char_create() -> void:
 	ui.visible = false

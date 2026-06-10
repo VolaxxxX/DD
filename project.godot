@@ -5,8 +5,8 @@ config_version=5
 
 [application]
 
-config/name="Aether Drift"
-config/description="2.5D procedural co-op RPG - MVP"
+config/name="Tiara"
+config/description="Tiara — procedural co-op narrative RPG"
 run/main_scene="res://main.tscn"
 config/features=PackedStringArray("4.3", "GL Compatibility")
 config/icon="res://icon.svg"
