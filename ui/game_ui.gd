@@ -95,7 +95,16 @@ func show_narrative(text: String, _tone: int, outcome: int) -> void:
 	_hide_choices()
 	narrative.modulate = OUTCOME_TINT.get(outcome, Color.WHITE)
 	narrative.text = text
+	narrative.visible_characters = 0
+	var tw := create_tween()
+	tw.tween_property(narrative, "visible_characters", text.length(), maxf(0.6, text.length() * 0.02))
 	_flash_fade(OUTCOME_TINT.get(outcome, Color.WHITE), 0.25 if outcome == 2 else 0.5)
+	match outcome:
+		0: Audio.play(&"crit_fail")
+		1: Audio.play(&"fail")
+		2: Audio.play(&"hit", 1.1)
+		3: Audio.play(&"success")
+		4: Audio.play(&"crit")
 
 func update_stats(force: int, injuries: Array) -> void:
 	_last_force = force
@@ -127,6 +136,7 @@ func show_run_over(cause: StringName) -> void:
 
 func _on_choice_pressed(idx: int) -> void:
 	for b in choice_buttons: b.disabled = true
+	Audio.play(&"click")
 	choice_selected.emit(idx)
 
 func _hide_choices() -> void:

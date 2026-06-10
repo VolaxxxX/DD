@@ -108,6 +108,14 @@ func _setup_camera() -> void:
 	camera.position = Vector3(0, 2.2, 6.0)
 	camera.look_at(Vector3(0, 1.0, 0), Vector3.UP)
 
+var _breath_time: float = 0.0
+func _process(delta: float) -> void:
+	if camera == null or boss_node != null: return
+	_breath_time += delta
+	var off_y := sin(_breath_time * 0.6) * 0.04
+	var off_x := sin(_breath_time * 0.4) * 0.03
+	camera.position = Vector3(off_x, 2.2 + off_y, 6.0)
+
 func _build_stage_for_active_zone() -> void:
 	for child in stage.get_children(): child.queue_free()
 	boss_node = null
@@ -156,6 +164,7 @@ func _dragon_flyby(id: StringName, intro: String) -> void:
 	dragon.scale = Vector3.ONE * 0.85
 	if intro != "":
 		ui.present_intro(intro)
+	Audio.play(&"dragon")
 	var t := create_tween().set_parallel(true)
 	t.tween_property(dragon, "position", Vector3(22, 9, -10), 6.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	t.tween_property(dragon, "rotation:y", -0.4, 6.0)
@@ -221,6 +230,7 @@ func _on_choice(idx: int) -> void:
 	director.choose(idx)
 
 func _on_run_over(cause: StringName) -> void:
+	Audio.play(&"death")
 	ui.show_run_over(cause)
 
 func _on_zone_changed(idx: int, _seed: int) -> void:
@@ -240,4 +250,5 @@ func _on_world_boss(boss: Dictionary) -> void:
 	boss_node.position = Vector3(0, 0, -2)
 	stage.add_child(boss_node)
 	boss_node.build(StringName(boss.id))
+	Audio.play(&"boss")
 	Cinematic.play_world_boss(StringName(boss.id), boss_node, camera, get_tree())

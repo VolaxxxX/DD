@@ -56,6 +56,55 @@ func build(biome: StringName, corruption: float) -> void:
 	_build_environment(biome, corruption)
 	_build_ground(biome, corruption)
 	_build_lights(biome, corruption)
+	_build_atmosphere(biome, corruption)
+
+func _build_atmosphere(biome: StringName, corruption: float) -> void:
+	var amount := 80
+	var col := Color(1, 1, 1, 0.8)
+	var gravity := Vector3(0, -0.2, 0)
+	var velocity := 0.4
+	var spread := 18.0
+	var lifetime := 8.0
+	var scale_min := 0.02
+	var scale_max := 0.06
+	var emit_rate := 18.0
+	match String(biome):
+		"forest":    col = Color(0.95, 0.90, 0.65, 0.7); gravity = Vector3(0.1, -0.05, 0); emit_rate = 14.0
+		"city":      col = Color(0.85, 0.85, 0.95, 0.6); gravity = Vector3(0.05, -0.1, 0); emit_rate = 10.0
+		"ruins":     col = Color(0.95, 0.85, 0.60, 0.7); gravity = Vector3(0.15, -0.08, 0); emit_rate = 14.0
+		"corrupted": col = Color(0.85, 0.30, 0.55, 0.8); gravity = Vector3(0, 0.05, 0); emit_rate = 22.0
+		"anomaly":   col = Color(0.55, 0.75, 1.0, 0.9); gravity = Vector3(0, 0.10, 0); emit_rate = 24.0
+		"swamp":     col = Color(0.60, 0.95, 0.55, 0.7); gravity = Vector3(0, -0.30, 0); emit_rate = 16.0
+		"highland":  col = Color(1.0, 1.0, 1.0, 0.85);   gravity = Vector3(0.30, -0.15, 0); emit_rate = 18.0
+		"crypt":     col = Color(0.65, 0.55, 0.85, 0.5); gravity = Vector3(0, 0.02, 0); emit_rate = 8.0
+		"coast":     col = Color(0.85, 0.85, 0.95, 0.7); gravity = Vector3(-0.20, -0.08, 0); emit_rate = 14.0
+	var p := GPUParticles3D.new()
+	var pm := ParticleProcessMaterial.new()
+	pm.direction = Vector3(0, 1, 0)
+	pm.spread = spread
+	pm.gravity = gravity
+	pm.initial_velocity_min = velocity * 0.3
+	pm.initial_velocity_max = velocity
+	pm.scale_min = scale_min
+	pm.scale_max = scale_max
+	pm.color = col
+	pm.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
+	pm.emission_box_extents = Vector3(12, 4, 8)
+	p.process_material = pm
+	var mesh := SphereMesh.new(); mesh.radius = 0.04; mesh.height = 0.08
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = col
+	mat.emission_enabled = true
+	mat.emission = col
+	mat.emission_energy_multiplier = 1.5
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mesh.material = mat
+	p.draw_pass_1 = mesh
+	p.amount = amount
+	p.lifetime = lifetime
+	p.fixed_fps = 30
+	p.position = Vector3(0, 3, -2)
+	add_child(p)
 
 func _build_environment(biome: StringName, corruption: float) -> void:
 	env = WorldEnvironment.new()
@@ -86,8 +135,18 @@ func _build_environment(biome: StringName, corruption: float) -> void:
 	e.glow_strength = 0.9
 	e.glow_bloom = 0.15
 	e.adjustment_enabled = true
-	e.adjustment_saturation = 1.1
-	e.adjustment_contrast = 1.05
+	# Per-biome grading.
+	match String(biome):
+		"forest":    e.adjustment_saturation = 1.20; e.adjustment_contrast = 1.05; e.adjustment_brightness = 1.00
+		"city":      e.adjustment_saturation = 0.85; e.adjustment_contrast = 1.10; e.adjustment_brightness = 0.95
+		"ruins":     e.adjustment_saturation = 1.05; e.adjustment_contrast = 1.10; e.adjustment_brightness = 1.05
+		"corrupted": e.adjustment_saturation = 0.70; e.adjustment_contrast = 1.20; e.adjustment_brightness = 0.90
+		"anomaly":   e.adjustment_saturation = 1.30; e.adjustment_contrast = 1.15; e.adjustment_brightness = 1.05
+		"swamp":     e.adjustment_saturation = 0.85; e.adjustment_contrast = 1.05; e.adjustment_brightness = 0.90
+		"highland":  e.adjustment_saturation = 1.10; e.adjustment_contrast = 1.05; e.adjustment_brightness = 1.10
+		"crypt":     e.adjustment_saturation = 0.65; e.adjustment_contrast = 1.25; e.adjustment_brightness = 0.85
+		"coast":     e.adjustment_saturation = 1.10; e.adjustment_contrast = 1.05; e.adjustment_brightness = 1.05
+		_:           e.adjustment_saturation = 1.10; e.adjustment_contrast = 1.05
 	env.environment = e
 	add_child(env)
 

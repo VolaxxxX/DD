@@ -14,6 +14,9 @@ config/icon="res://icon.svg"
 [autoload]
 
 Bus="*res://core/event_bus.gd"
+Audio="*res://core/audio.gd"
+ThemeLoader="*res://core/theme_loader.gd"
+PostFX="*res://ui/postfx_overlay.gd"
 
 [display]
 

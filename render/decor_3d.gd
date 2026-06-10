@@ -15,7 +15,7 @@ func build(biome: StringName, corruption: float, rng: DRNG) -> void:
 		&"coast":     _coast(rng, corruption)
 		_:            _forest(rng, corruption)
 
-func _place(mesh: Mesh, pos: Vector3, color: Color, scale_v: Vector3 = Vector3.ONE, emission: float = 0.0, rough: float = 0.85, rot_y: float = 0.0) -> void:
+func _place(mesh: Mesh, pos: Vector3, color: Color, scale_v: Vector3 = Vector3.ONE, emission: float = 0.0, rough: float = 0.85, rot_y: float = 0.0, sway: bool = false) -> void:
 	var mi := MeshInstance3D.new()
 	mi.mesh = mesh
 	mi.position = pos
@@ -30,6 +30,18 @@ func _place(mesh: Mesh, pos: Vector3, color: Color, scale_v: Vector3 = Vector3.O
 		mat.emission_energy_multiplier = emission
 	mi.material_override = mat
 	add_child(mi)
+	if sway:
+		mi.set_meta("sway_amp", 0.05 + (randf() * 0.04))
+		mi.set_meta("sway_phase", randf() * TAU)
+
+func _process(delta: float) -> void:
+	# Apply wind sway on all meshes marked with sway metadata.
+	var t := Time.get_ticks_msec() / 1000.0
+	for child in get_children():
+		if child is MeshInstance3D and child.has_meta("sway_amp"):
+			var amp: float = child.get_meta("sway_amp")
+			var ph: float = child.get_meta("sway_phase")
+			child.rotation.z = sin(t * 0.8 + ph) * amp
 
 func _grass_tufts(biome: StringName, rng: DRNG) -> void:
 	var color := Color(0.18, 0.30, 0.12)
@@ -64,7 +76,7 @@ func _tree(rng: DRNG, x: float, z: float, corr: float) -> void:
 		var leaves := SphereMesh.new()
 		leaves.radius = 0.9; leaves.height = 1.5
 		var tint := leaf_base.lerp(Color(0.05, 0.12, 0.05), float(i) * 0.15)
-		_place(leaves, Vector3(x + off.x, off.y, z + off.z), tint, Vector3(s, s * 0.85, s))
+		_place(leaves, Vector3(x + off.x, off.y, z + off.z), tint, Vector3(s, s * 0.85, s), 0.0, 0.85, 0.0, true)
 
 func _forest(rng: DRNG, corr: float) -> void:
 	for i in 9:

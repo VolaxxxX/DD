@@ -150,10 +150,27 @@ static func _shift_color(c: Color, dh: float, ds: float, dv: float) -> Color:
 		Archetype.Family.DRACONIC:   _build_draconic()
 	_apply_feats(override.get("feats", []))
 	_apply_tier_scale()
+	_apply_outline()
 	_animator = Animator.new()
 	add_child(_animator)
 	_animator.target = body
 	_animator.start_idle()
+
+func _apply_outline() -> void:
+	# Inverted-hull outline: clone every mesh, flip culling and slightly enlarge.
+	for child in body.get_children():
+		if not (child is MeshInstance3D): continue
+		var orig := child as MeshInstance3D
+		var shell := MeshInstance3D.new()
+		shell.mesh = orig.mesh
+		shell.transform = orig.transform
+		shell.scale = orig.scale * 1.06
+		var om := StandardMaterial3D.new()
+		om.albedo_color = Color(0.04, 0.03, 0.06)
+		om.cull_mode = BaseMaterial3D.CULL_FRONT
+		om.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		shell.material_override = om
+		body.add_child(shell)
 
 func _make_material(col: Color, rough: float, glow: bool) -> StandardMaterial3D:
 	var m := StandardMaterial3D.new()
