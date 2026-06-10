@@ -82,6 +82,11 @@ func _setup_camera() -> void:
 
 func _build_stage_for_active_zone() -> void:
 	for child in stage.get_children(): child.queue_free()
+	boss_node = null
+	creature_node = null
+	situation_node = null
+	_setup_camera()
+	camera.fov = 50.0
 	var z := orchestrator.world.active_zone()
 	backdrop = Backdrop3D.new()
 	stage.add_child(backdrop)
@@ -108,10 +113,7 @@ func _dragon_flyby(id: StringName, intro: String) -> void:
 		if is_instance_valid(dragon): dragon.queue_free())
 
 func _spawn_creature(arch: Archetype) -> void:
-	if boss_node and is_instance_valid(boss_node):
-		boss_node.queue_free()
-		boss_node = null
-		_setup_camera()
+	_reset_camera_if_boss()
 	if creature_node and is_instance_valid(creature_node):
 		creature_node.queue_free()
 	creature_node = Creature3D.new()
@@ -125,16 +127,36 @@ func _spawn_creature(arch: Archetype) -> void:
 func _on_zone_intro(text: String, _biome: StringName) -> void:
 	ui.present_intro(text)
 
+var situation_node: Situation3D
+
 func _on_encounter(enc) -> void:
+	if situation_node and is_instance_valid(situation_node):
+		situation_node.queue_free()
+		situation_node = null
 	if enc is SituationEncounter:
 		if creature_node and is_instance_valid(creature_node):
 			creature_node.queue_free()
 			creature_node = null
+		_reset_camera_if_boss()
+		situation_node = Situation3D.new()
+		stage.add_child(situation_node)
+		situation_node.build(StringName(enc.template.id))
+		situation_node.scale = Vector3.ZERO
+		var t := create_tween()
+		t.tween_property(situation_node, "scale", Vector3.ONE, 0.5).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 		ui.present_intro(String(enc.template.title))
 		ui.present_encounter(enc)
 	else:
 		_spawn_creature(enc.creature.archetype)
 		ui.present_encounter(enc)
+
+func _reset_camera_if_boss() -> void:
+	if boss_node and is_instance_valid(boss_node):
+		boss_node.queue_free()
+	boss_node = null
+	if camera.position != Vector3(0, 2.2, 6.0):
+		_setup_camera()
+		camera.fov = 50.0
 
 func _on_narrative(text: String, tone: int, outcome: int) -> void:
 	ui.show_narrative(text, tone, outcome)

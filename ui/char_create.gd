@@ -60,6 +60,7 @@ func _ready() -> void:
 	v.move_child(_duo_btn, 1)
 	_build_stat_rows()
 	_load_class(_idx)
+	_update_play_label()
 	_spin_avatar()
 
 func _update_play_label() -> void:

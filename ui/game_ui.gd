@@ -42,6 +42,26 @@ func _ready() -> void:
 	narrative.text = ""
 	intro_label.text = ""
 	fade.modulate.a = 0.0
+	# In-game language switch — cycles FR -> EN -> ID at any moment.
+	_lang_btn = Button.new()
+	_lang_btn.text = Lang.code.to_upper()
+	_lang_btn.custom_minimum_size = Vector2(56, 40)
+	_lang_btn.anchor_left = 1.0; _lang_btn.anchor_right = 1.0
+	_lang_btn.offset_left = -70.0; _lang_btn.offset_right = -12.0
+	_lang_btn.offset_top = 60.0; _lang_btn.offset_bottom = 100.0
+	_lang_btn.pressed.connect(_cycle_lang)
+	$Root.add_child(_lang_btn)
+
+var _lang_btn: Button
+var _last_force: int = 0
+var _last_injuries: Array = []
+
+func _cycle_lang() -> void:
+	var order := ["fr", "en", "id"]
+	Lang.code = order[(order.find(Lang.code) + 1) % order.size()]
+	Lang.save_pref()
+	_lang_btn.text = Lang.code.to_upper()
+	update_stats(_last_force, _last_injuries)
 
 func set_player(p: PlayerState) -> void:
 	name_label.text = "%s — %s" % [p.name, String(p.class_data.name)]
@@ -78,6 +98,8 @@ func show_narrative(text: String, _tone: int, outcome: int) -> void:
 	_flash_fade(OUTCOME_TINT.get(outcome, Color.WHITE), 0.25 if outcome == 2 else 0.5)
 
 func update_stats(force: int, injuries: Array) -> void:
+	_last_force = force
+	_last_injuries = injuries.duplicate()
 	stat_label.text = "%s  %d" % [Lang.ui("force"), force]
 	_render_injuries(injuries)
 
