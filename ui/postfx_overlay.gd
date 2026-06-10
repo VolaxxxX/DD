@@ -15,19 +15,26 @@ func _make_shader() -> Shader:
 	s.code = """
 shader_type canvas_item;
 uniform sampler2D screen_tex : hint_screen_texture, repeat_disable, filter_linear;
-uniform float vignette = 0.55;
-uniform float grain    = 0.06;
+uniform float vignette  = 0.55;
+uniform float grain     = 0.06;
+uniform float chromatic = 0.0025;
 
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 
 void fragment() {
-	vec4 col = texture(screen_tex, SCREEN_UV);
 	vec2 d = SCREEN_UV - vec2(0.5);
-	float v = smoothstep(0.85, 0.25, length(d));
-	col.rgb *= mix(1.0 - vignette, 1.0, v);
+	float r = length(d);
+	// Chromatic aberration scaled by distance from center.
+	float ca = chromatic * r;
+	float cr = texture(screen_tex, SCREEN_UV - d * ca).r;
+	float cg = texture(screen_tex, SCREEN_UV).g;
+	float cb = texture(screen_tex, SCREEN_UV + d * ca).b;
+	vec3 col = vec3(cr, cg, cb);
+	float v = smoothstep(0.85, 0.25, r);
+	col *= mix(1.0 - vignette, 1.0, v);
 	float g = (hash(SCREEN_UV * 600.0 + TIME) - 0.5) * grain;
-	col.rgb += g;
-	COLOR = col;
+	col += g;
+	COLOR = vec4(col, 1.0);
 }
 """
 	return s

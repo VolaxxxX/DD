@@ -39,6 +39,7 @@ func _set_filter(f: String) -> void:
 
 func _populate() -> void:
 	for c in list.get_children(): c.queue_free()
+	# Build entries with deferred thumbnails to keep mobile perf sane.
 	if _filter in ["all", "creatures"]:
 		for t in CreatureRegistry.templates():
 			list.add_child(_creature_entry(t))
@@ -48,8 +49,49 @@ func _populate() -> void:
 	if _filter in ["all", "titans"]:
 		for t in WorldBossRegistry.templates():
 			list.add_child(_titan_entry(t))
+	# Defer first thumbnail visibility check to next frame.
+	call_deferred("_check_visible_thumbs")
+	if not get_tree().process_frame.is_connected(_check_visible_thumbs):
+		get_tree().process_frame.connect(_check_visible_thumbs)
+
+func _check_visible_thumbs() -> void:
+	# Render thumbnails only when their row is on screen. Cheap heuristic:
+	# compare row global rect against scroll viewport rect.
+	var scroll: ScrollContainer = $UI/Root/Scroll
+	var scroll_rect := scroll.get_global_rect()
+	for child in list.get_children():
+		if not child.has_meta("thumb_pending"): continue
+		var r := child.get_global_rect()
+		if r.intersects(scroll_rect.grow(120)):
+			_realize_thumb(child)
 
 # ---------- entry builders ----------
+
+func _placeholder_thumb() -> Control:
+	var c := ColorRect.new()
+	c.color = Color(0.08, 0.07, 0.10, 1)
+	c.custom_minimum_size = Vector2(THUMB_SIZE.x, THUMB_SIZE.y)
+	return c
+
+func _realize_thumb(row: Control) -> void:
+	if not row.has_meta("thumb_pending"): return
+	row.remove_meta("thumb_pending")
+	var kind: String = row.get_meta("thumb_kind")
+	var data: Dictionary = row.get_meta("thumb_data")
+	var holder: Control = row.get_meta("thumb_holder")
+	var real: Control
+	match kind:
+		"creature": real = _build_thumb_creature(data)
+		"dragon":   real = _build_thumb_dragon(StringName(data.id))
+		"titan":    real = _build_thumb_titan(StringName(data.id))
+	if real == null: return
+	real.custom_minimum_size = Vector2(THUMB_SIZE.x, THUMB_SIZE.y)
+	var parent := holder.get_parent()
+	var idx := holder.get_index()
+	parent.remove_child(holder)
+	holder.queue_free()
+	parent.add_child(real)
+	parent.move_child(real, idx)
 
 func _row(thumb: Control, name: String, tag: String, tag_color: Color, body_lines: Array[String]) -> Control:
 	var panel := PanelContainer.new()
@@ -89,7 +131,7 @@ func _row(thumb: Control, name: String, tag: String, tag_color: Color, body_line
 func _creature_entry(t: Dictionary) -> Control:
 	var tag := _tier_tag(int(t.tier))
 	var color := _tier_color(int(t.tier))
-	var thumb := _build_thumb_creature(t)
+	var thumb := _placeholder_thumb()
 	var fam := _family_name(int(t.family))
 	var biome_list: String = ""
 	for b in t.biomes: biome_list += String(b) + "  "
@@ -97,28 +139,43 @@ func _creature_entry(t: Dictionary) -> Control:
 	lines.append("[i]%s[/i]   INT %d   AGR %d" % [fam, int(t.intel), int(t.aggr)])
 	lines.append("[color=#a0c8ff]%s[/color]  %s" % [Lang.ui("biomes"), biome_list.strip_edges()])
 	lines.append("[color=#9fffa8]%s[/color]  %s" % [Lang.ui("weakness"), _approach_hint(t)])
-	return _row(thumb, String(t.name), tag, color, lines)
+	var row := _row(thumb, String(t.name), tag, color, lines)
+	row.set_meta("thumb_pending", true)
+	row.set_meta("thumb_kind", "creature")
+	row.set_meta("thumb_data", t)
+	row.set_meta("thumb_holder", thumb)
+	return row
 
 func _dragon_entry(t: Dictionary) -> Control:
 	var weight: int = int(t.weight)
 	var rarity_str := "%s — %s" % [Lang.ui("tag_dragon"), _dragon_rarity_word(weight)]
 	var color := _dragon_color(int(t.align))
-	var thumb := _build_thumb_dragon(StringName(t.id))
+	var thumb := _placeholder_thumb()
 	var align_str := ["méchant", "bon", "au-delà"][int(t.align)]
 	var lines: Array[String] = []
 	lines.append("[i]%s — puissance %d[/i]" % [align_str, int(t.tier)])
 	lines.append("[color=#ffd57a]%s[/color]  %s" % [Lang.ui("effect"), _dragon_effect_text(String(t.zone_effect), int(t.value))])
 	lines.append("[color=#cccccc]%s[/color]" % String(t.intro))
-	return _row(thumb, String(t.name), rarity_str, color, lines)
+	var row := _row(thumb, String(t.name), rarity_str, color, lines)
+	row.set_meta("thumb_pending", true)
+	row.set_meta("thumb_kind", "dragon")
+	row.set_meta("thumb_data", t)
+	row.set_meta("thumb_holder", thumb)
+	return row
 
 func _titan_entry(t: Dictionary) -> Control:
 	var color := Color(1, 0.5, 0.55)
-	var thumb := _build_thumb_titan(StringName(t.id))
+	var thumb := _placeholder_thumb()
 	var lines: Array[String] = []
 	lines.append("[i]%s[/i]" % String(t.title))
 	lines.append("[color=#ffd57a]%s[/color]  %s" % [Lang.ui("effect"), _titan_effect_text(String(t.effect))])
 	lines.append("[color=#cccccc]%s[/color]" % String(t.intro))
-	return _row(thumb, String(t.name), Lang.ui("tag_wboss"), color, lines)
+	var row := _row(thumb, String(t.name), Lang.ui("tag_wboss"), color, lines)
+	row.set_meta("thumb_pending", true)
+	row.set_meta("thumb_kind", "titan")
+	row.set_meta("thumb_data", t)
+	row.set_meta("thumb_holder", thumb)
+	return row
 
 # ---------- thumbnails (SubViewport) ----------
 

@@ -217,6 +217,31 @@ func _reset_camera_if_boss() -> void:
 
 func _on_narrative(text: String, tone: int, outcome: int) -> void:
 	ui.show_narrative(text, tone, outcome)
+	_play_outcome_vfx(tone, outcome)
+
+func _play_outcome_vfx(tone: int, outcome: int) -> void:
+	if creature_node == null or not is_instance_valid(creature_node): return
+	var pos: Vector3 = creature_node.position + Vector3(0, 1.0, 0)
+	match outcome:
+		0:  # CRIT_FAIL - the player suffers
+			CombatVFX.blood_spray(stage, Vector3(0, 1.2, 2.0))
+		1:  # FAIL
+			CombatVFX.dust_puff(stage, pos)
+		2:  # MIXED
+			CombatVFX.dust_puff(stage, pos)
+			CombatVFX.sparks(stage, pos, Color(1.0, 0.7, 0.3))
+		3:  # SUCCESS
+			match tone:
+				0: CombatVFX.sparks(stage, pos)
+				1, 4: CombatVFX.dust_puff(stage, pos, Color(0.8, 0.9, 1.0))
+				2: CombatVFX.dust_puff(stage, pos)
+				3: CombatVFX.radiant_flash(stage, pos)
+				5: CombatVFX.void_implode(stage, pos)
+		4:  # CRIT_SUCCESS
+			match tone:
+				0:    CombatVFX.blood_spray(stage, pos); CombatVFX.sparks(stage, pos)
+				5:    CombatVFX.void_implode(stage, pos); CombatVFX.radiant_flash(stage, pos)
+				_:    CombatVFX.radiant_flash(stage, pos)
 
 func _on_creature_reaction(reaction: StringName) -> void:
 	if creature_node and is_instance_valid(creature_node):
