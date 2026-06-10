@@ -120,9 +120,7 @@ func _spawn_creature(arch: Archetype) -> void:
 	creature_node.position = Vector3(0, 0, 0)
 	stage.add_child(creature_node)
 	creature_node.build(arch)
-	creature_node.scale = Vector3.ZERO
-	var t := create_tween()
-	t.tween_property(creature_node, "scale", Vector3.ONE, 0.5).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	Cinematic.play_for_creature(arch.id, int(arch.tier), creature_node, camera, get_tree())
 
 func _on_zone_intro(text: String, _biome: StringName) -> void:
 	ui.present_intro(text)
@@ -154,9 +152,8 @@ func _reset_camera_if_boss() -> void:
 	if boss_node and is_instance_valid(boss_node):
 		boss_node.queue_free()
 	boss_node = null
-	if camera.position != Vector3(0, 2.2, 6.0):
-		_setup_camera()
-		camera.fov = 50.0
+	if camera.position != Vector3(0, 2.2, 6.0) or camera.fov != 50.0:
+		Cinematic.reset_camera(camera)
 
 func _on_narrative(text: String, tone: int, outcome: int) -> void:
 	ui.show_narrative(text, tone, outcome)
@@ -182,18 +179,13 @@ func _on_world_boss(boss: Dictionary) -> void:
 	if creature_node and is_instance_valid(creature_node):
 		creature_node.queue_free()
 		creature_node = null
+	if situation_node and is_instance_valid(situation_node):
+		situation_node.queue_free()
+		situation_node = null
 	if boss_node and is_instance_valid(boss_node):
 		boss_node.queue_free()
 	boss_node = WorldBoss3D.new()
 	boss_node.position = Vector3(0, 0, -2)
 	stage.add_child(boss_node)
 	boss_node.build(StringName(boss.id))
-	boss_node.scale = Vector3.ZERO
-	# Cinematic: camera pulls back, boss scales up.
-	var t := create_tween().set_parallel(true)
-	t.tween_property(boss_node, "scale", Vector3.ONE, 1.6).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	t.tween_property(camera, "position", Vector3(0, 4.5, 12.0), 1.8).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	t.tween_property(camera, "fov", 60.0, 1.8)
-	# Slow rotate around boss for awe
-	var spin := create_tween().set_loops()
-	spin.tween_property(boss_node, "rotation:y", TAU, 30.0)
+	Cinematic.play_world_boss(StringName(boss.id), boss_node, camera, get_tree())

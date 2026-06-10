@@ -9,7 +9,8 @@ static func maybe_manifest(zone: Zone, rng: DRNG) -> void:
 		killed[zone.index] = cooldown - 1
 		zone.memory.data["killed_apex"] = killed
 		return
-	if not rng.chance(int(zone.chaos * 30), 100): return
+	if zone.index == 0: return
+	if not rng.chance(int(zone.chaos * 8), 100): return
 	var dragon: Dictionary = DragonRegistry.pick(rng, zone.chaos)
 	zone.dragon_id = StringName(dragon.id)
 	zone.dragon_intro = String(dragon.intro)
