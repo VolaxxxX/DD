@@ -65,7 +65,7 @@ static func play_world_boss(boss_id: StringName, target: Node3D, camera: Camera3
 
 # ------------------------- Rare creatures ---------------------------------
 
-static func play_for_creature(creature_id: StringName, tier: int, target: Node3D, camera: Camera3D, tree: SceneTree) -> void:
+static func play_for_creature(creature_id: StringName, tier: int, target: Node3D, camera: Camera3D, tree: SceneTree, family: int = 0) -> void:
 	# COMMON, UNCOMMON, RARE: simple pop, no cinematic.
 	if tier < 3:
 		target.scale = Vector3.ZERO
@@ -74,6 +74,55 @@ static func play_for_creature(creature_id: StringName, tier: int, target: Node3D
 		return
 	# ELITE+: brief arrival flash + small zoom.
 	_flash_screen(tree, Color(0.85, 0.6, 0.9, 0.5), 0.20)
+	# ELITE without per-id move: pick a family-flavored move.
+	var per_id_handled := _try_per_id_creature(creature_id, target, camera, tree)
+	if not per_id_handled:
+		_family_arrival(family, target, camera, tree)
+
+static func _family_arrival(family: int, target: Node3D, camera: Camera3D, tree: SceneTree) -> void:
+	# Family-themed arrival for ELITE-tier creatures without a per-id signature.
+	match family:
+		0:  # HUMANOID — slow walk-up
+			target.scale = Vector3.ONE; target.position = Vector3(0, 0, -2.5)
+			var t := target.create_tween()
+			t.tween_property(target, "position", Vector3(0, 0, 0), 1.4).set_trans(Tween.TRANS_SINE)
+		1:  # BEAST — pounce
+			target.scale = Vector3.ONE; target.position = Vector3(0, 0, -3.0)
+			var t := target.create_tween()
+			t.tween_property(target, "position", Vector3(0, 0.6, -0.5), 0.4).set_trans(Tween.TRANS_EXPO)
+			t.tween_property(target, "position", Vector3(0, 0, 0), 0.5).set_trans(Tween.TRANS_BOUNCE)
+		2:  # UNDEAD — rise from ground
+			target.scale = Vector3.ONE; target.position = Vector3(0, -1.5, 0)
+			var t := target.create_tween()
+			t.tween_property(target, "position", Vector3(0, 0, 0), 1.4).set_trans(Tween.TRANS_EXPO)
+		3:  # CONSTRUCT — assemble from above
+			target.scale = Vector3.ONE; target.position = Vector3(0, 4.0, 0)
+			var t := target.create_tween()
+			t.tween_property(target, "position", Vector3(0, 0, 0), 0.9).set_trans(Tween.TRANS_BOUNCE)
+			_shake_camera(camera, tree, 0.10, 0.4)
+		4:  # ELEMENTAL — implode in
+			target.scale = Vector3.ONE * 3.0; target.modulate = Color(1, 1, 1, 0)
+			var t := target.create_tween().set_parallel(true)
+			t.tween_property(target, "scale", Vector3.ONE, 0.8).set_trans(Tween.TRANS_BACK)
+			t.tween_property(target, "modulate", Color(1, 1, 1, 1), 0.8)
+		5:  # ABERRATION — wobbles in, FOV pulse
+			_pop(target)
+			var cam := camera.create_tween()
+			cam.tween_property(camera, "fov", 60.0, 0.5)
+			cam.tween_property(camera, "fov", 50.0, 0.5)
+		6:  # FEY — fade in from sparkle
+			target.scale = Vector3.ONE; target.modulate = Color(1, 1, 1, 0)
+			var t := target.create_tween()
+			t.tween_property(target, "modulate", Color(1, 1, 1, 1), 1.2)
+		7:  # DRACONIC — earth shake, scale up
+			_shake_camera(camera, tree, 0.25, 1.0)
+			target.scale = Vector3.ZERO
+			var t := target.create_tween()
+			t.tween_property(target, "scale", Vector3.ONE * 1.3, 1.0).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
+		_:
+			_pop(target)
+
+static func _try_per_id_creature(creature_id: StringName, target: Node3D, camera: Camera3D, tree: SceneTree) -> bool:
 	# APEX/MYTHIC: per-id signature move.
 	match String(creature_id):
 		"whisper_shade":
@@ -136,7 +185,60 @@ static func play_for_creature(creature_id: StringName, tier: int, target: Node3D
 			var rise := target.create_tween()
 			rise.tween_property(target, "position", Vector3(0, 0, 0), 1.6).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
 		_:
-			_pop(target)
+			return false
+	return true
+
+# Tone feedback: a tiny camera nudge when the player picks a choice tone.
+static func nudge_for_tone(camera: Camera3D, tone: int) -> void:
+	if camera == null: return
+	var base := camera.position
+	var t := camera.create_tween()
+	match tone:
+		0:  # AGGRESSIVE - sharp push-in
+			t.tween_property(camera, "position", base + Vector3(0, 0, -0.4), 0.10).set_trans(Tween.TRANS_EXPO)
+			t.tween_property(camera, "position", base, 0.18)
+		1:  # DIPLOMATIC - slight pull-out
+			t.tween_property(camera, "position", base + Vector3(0, 0.05, 0.3), 0.25)
+			t.tween_property(camera, "position", base, 0.25)
+		2:  # CAUTIOUS - subtle drift left
+			t.tween_property(camera, "position", base + Vector3(-0.15, 0, 0), 0.20)
+			t.tween_property(camera, "position", base, 0.20)
+		3:  # CURIOUS - tilt up
+			t.tween_property(camera, "position", base + Vector3(0, 0.15, -0.2), 0.25)
+			t.tween_property(camera, "position", base, 0.25)
+		4:  # DECEPTIVE - smooth side-step
+			t.tween_property(camera, "position", base + Vector3(0.20, 0, 0.1), 0.30)
+			t.tween_property(camera, "position", base, 0.30)
+		5:  # MYSTICAL - slow zoom-in
+			t.tween_property(camera, "position", base + Vector3(0, 0.10, -0.5), 0.45).set_trans(Tween.TRANS_SINE)
+			t.tween_property(camera, "position", base, 0.30)
+
+# Situation arrival: brief reveal cinematic per situation kind.
+static func play_for_situation(sit_id: StringName, target: Node3D, camera: Camera3D, tree: SceneTree) -> void:
+	if target == null: return
+	target.scale = Vector3.ZERO
+	var t := target.create_tween()
+	t.tween_property(target, "scale", Vector3.ONE, 0.6).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	match String(sit_id):
+		"collapse":
+			_shake_camera(camera, tree, 0.25, 1.0)
+			_flash_screen(tree, Color(0.55, 0.25, 0.1, 0.6), 0.18)
+		"storm":
+			_shake_camera(camera, tree, 0.15, 1.5)
+			_flash_screen(tree, Color(1, 1, 1, 0.85), 0.12)
+		"deep_well":
+			var cam := camera.create_tween()
+			cam.tween_property(camera, "position", HOME_CAM + Vector3(0, 1.0, -1.0), 1.0)
+		"the_double":
+			_flash_screen(tree, Color(0.05, 0.0, 0.10, 0.85), 0.40)
+		"shrine":
+			_flash_screen(tree, Color(1.0, 0.95, 0.65, 0.55), 0.40)
+		"stranger":
+			_flash_screen(tree, Color(0.15, 0.05, 0.20, 0.30), 0.20)
+		"burning_tree":
+			_flash_screen(tree, Color(1.0, 0.5, 0.10, 0.55), 0.18)
+		_:
+			pass
 
 # --------------------------- helpers --------------------------------------
 

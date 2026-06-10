@@ -180,7 +180,7 @@ func _spawn_creature(arch: Archetype) -> void:
 	creature_node.position = Vector3(0, 0, 0)
 	stage.add_child(creature_node)
 	creature_node.build(arch)
-	Cinematic.play_for_creature(arch.id, int(arch.tier), creature_node, camera, get_tree())
+	Cinematic.play_for_creature(arch.id, int(arch.tier), creature_node, camera, get_tree(), int(arch.family))
 
 func _on_zone_intro(text: String, _biome: StringName) -> void:
 	ui.present_intro(text)
@@ -199,9 +199,7 @@ func _on_encounter(enc) -> void:
 		situation_node = Situation3D.new()
 		stage.add_child(situation_node)
 		situation_node.build(StringName(enc.template.id))
-		situation_node.scale = Vector3.ZERO
-		var t := create_tween()
-		t.tween_property(situation_node, "scale", Vector3.ONE, 0.5).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		Cinematic.play_for_situation(StringName(enc.template.id), situation_node, camera, get_tree())
 		ui.present_intro(String(enc.template.title))
 		ui.present_encounter(enc)
 	else:
@@ -252,6 +250,10 @@ func _on_stats(force: int, injuries: Array) -> void:
 	_refresh_avatars_injuries()
 
 func _on_choice(idx: int) -> void:
+	# Nudge the camera according to the picked tone, for tactile feedback.
+	if director.current != null and idx < director.current.choices.size():
+		var tone: int = int(director.current.choices[idx].tone)
+		Cinematic.nudge_for_tone(camera, tone)
 	director.choose(idx)
 
 func _on_run_over(cause: StringName) -> void:

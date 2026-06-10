@@ -218,6 +218,70 @@ static func all() -> Array:
 			 "good": {"stat_delta": 1, "stat": &"esprit", "narr": "La pierre te raconte la guerre qu'elle a vue. C'était il y a longtemps."},
 			 "bad":  {"injury": &"terror", "narr": "La pierre se souvient. Elle veut que tu te souviennes aussi."}},
 		 ]},
+
+		# --- BURIED PILGRIM: bones half-buried in mud ---
+		{"id": &"buried_pilgrim",
+		 "title": "Des ossements à moitié enfouis tiennent encore un pendentif.",
+		 "biomes": [&"swamp", &"corrupted", &"ruins", &"crypt", &"forest"],
+		 "choices": [
+			{"tone": T_CURI, "text": "Tu déterres le pendentif. Il est tiède.",
+			 "good": {"stat_delta": 2, "stat": &"esprit", "narr": "Le pendentif réveille un savoir ancien. Tu comprends pourquoi il marchait ici."},
+			 "bad":  {"injury": &"curse", "narr": "Le pendentif s'ouvre. Quelque chose à l'intérieur te regarde avant que tu refermes."}},
+			{"tone": T_DIPL, "text": "Tu prononces une bénédiction et laisses tout en place.",
+			 "good": {"heal": &"terror", "narr": "Une paix te traverse. Tu portes une crainte de moins."},
+			 "bad":  {"injury": &"exhaustion", "narr": "Tes mots se perdent. Tu pries trop longtemps. Le froid te prend."}},
+			{"tone": T_AGGR, "text": "Tu arraches le pendentif d'un geste sec.",
+			 "good": {"stat_delta": 1, "stat": &"force", "narr": "Tu l'as. Il pèse plus lourd que sa taille."},
+			 "bad":  {"injury": &"bleeding", "narr": "Une racine cassée te griffe le bras. Ce n'était peut-être pas une racine."}},
+		 ]},
+
+		# --- DOOR: an iron door that should not be here ---
+		{"id": &"iron_door",
+		 "title": "Une porte de fer scellée se dresse, là où rien ne devrait être.",
+		 "biomes": [&"forest", &"highland", &"anomaly", &"corrupted"],
+		 "choices": [
+			{"tone": T_AGGR, "text": "Tu cognes l'épaule contre. Une fois. Encore.",
+			 "good": {"stat_delta": 2, "stat": &"force", "narr": "La serrure cède. Derrière : un vide qui sent l'or. Tu repars chargé."},
+			 "bad":  {"injury": &"broken_arm", "narr": "Quelque chose dans ton bras a cédé avant la porte."}},
+			{"tone": T_MYST, "text": "Tu poses la paume et écoutes ce qui dort derrière.",
+			 "good": {"stat_delta": 2, "stat": &"esprit", "narr": "Ce qui dort derrière te confie un nom. Tu le gardes."},
+			 "bad":  {"injury": &"curse", "narr": "Ce qui dort derrière s'est réveillé. Il te suit, désormais."}},
+			{"tone": T_CAUT, "text": "Tu fais demi-tour sans avoir touché la porte.",
+			 "good": {"narr": "Tu pars. La porte n'est plus là quand tu te retournes. Tant mieux."},
+			 "bad":  {"narr": "Tu pars. Mais tu sais que tu reviendras. Tu sais déjà quand."}},
+		 ]},
+
+		# --- LOST MERCENARY: wounded fellow traveler ---
+		{"id": &"wounded_merc",
+		 "title": "Un mercenaire blessé tend une main vers toi.",
+		 "biomes": [&"forest", &"city", &"ruins", &"highland", &"coast"],
+		 "choices": [
+			{"tone": T_DIPL, "text": "Tu t'agenouilles et bandes sa plaie.",
+			 "good": {"stat_delta": 1, "stat": &"charisme", "narr": "Il te confie sa lame avant de fermer les yeux. Tu y gagnes plus que tu ne penses."},
+			 "bad":  {"injury": &"bleeding", "narr": "En te penchant, tu glisses. Sa lame tombe et te marque la cuisse."}},
+			{"tone": T_DECE, "text": "Tu fouilles déjà ses poches en lui parlant doucement.",
+			 "good": {"stat_delta": 2, "stat": &"vivacite", "narr": "Tu trouves trois pièces, une carte, un sceau. Il n'a rien vu."},
+			 "bad":  {"injury": &"curse", "narr": "Sa main s'agrippe à ton poignet, plus forte qu'elle ne devrait. Il chuchote un mot."}},
+			{"tone": T_AGGR, "text": "Tu écourtes sa souffrance d'un coup net.",
+			 "good": {"stat_delta": 1, "stat": &"endurance", "narr": "C'était la chose juste à faire. Tu emportes son anneau."},
+			 "bad":  {"injury": &"terror", "narr": "Ses yeux ne te quittent pas. Tu les vois encore quand tu fermes les tiens."}},
+		 ]},
+
+		# --- TWO ROADS: a fork with a cold wind from one side ---
+		{"id": &"cold_fork",
+		 "title": "Deux chemins. Le vent ne souffle que par l'un.",
+		 "biomes": [&"forest", &"highland", &"coast", &"swamp", &"crypt"],
+		 "choices": [
+			{"tone": T_CURI, "text": "Tu prends celui qui souffle. Tu veux savoir d'où vient le vent.",
+			 "good": {"stat_delta": 2, "stat": &"instinct", "narr": "Au bout, un belvédère silencieux. Tu comprends une chose que personne ne devrait."},
+			 "bad":  {"injury": &"terror", "narr": "Au bout, ce qui soufflait. Il avait une bouche. Il t'a vu."}},
+			{"tone": T_CAUT, "text": "Tu prends l'autre. Sans vent, sans surprise.",
+			 "good": {"heal": &"exhaustion", "narr": "Le chemin est doux. Tu reprends des forces."},
+			 "bad":  {"narr": "Le chemin est si calme que tu doutes de l'avoir choisi. Tu marches longtemps."}},
+			{"tone": T_MYST, "text": "Tu poses une question au croisement, à voix haute.",
+			 "good": {"stat_delta": 1, "stat": &"esprit", "narr": "Le carrefour te répond — d'un côté, par le vent ; de l'autre, par le silence. Tu sais lequel prendre."},
+			 "bad":  {"injury": &"curse", "narr": "Le carrefour t'a entendu. Il propose une troisième route. Tu en sors, plus tard, sans souvenir de ce qui s'y trouvait."}},
+		 ]},
 	]
 
 static func for_biome(biome: StringName) -> Array:
