@@ -110,35 +110,46 @@ func _sea_beneath_stone() -> void:
 	_glow_light(Vector3(0, 2.5, 1.5), Color(0.95, 0.85, 0.50), 6.0, 20.0)
 
 func _gallows_parliament() -> void:
-	# 12 hanging silhouettes in a circle, central empty stand.
+	# 12 hanging figures + drifting ash particles + lantern glow.
 	for i in 12:
 		var ang := i * TAU / 12.0
 		var rope := CylinderMesh.new()
 		rope.top_radius = 0.04; rope.bottom_radius = 0.04; rope.height = 4.0
 		_add(rope, Vector3(cos(ang) * 4.0, 6.0, sin(ang) * 4.0), Color(0.30, 0.22, 0.15))
-		# body: capsule
 		var body := CapsuleMesh.new()
 		body.radius = 0.35; body.height = 1.6
 		_add(body, Vector3(cos(ang) * 4.0, 3.5, sin(ang) * 4.0), Color(0.15, 0.10, 0.08))
-		# head: sphere
+		# Tattered robe (extra prism per figure)
+		var robe := PrismMesh.new(); robe.size = Vector3(0.6, 1.4, 0.10)
+		_add(robe, Vector3(cos(ang) * 4.0, 3.2, sin(ang) * 4.0), Color(0.08, 0.05, 0.05), 0.0, Vector3.ONE, Vector3(0, rad_to_deg(ang), 0))
 		var head := SphereMesh.new()
 		head.radius = 0.32; head.height = 0.64
 		_add(head, Vector3(cos(ang) * 4.0, 4.6, sin(ang) * 4.0), Color(0.10, 0.06, 0.05))
+		# Glowing eye sockets per hanged judge
+		for side in [-1, 1]:
+			var eye := SphereMesh.new(); eye.radius = 0.05; eye.height = 0.10
+			_add(eye, Vector3(cos(ang) * 4.0 + side * 0.08, 4.65, sin(ang) * 4.0 + 0.20), Color(0.9, 0.85, 0.65), 6.0)
 		# crossbeam segment
 		var beam := BoxMesh.new(); beam.size = Vector3(2.0, 0.2, 0.2)
-		var ang2 := i * TAU / 12.0
-		_add(beam, Vector3(cos(ang2) * 4.0, 8.0, sin(ang2) * 4.0), Color(0.20, 0.14, 0.10), 0.0, Vector3.ONE, Vector3(0, rad_to_deg(ang2) + 90, 0))
-	# central scale of judgment (empty)
+		_add(beam, Vector3(cos(ang) * 4.0, 8.0, sin(ang) * 4.0), Color(0.20, 0.14, 0.10), 0.0, Vector3.ONE, Vector3(0, rad_to_deg(ang) + 90, 0))
+		# Hanging lantern beneath each figure
+		var lantern := SphereMesh.new(); lantern.radius = 0.12; lantern.height = 0.24
+		_add(lantern, Vector3(cos(ang) * 4.0, 2.2, sin(ang) * 4.0), Color(1.0, 0.65, 0.25), 4.0)
+	# central scale of judgment
 	var post := CylinderMesh.new(); post.top_radius = 0.10; post.bottom_radius = 0.15; post.height = 4.0
 	_add(post, Vector3(0, 2.0, 0), Color(0.30, 0.22, 0.15))
 	var pan := CylinderMesh.new(); pan.top_radius = 0.6; pan.bottom_radius = 0.6; pan.height = 0.08
 	_add(pan, Vector3(-0.8, 4.0, 0), Color(0.55, 0.50, 0.40), 0.4)
 	_add(pan, Vector3(0.8, 4.0, 0), Color(0.55, 0.50, 0.40), 0.4)
-	_glow_light(Vector3(0, 5, 0), Color(0.9, 0.85, 0.65), 4.0, 22.0)
+	# Sacred verdict orb at the top of the post
+	var orb := SphereMesh.new(); orb.radius = 0.30; orb.height = 0.60
+	_add(orb, Vector3(0, 4.7, 0), Color(1.0, 0.95, 0.65), 5.0)
+	_add_ash_particles(Vector3(0, 6, 0), Color(0.85, 0.80, 0.65, 0.7), 60)
+	_glow_light(Vector3(0, 5, 0), Color(0.9, 0.85, 0.65), 5.0, 30.0)
+	_glow_light(Vector3(0, 2.2, 0), Color(1.0, 0.55, 0.20), 3.5, 14.0)
 
 func _silent_orchestra() -> void:
-	# Cluster of floating instruments + invisible conductor outlined by particles.
-	# Lutes (capsules), drums (cylinders), horns (cones via cylinder), strings (boxes)
+	# Orchestra spiral + music-note particles + ghostly conductor outline.
 	for i in 14:
 		var ang := i * TAU / 14.0
 		var radius := 4.5 + sin(i) * 0.5
@@ -149,40 +160,90 @@ func _silent_orchestra() -> void:
 			0:
 				var lute := CapsuleMesh.new(); lute.radius = 0.35; lute.height = 1.4
 				_add(lute, Vector3(cos(ang) * radius, y, sin(ang) * radius), color, 0.3, Vector3.ONE, Vector3(rad_to_deg(ang), 0, 30))
+				# Strings glow
+				var strings := BoxMesh.new(); strings.size = Vector3(0.04, 0.9, 0.04)
+				_add(strings, Vector3(cos(ang) * radius, y + 0.35, sin(ang) * radius), Color(1, 0.95, 0.7), 3.0, Vector3.ONE, Vector3(rad_to_deg(ang), 0, 30))
 			1:
 				var drum := CylinderMesh.new(); drum.top_radius = 0.55; drum.bottom_radius = 0.55; drum.height = 0.65
 				_add(drum, Vector3(cos(ang) * radius, y, sin(ang) * radius), color, 0.2)
+				# Drum skin glow
+				var skin := CylinderMesh.new(); skin.top_radius = 0.50; skin.bottom_radius = 0.50; skin.height = 0.05
+				_add(skin, Vector3(cos(ang) * radius, y + 0.32, sin(ang) * radius), Color(0.9, 0.85, 0.65), 4.0)
 			2:
 				var horn := CylinderMesh.new(); horn.top_radius = 0.50; horn.bottom_radius = 0.10; horn.height = 1.2
 				_add(horn, Vector3(cos(ang) * radius, y, sin(ang) * radius), color, 0.4, Vector3.ONE, Vector3(0, 0, 25))
+				# Bell mouth glow
+				var bell := TorusMesh.new(); bell.inner_radius = 0.40; bell.outer_radius = 0.50
+				_add(bell, Vector3(cos(ang) * radius + 0.5, y + 0.25, sin(ang) * radius), color, 1.5, Vector3.ONE, Vector3(0, 0, 90))
 			3:
 				var box := BoxMesh.new(); box.size = Vector3(0.30, 1.2, 0.10)
 				_add(box, Vector3(cos(ang) * radius, y, sin(ang) * radius), color)
-	# conductor center (silhouette outline only)
+	# Ghostly conductor — outlined by floating dots
 	for i in 30:
 		var ang := i * TAU / 30.0
 		var dot := SphereMesh.new(); dot.radius = 0.04; dot.height = 0.08
 		_add(dot, Vector3(cos(ang) * 0.6, 3.0 + sin(i * 0.5) * 1.5, sin(ang) * 0.6), Color(1, 0.95, 0.85), 6.0)
-	_glow_light(Vector3(0, 4, 0), Color(1, 0.85, 0.55), 5.0, 22.0)
+	# Music notes drifting up (small floating spheres)
+	for i in 18:
+		var note := SphereMesh.new(); note.radius = 0.06; note.height = 0.12
+		_add(note, Vector3(_frng(i, -5, 5), _frng(i + 7, 1, 7), _frng(i + 11, -4, 4)), Color(1.0, 0.90, 0.65), 4.0)
+	_glow_light(Vector3(0, 4, 0), Color(1, 0.85, 0.55), 5.0, 28.0)
+	_glow_light(Vector3(0, 6, 0), Color(0.95, 0.80, 0.45), 3.5, 18.0)
 
 func _that_which_dreams_us() -> void:
-	# Colossal closed eye, with reality-fracture rings — ambient unease.
+	# Massive closed eye + fracture rings + dreaming orbs + chromatic shells.
 	var lid := SphereMesh.new(); lid.radius = 3.2; lid.height = 4.4
 	_add(lid, Vector3(0, 3.0, 0), Color(0.20, 0.12, 0.30), 0.3, Vector3(1.4, 0.5, 1.4), Vector3(0, 0, 0), 0.7)
+	# Inner pulse (slightly visible)
+	var pulse := SphereMesh.new(); pulse.radius = 2.9; pulse.height = 4.0
+	_add(pulse, Vector3(0, 3.0, 0), Color(0.55, 0.30, 0.85), 1.0, Vector3(1.4, 0.5, 1.4))
 	var lash := BoxMesh.new(); lash.size = Vector3(8.5, 0.18, 0.5)
 	_add(lash, Vector3(0, 3.0, 0), Color(0.05, 0.03, 0.08))
 	# fracture rings (tori) at angles
-	for i in 4:
+	for i in 5:
 		var ring := TorusMesh.new()
 		ring.inner_radius = 5.0 + i * 1.2; ring.outer_radius = 5.4 + i * 1.2
-		var col := Color(0.35, 0.20, 0.85).lerp(Color(0.85, 0.45, 1.0), float(i) / 4.0)
+		var col := Color(0.35, 0.20, 0.85).lerp(Color(0.85, 0.45, 1.0), float(i) / 5.0)
 		_add(ring, Vector3(0, 3.0 + i * 0.4, 0), col, 1.2 + i * 0.3, Vector3.ONE, Vector3(70 + i * 10, i * 25, i * 5))
+	# Smaller circling shards
+	for i in 18:
+		var ang := i * TAU / 18.0
+		var shard := PrismMesh.new(); shard.size = Vector3(0.18, 0.55, 0.06)
+		_add(shard, Vector3(cos(ang) * 4.5, 3.0 + sin(ang * 2) * 0.6, sin(ang) * 4.5), Color(0.65, 0.40, 1.0), 3.0, Vector3.ONE, Vector3(0, rad_to_deg(ang), _frng(i, -30, 30)))
 	# distant orbs (other dreamers)
-	for i in 8:
-		var ang := i * TAU / 8.0
+	for i in 12:
+		var ang := i * TAU / 12.0
 		var orb := SphereMesh.new(); orb.radius = 0.18; orb.height = 0.36
 		_add(orb, Vector3(cos(ang) * 8.0, 3.0 + sin(ang * 2) * 2.0, sin(ang) * 8.0), Color(0.95, 0.85, 1.00), 5.0)
-	_glow_light(Vector3(0, 3, 0), Color(0.50, 0.25, 1.0), 7.0, 30.0)
+	_add_ash_particles(Vector3(0, 4, 0), Color(0.55, 0.40, 1.0, 0.6), 90)
+	_glow_light(Vector3(0, 3, 0), Color(0.50, 0.25, 1.0), 7.0, 35.0)
+	_glow_light(Vector3(0, 6, 4), Color(0.85, 0.45, 1.0), 4.0, 22.0)
+
+func _add_ash_particles(pos: Vector3, color: Color, amount: int) -> void:
+	var p := GPUParticles3D.new()
+	p.position = pos
+	p.amount = amount
+	p.lifetime = 4.0
+	var pm := ParticleProcessMaterial.new()
+	pm.direction = Vector3(0, 1, 0)
+	pm.spread = 50.0
+	pm.gravity = Vector3(0, -0.15, 0)
+	pm.initial_velocity_min = 0.3
+	pm.initial_velocity_max = 0.9
+	pm.scale_min = 0.03; pm.scale_max = 0.10
+	pm.color = color
+	pm.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
+	pm.emission_box_extents = Vector3(6, 2, 6)
+	p.process_material = pm
+	var mesh := SphereMesh.new(); mesh.radius = 0.05; mesh.height = 0.1
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = color
+	mat.emission_enabled = true; mat.emission = color
+	mat.emission_energy_multiplier = 2.0
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mesh.material = mat
+	p.draw_pass_1 = mesh
+	add_child(p)
 
 func _frng(seed_v: int, lo: float, hi: float) -> float:
 	# deterministic per-index pseudo-random.

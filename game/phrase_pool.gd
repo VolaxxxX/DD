@@ -344,21 +344,29 @@ static func pick_outcome(rng: DRNG, tone: int, outcome: int, creature_name: Stri
 	return tpl % creature_name
 
 static func family_descriptor(family: int, tier: int) -> String:
-	var base := ""
-	match family:
-		0: base = "le vagabond"
-		1: base = "la bête"
-		2: base = "le revenant"
-		3: base = "le gardien de fer"
-		4: base = "l'élémentaire"
-		5: base = "la chose"
-		6: base = "la silhouette fée"
-		7: base = "le draconide"
-		_: base = "l'entité"
-	if tier >= 3 and base.begins_with("le "):
-		base = "le grand " + base.substr(3)
-	elif tier >= 3 and base.begins_with("la "):
-		base = "la grande " + base.substr(3)
+	var fr := ["le vagabond", "la bête", "le revenant", "le gardien de fer",
+		"l'élémentaire", "la chose", "la silhouette fée", "le draconide"]
+	var en := ["the wanderer", "the beast", "the revenant", "the iron guardian",
+		"the elemental", "the thing", "the fey shape", "the dragonkin"]
+	var id := ["si pengembara", "binatang itu", "si arwah", "penjaga besi",
+		"sang elemental", "si makhluk", "siluet peri", "naga keturunan"]
+	var idx := clampi(family, 0, 7)
+	var base: String
+	match Lang.code:
+		"en": base = en[idx] if idx < en.size() else "the entity"
+		"id": base = id[idx] if idx < id.size() else "makhluk itu"
+		_:    base = fr[idx] if idx < fr.size() else "l'entité"
+	# Tier prefix per language for ELITE+ creatures.
+	if tier >= 3:
+		match Lang.code:
+			"en":
+				if not base.begins_with("the great "): base = "the great " + base.replace("the ", "")
+			"id":
+				base = "agung " + base
+			_:
+				if base.begins_with("le "):  base = "le grand "  + base.substr(3)
+				elif base.begins_with("la "): base = "la grande " + base.substr(3)
+				elif base.begins_with("l'"):  base = "le grand "  + base.substr(2)
 	return base
 
 static func biome_intro(biome: StringName, corruption: float) -> String:

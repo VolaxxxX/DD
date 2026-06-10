@@ -13,25 +13,42 @@ const STAT_MAX := 18
 static func stat_keys() -> Array[StringName]:
 	return [&"force", &"esprit", &"vivacite", &"instinct", &"charisme", &"endurance"]
 
+const _STAT_LABELS := {
+	"force":     {"fr": "FORCE",     "en": "MIGHT",    "id": "KEKUATAN"},
+	"esprit":    {"fr": "ESPRIT",    "en": "MIND",     "id": "PIKIRAN"},
+	"vivacite":  {"fr": "VIVACITÉ",  "en": "SWIFTNESS","id": "KELINCAHAN"},
+	"instinct":  {"fr": "INSTINCT",  "en": "INSTINCT", "id": "INSTING"},
+	"charisme":  {"fr": "CHARISME",  "en": "CHARISMA", "id": "PESONA"},
+	"endurance": {"fr": "ENDURANCE", "en": "STAMINA",  "id": "DAYA TAHAN"},
+}
+const _STAT_HINTS := {
+	"force":     {"fr": "frapper, briser, tenir.",
+	              "en": "strike, break, hold.",
+	              "id": "memukul, mematahkan, menahan."},
+	"esprit":    {"fr": "parler, lire, comprendre.",
+	              "en": "speak, read, understand.",
+	              "id": "berbicara, membaca, memahami."},
+	"vivacite":  {"fr": "esquiver, fuir, surprendre.",
+	              "en": "dodge, flee, surprise.",
+	              "id": "mengelak, lari, mengejutkan."},
+	"instinct":  {"fr": "sentir, deviner, voir au-delà.",
+	              "en": "sense, guess, see beyond.",
+	              "id": "merasakan, menebak, melihat lebih jauh."},
+	"charisme":  {"fr": "mentir, charmer, ordonner.",
+	              "en": "lie, charm, command.",
+	              "id": "berbohong, memikat, memerintah."},
+	"endurance": {"fr": "encaisser, marcher, durer.",
+	              "en": "take a hit, walk on, endure.",
+	              "id": "menahan, berjalan terus, bertahan."},
+}
+
 static func stat_label(k: StringName) -> String:
-	match String(k):
-		"force":      return "FORCE"
-		"esprit":     return "ESPRIT"
-		"vivacite":   return "VIVACITÉ"
-		"instinct":   return "INSTINCT"
-		"charisme":   return "CHARISME"
-		"endurance":  return "ENDURANCE"
-		_:            return String(k).to_upper()
+	var d: Dictionary = _STAT_LABELS.get(String(k), {})
+	return String(d.get(Lang.code, d.get("fr", String(k).to_upper())))
 
 static func stat_hint(k: StringName) -> String:
-	match String(k):
-		"force":      return "frapper, briser, tenir."
-		"esprit":     return "parler, lire, comprendre."
-		"vivacite":   return "esquiver, fuir, surprendre."
-		"instinct":   return "sentir, deviner, voir au-delà."
-		"charisme":   return "mentir, charmer, ordonner."
-		"endurance":  return "encaisser, marcher, durer."
-		_:            return ""
+	var d: Dictionary = _STAT_HINTS.get(String(k), {})
+	return String(d.get(Lang.code, d.get("fr", "")))
 
 static func all() -> Array:
 	return [
@@ -87,8 +104,41 @@ static func all() -> Array:
 
 static func by_kind(kind: int) -> Dictionary:
 	for c in all():
-		if int(c.kind) == kind: return c
+		if int(c.kind) == kind:
+			var d := c.duplicate(true)
+			d["name"] = _localized_name(int(c.kind))
+			d["tagline"] = _localized_tagline(int(c.kind))
+			return d
 	return all()[0]
+
+const _NAMES := {
+	0: {"fr": "Soldat",     "en": "Soldier",  "id": "Prajurit"},
+	1: {"fr": "Éclaireur",  "en": "Scout",    "id": "Pengintai"},
+	2: {"fr": "Mystique",   "en": "Mystic",   "id": "Mistikus"},
+	3: {"fr": "Voleur",     "en": "Thief",    "id": "Pencuri"},
+}
+const _TAGLINES := {
+	0: {"fr": "Lame d'abord. Questions ensuite.",
+	    "en": "Blade first. Questions later.",
+	    "id": "Pedang dulu. Tanya kemudian."},
+	1: {"fr": "Voir avant d'être vu.",
+	    "en": "See before being seen.",
+	    "id": "Melihat sebelum terlihat."},
+	2: {"fr": "Les mots ont du poids.",
+	    "en": "Words have weight.",
+	    "id": "Kata-kata punya bobot."},
+	3: {"fr": "Sourire devant. Lame derrière.",
+	    "en": "Smile in front. Blade behind.",
+	    "id": "Senyum di depan. Pisau di belakang."},
+}
+
+static func _localized_name(kind: int) -> String:
+	var d: Dictionary = _NAMES.get(kind, {})
+	return String(d.get(Lang.code, d.get("fr", "?")))
+
+static func _localized_tagline(kind: int) -> String:
+	var d: Dictionary = _TAGLINES.get(kind, {})
+	return String(d.get(Lang.code, d.get("fr", "")))
 
 static func tone_stat(tone: int) -> StringName:
 	# Maps a tone to its primary stat for rolls.

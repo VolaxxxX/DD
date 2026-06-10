@@ -63,6 +63,39 @@ static func tone_difficulty_mod(biome: StringName, tone: int) -> int:
 	var tm: Dictionary = r.get("tone_mod", {})
 	return int(tm.get(tone, 0))
 
+const _LABELS := {
+	"forest":    {"fr": "La forêt cache ceux qui savent se taire.",
+	              "en": "The forest hides those who know how to be silent.",
+	              "id": "Hutan menyembunyikan mereka yang tahu cara diam."},
+	"city":      {"fr": "Ici, la parole vaut une lame.",
+	              "en": "Here, a word cuts like a blade.",
+	              "id": "Di sini, sepatah kata setajam pisau."},
+	"ruins":     {"fr": "Les pierres parlent à qui sait lire.",
+	              "en": "The stones speak to those who can read.",
+	              "id": "Batu-batu berbicara pada yang bisa membaca."},
+	"corrupted": {"fr": "La terre malade ronge les faibles.",
+	              "en": "The sick land devours the weak.",
+	              "id": "Tanah sakit menggerogoti yang lemah."},
+	"anomaly":   {"fr": "Ici, la force ne veut rien dire.",
+	              "en": "Here, strength means nothing.",
+	              "id": "Di sini, kekuatan tak berarti apa-apa."},
+	"swamp":     {"fr": "Le marais ne laisse personne courir.",
+	              "en": "The swamp lets no one run.",
+	              "id": "Rawa tidak membiarkan siapa pun berlari."},
+	"highland":  {"fr": "Les hauteurs ne récompensent que l'effort.",
+	              "en": "The high places reward only effort.",
+	              "id": "Dataran tinggi hanya memberi upah pada usaha."},
+	"crypt":     {"fr": "Les morts n'écoutent pas les discours.",
+	              "en": "The dead do not listen to speeches.",
+	              "id": "Yang mati tidak mendengarkan pidato."},
+	"coast":     {"fr": "Tout se négocie, face à la mer.",
+	              "en": "Everything is negotiable, before the sea.",
+	              "id": "Semua bisa dirundingkan, di hadapan laut."},
+}
+
 static func label(biome: StringName) -> String:
-	var r: Dictionary = rules().get(biome, {})
-	return String(r.get("label", ""))
+	var d: Dictionary = _LABELS.get(String(biome), {})
+	if d.is_empty():
+		var r: Dictionary = rules().get(biome, {})
+		return String(r.get("label", ""))
+	return String(d.get(Lang.code, d.get("fr", "")))
