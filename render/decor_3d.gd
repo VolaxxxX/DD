@@ -3,6 +3,9 @@ class_name Decor3D extends Node3D
 
 func build(biome: StringName, corruption: float, rng: DRNG) -> void:
 	_grass_tufts(biome, rng)
+	# Try Kenney prop layout first; on failure fall back to procedural.
+	if _try_kenney(biome, corruption, rng):
+		return
 	match biome:
 		&"forest":    _forest(rng, corruption)
 		&"city":      _city(rng, corruption)
@@ -239,6 +242,54 @@ func _coast(rng: DRNG, _corr: float) -> void:
 	for i in 6:
 		var gull := PrismMesh.new(); gull.size = Vector3(0.30, 0.08, 0.10)
 		_place(gull, Vector3(_frng(rng, -10, 10), _frng(rng, 4, 7), _frng(rng, -12, -6)), Color(0.95, 0.95, 0.95), Vector3.ONE, 0.5)
+
+func _try_kenney(biome: StringName, corruption: float, rng: DRNG) -> bool:
+	# Pull props from the per-biome Kenney inventory. Returns true if anything
+	# loaded successfully — false leaves the procedural builder in charge.
+	var hero: Array = PropLoader.pool_for(biome, &"hero")
+	var ground: Array = PropLoader.pool_for(biome, &"ground")
+	var any := 0
+	# Place 9 "hero" props in a half-arc behind the encounter.
+	for i in 9:
+		var pick: Array = hero[rng.range_i(0, hero.size())] if hero.size() > 0 else []
+		if pick.size() < 2: continue
+		var n: Node3D = PropLoader.instance(pick[0], pick[1])
+		if n == null: continue
+		any += 1
+		var x := _frng(rng, -9, 9)
+		var z := _frng(rng, -8, -1)
+		var scl := _frng(rng, 1.2, 2.4) * float(pick[2])
+		n.position = Vector3(x, float(pick[3]), z)
+		n.rotation.y = _frng(rng, 0, 6.28)
+		n.scale = Vector3.ONE * scl
+		add_child(n)
+		# Corruption tint via per-instance modulate on the meshes.
+		if corruption > 0.4:
+			_tint_children(n, Color(1.0, 1.0, 1.0).lerp(Color(0.55, 0.20, 0.45), corruption * 0.5))
+	# Place 14 "ground" props (bushes, rocks, mushrooms) scattered.
+	for i in 14:
+		var pick: Array = ground[rng.range_i(0, ground.size())] if ground.size() > 0 else []
+		if pick.size() < 2: continue
+		var n: Node3D = PropLoader.instance(pick[0], pick[1])
+		if n == null: continue
+		any += 1
+		var x := _frng(rng, -8, 8)
+		var z := _frng(rng, -7, -0.5)
+		var scl := _frng(rng, 0.8, 1.6) * float(pick[2])
+		n.position = Vector3(x, float(pick[3]), z)
+		n.rotation.y = _frng(rng, 0, 6.28)
+		n.scale = Vector3.ONE * scl
+		add_child(n)
+	return any > 0
+
+func _tint_children(node: Node, tint: Color) -> void:
+	for c in node.get_children():
+		if c is MeshInstance3D:
+			var mi: MeshInstance3D = c
+			var mat := StandardMaterial3D.new()
+			mat.albedo_color = tint
+			mi.material_override = mat
+		_tint_children(c, tint)
 
 func _frng(rng: DRNG, lo: float, hi: float) -> float:
 	var span := int((hi - lo) * 100.0)
