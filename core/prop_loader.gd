@@ -91,14 +91,40 @@ const RUINS_PROPS := [
 ]
 
 const CRYPT_PROPS := [
+	[&"graveyard", &"gravestone-cross", 1.0, 0.0],
+	[&"graveyard", &"gravestone-decorative", 1.0, 0.0],
+	[&"graveyard", &"gravestone-roof", 1.0, 0.0],
+	[&"graveyard", &"gravestone-broken", 1.0, 0.0],
+	[&"graveyard", &"crypt", 1.0, 0.0],
+	[&"graveyard", &"cross-column", 1.0, 0.0],
+	[&"graveyard", &"altar-stone", 1.0, 0.0],
+	[&"graveyard", &"column-large", 1.0, 0.0],
+	[&"graveyard", &"pumpkin-tall-carved", 1.0, 0.0],
+	[&"graveyard", &"debris", 1.0, 0.0],
+	[&"graveyard", &"trunk-long", 1.0, 0.0],
+	[&"graveyard", &"iron-fence", 1.0, 0.0],
+]
+
+const CITY_BIG_PROPS := [
+	[&"town", &"cottage", 1.0, 0.0],
+	[&"town", &"watermill", 1.0, 0.0],
+	[&"town", &"windmill", 1.0, 0.0],
+	[&"town", &"fountain", 1.0, 0.0],
+	[&"town", &"market-stall", 1.0, 0.0],
+	[&"castle", &"tower-base", 1.0, 0.0],
+	[&"castle", &"flag-banner-long", 1.0, 0.0],
+	[&"castle", &"tower-square-mid-open", 1.0, 0.0],
+]
+
+const RUINS_BIG_PROPS := [
+	[&"castle", &"siege-tower-demolished", 1.0, 0.0],
+	[&"castle", &"wall-half", 1.0, 0.0],
+	[&"castle", &"tower-base", 1.0, 0.0],
 	[&"arena", &"column", 1.0, 0.0],
 	[&"arena", &"column-damaged", 1.0, 0.0],
-	[&"dungeon", &"column", 1.0, 0.0],
-	[&"dungeon", &"banner", 1.0, 0.0],
-	[&"dungeon", &"barrel", 1.0, 0.0],
-	[&"dungeon", &"chest", 1.0, 0.0],
-	[&"dungeon", &"stones", 1.0, 0.0],
 	[&"arena", &"statue", 1.0, 0.0],
+	[&"graveyard", &"cross-column", 1.0, 0.0],
+	[&"graveyard", &"debris", 1.0, 0.0],
 ]
 
 const CORRUPTED_PROPS := [
@@ -124,8 +150,8 @@ static func pool_for(biome: StringName, role: StringName) -> Array:
 		"highland":   return HIGHLAND_PROPS
 		"swamp":      return SWAMP_PROPS
 		"coast":      return COAST_PROPS
-		"city":       return CITY_PROPS
-		"ruins":      return RUINS_PROPS
+		"city":       return CITY_BIG_PROPS
+		"ruins":      return RUINS_BIG_PROPS
 		"crypt":      return CRYPT_PROPS
 		"corrupted":  return CORRUPTED_PROPS
 		"anomaly":    return ANOMALY_PROPS
