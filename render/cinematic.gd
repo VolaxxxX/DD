@@ -58,6 +58,18 @@ static func play_world_boss(boss_id: StringName, target: Node3D, camera: Camera3
 			var pulse := camera.create_tween().set_loops(3)
 			pulse.tween_property(camera, "fov", 80.0, 0.6)
 			pulse.tween_property(camera, "fov", 55.0, 0.6)
+		"drowning_god":
+			# Rising from beneath: camera tilts down, water spray flash, then pulls back hard.
+			_shake_camera(camera, tree, 0.55, 2.2)
+			_flash_screen(tree, Color(0.10, 0.30, 0.45, 0.75), 0.45)
+			var cam := camera.create_tween()
+			cam.tween_property(camera, "position", Vector3(0, 1.8, 5.5), 0.6)
+			cam.tween_property(camera, "position", Vector3(0, 8.5, 18.0), 3.0).set_trans(Tween.TRANS_EXPO)
+			var fov_t := camera.create_tween()
+			fov_t.tween_property(camera, "fov", 75.0, 3.0)
+			# Slow rotation so the player sees all 8 tentacles
+			var spin := target.create_tween().set_loops()
+			spin.tween_property(target, "rotation:y", TAU, 28.0)
 		_:
 			var t := camera.create_tween().set_parallel(true)
 			t.tween_property(camera, "position", Vector3(0, 4.5, 12.0), 1.8).set_trans(Tween.TRANS_SINE)

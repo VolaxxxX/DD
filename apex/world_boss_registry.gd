@@ -39,6 +39,12 @@ static func templates() -> Array:
 		 "title": "le rêveur dont nous sommes le songe",
 		 "effect": "invert_outcomes",
 		 "trigger_hint": "final_zone+runs_completed>=5"},
+		{"id": &"drowning_god",
+		 "name": "le Dieu-Noyé",
+		 "intro": "L'eau du monde se met à respirer. Quelque chose remonte. Quelque chose qui a toujours été là.",
+		 "title": "l'ancien sous toutes les marées",
+		 "effect": "drown_zone",
+		 "trigger_hint": "biome:coast/swamp/corrupted + final_zone + runs>=2"},
 	]
 
 static func pick(rng: DRNG) -> Dictionary:

@@ -35,3 +35,9 @@ static func _apply_world_effect(zone: Zone, boss: Dictionary) -> void:
 		"invert_outcomes":
 			zone.chaos = clampf(zone.chaos + 0.4, 0.0, 1.0)
 			zone.corruption = clampf(zone.corruption + 0.2, 0.0, 1.0)
+		"drown_zone":
+			# The drowning god floods minds: aggression locked low, charisme moot.
+			zone.corruption = clampf(zone.corruption + 0.45, 0.0, 1.0)
+			for a in zone.ecosystem.roster:
+				a.aggression = mini(100, a.aggression + 35)
+				a.intelligence = mini(100, a.intelligence + 15)

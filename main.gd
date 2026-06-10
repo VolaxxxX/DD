@@ -32,6 +32,7 @@ func _show_main_menu() -> void:
 	add_child(_menu_root)
 	_menu_root.start_new_game.connect(_on_menu_new_game)
 	_menu_root.open_bestiary.connect(_on_menu_bestiary)
+	Music.play_menu()
 
 func _on_menu_new_game() -> void:
 	_clear_overlays()
@@ -131,6 +132,7 @@ func _build_stage_for_active_zone() -> void:
 	stage.add_child(decor)
 	decor.build(z.biome, z.corruption, _rng.derive(z.index + 100))
 	_rebuild_player_avatars()
+	Music.play_biome(z.biome)
 	if z.dragon_id != &"":
 		_dragon_flyby(z.dragon_id, z.dragon_intro)
 
@@ -278,4 +280,5 @@ func _on_world_boss(boss: Dictionary) -> void:
 	stage.add_child(boss_node)
 	boss_node.build(StringName(boss.id))
 	Audio.play(&"boss")
+	Music.play_boss(StringName(boss.id))
 	Cinematic.play_world_boss(StringName(boss.id), boss_node, camera, get_tree())

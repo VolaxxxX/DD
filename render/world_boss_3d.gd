@@ -20,6 +20,7 @@ func build(boss_id: StringName) -> void:
 		"gallows_parliament":   _gallows_parliament()
 		"silent_orchestra":     _silent_orchestra()
 		"that_which_dreams_us": _that_which_dreams_us()
+		"drowning_god":         _drowning_god()
 		_:                      _prismatic_ascendant()
 
 func _add(mesh: Mesh, pos: Vector3, color: Color, emission_e: float = 0.0, scale_v: Vector3 = Vector3.ONE, rot_deg: Vector3 = Vector3.ZERO, rough: float = 0.6) -> MeshInstance3D:
@@ -218,6 +219,84 @@ func _that_which_dreams_us() -> void:
 	_add_ash_particles(Vector3(0, 4, 0), Color(0.55, 0.40, 1.0, 0.6), 90)
 	_glow_light(Vector3(0, 3, 0), Color(0.50, 0.25, 1.0), 7.0, 35.0)
 	_glow_light(Vector3(0, 6, 4), Color(0.85, 0.45, 1.0), 4.0, 22.0)
+
+func _drowning_god() -> void:
+	# Cthulhu-esque ancient deity: massive humanoid silhouette with cephalopod
+	# head, central glowing third eye, 12 huge tentacles, fan wings, and a
+	# black-water reflection plane beneath.
+	# --- Black water plane (the world's surface) ---
+	var water := PlaneMesh.new(); water.size = Vector2(40, 40)
+	var wmat := StandardMaterial3D.new()
+	wmat.albedo_color = Color(0.02, 0.03, 0.07)
+	wmat.roughness = 0.05; wmat.metallic = 0.8
+	wmat.metallic_specular = 0.9
+	var wmi := MeshInstance3D.new(); wmi.mesh = water; wmi.position = Vector3(0, 0.0, 0); wmi.material_override = wmat
+	add_child(wmi)
+	# --- Massive torso (cephalopod body) ---
+	var torso := CapsuleMesh.new(); torso.radius = 1.8; torso.height = 5.5
+	_add(torso, Vector3(0, 3.0, 0), Color(0.10, 0.18, 0.16), 0.0, Vector3(1.1, 1.0, 1.2), Vector3.ZERO, 0.6)
+	# --- Slimy skin highlight (smaller emitting capsule overlay) ---
+	var skin := CapsuleMesh.new(); skin.radius = 1.7; skin.height = 5.2
+	_add(skin, Vector3(0, 3.0, 0), Color(0.30, 0.55, 0.50), 0.4, Vector3(1.1, 1.0, 1.2))
+	# --- Cephalopod head (giant sphere on top) ---
+	var head := SphereMesh.new(); head.radius = 2.2; head.height = 4.4
+	_add(head, Vector3(0, 6.0, 0), Color(0.08, 0.16, 0.14), 0.0, Vector3.ONE, Vector3.ZERO, 0.4)
+	# --- Glowing third eye, central ---
+	var eye_outer := SphereMesh.new(); eye_outer.radius = 0.7; eye_outer.height = 1.4
+	_add(eye_outer, Vector3(0, 6.0, 2.0), Color(0.95, 0.85, 0.20), 1.5, Vector3.ONE, Vector3.ZERO, 0.1)
+	var eye_pupil := SphereMesh.new(); eye_pupil.radius = 0.30; eye_pupil.height = 0.60
+	_add(eye_pupil, Vector3(0, 6.0, 2.55), Color(0.03, 0.02, 0.05), 0.0)
+	# --- Face tentacles (mouth tendrils, 8 hanging) ---
+	for i in 8:
+		var ang := i * TAU / 8.0 + 0.3
+		var tent := CylinderMesh.new(); tent.top_radius = 0.06; tent.bottom_radius = 0.18; tent.height = 2.2
+		_add(tent, Vector3(cos(ang) * 1.4, 4.4, 1.2 + sin(ang) * 0.8), Color(0.10, 0.18, 0.16), 0.0, Vector3.ONE, Vector3(_pseudo(i, 60, 110), rad_to_deg(ang), 0))
+	# --- 8 great tentacles emerging from the base, sweeping outward ---
+	for i in 8:
+		var ang := i * TAU / 8.0
+		# Base segment (thick)
+		var base_seg := CylinderMesh.new(); base_seg.top_radius = 0.5; base_seg.bottom_radius = 0.9; base_seg.height = 3.5
+		_add(base_seg, Vector3(cos(ang) * 1.8, 1.5, sin(ang) * 1.8), Color(0.08, 0.15, 0.13), 0.0, Vector3.ONE, Vector3(_pseudo(i, 25, 50), rad_to_deg(ang), 0))
+		# Mid segment (medium)
+		var mid := CylinderMesh.new(); mid.top_radius = 0.25; mid.bottom_radius = 0.5; mid.height = 3.0
+		var ux := cos(ang) * 4.0; var uz := sin(ang) * 4.0
+		_add(mid, Vector3(ux, 0.6, uz), Color(0.10, 0.18, 0.16), 0.0, Vector3.ONE, Vector3(75, rad_to_deg(ang), 0))
+		# Tip (thin, emerging from water)
+		var tip := CylinderMesh.new(); tip.top_radius = 0.05; tip.bottom_radius = 0.20; tip.height = 2.5
+		var tx := cos(ang) * 6.5; var tz := sin(ang) * 6.5
+		_add(tip, Vector3(tx, 1.5, tz), Color(0.15, 0.25, 0.22), 0.0, Vector3.ONE, Vector3(_pseudo(i + 31, -30, 30), rad_to_deg(ang), _pseudo(i + 13, -25, 25)))
+		# Sucker glow at the tip
+		var sucker := SphereMesh.new(); sucker.radius = 0.12; sucker.height = 0.24
+		_add(sucker, Vector3(tx, 2.8, tz), Color(0.85, 0.95, 0.60), 4.0)
+	# --- Wing-mantle (4 large prisms flanking the torso, like vestigial fins) ---
+	for side in [-1, 1]:
+		var wing := PrismMesh.new(); wing.size = Vector3(3.5, 4.0, 0.20)
+		_add(wing, Vector3(side * 2.5, 3.5, 0), Color(0.10, 0.20, 0.18), 0.0, Vector3.ONE, Vector3(0, 90 if side > 0 else -90, side * 18))
+		var wing2 := PrismMesh.new(); wing2.size = Vector3(2.5, 2.8, 0.15)
+		_add(wing2, Vector3(side * 1.8, 5.0, -0.4), Color(0.12, 0.22, 0.20), 0.0, Vector3.ONE, Vector3(0, 90 if side > 0 else -90, side * 25))
+	# --- Crown of small tentacles on top of the head ---
+	for i in 12:
+		var ang := i * TAU / 12.0
+		var sp := SphereMesh.new(); sp.radius = 0.12; sp.height = 0.24
+		_add(sp, Vector3(cos(ang) * 1.4, 7.8, sin(ang) * 1.4), Color(0.08, 0.15, 0.13))
+		var spike := PrismMesh.new(); spike.size = Vector3(0.10, _pseudo(i, 0.6, 1.4), 0.10)
+		_add(spike, Vector3(cos(ang) * 1.4, 8.2, sin(ang) * 1.4), Color(0.12, 0.22, 0.20))
+	# --- Many small glowing eyes scattered on torso ---
+	for i in 14:
+		var ang := i * TAU / 14.0
+		var y := _pseudo(i, 2.0, 5.0)
+		_add(_eye_glow(), Vector3(cos(ang) * 1.9, y, sin(ang) * 1.9), Color(0.90, 0.70, 0.30), 5.0)
+	# --- Ambient drowning particles (drifting bubbles + spume) ---
+	_add_ash_particles(Vector3(0, 4, 0), Color(0.45, 0.85, 0.70, 0.55), 80)
+	_add_ash_particles(Vector3(0, 1, 0), Color(0.10, 0.20, 0.18, 0.55), 60)
+	# --- Cinematic glow lights ---
+	_glow_light(Vector3(0, 6, 2.5), Color(0.95, 0.85, 0.20), 8.0, 30.0)  # third eye
+	_glow_light(Vector3(0, 4, 0),   Color(0.30, 0.55, 0.50), 6.0, 28.0)  # body glow
+	_glow_light(Vector3(0, 0.1, 0), Color(0.05, 0.15, 0.25), 5.0, 35.0)  # water reflection
+
+func _eye_glow() -> SphereMesh:
+	var s := SphereMesh.new(); s.radius = 0.10; s.height = 0.20
+	return s
 
 func _add_ash_particles(pos: Vector3, color: Color, amount: int) -> void:
 	var p := GPUParticles3D.new()
