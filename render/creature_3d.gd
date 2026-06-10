@@ -113,6 +113,39 @@ var _animator: Animator
 var _eye_color: Color = Color(1, 1, 1)
 var _head_pos: Vector3 = Vector3(0, 1.6, 0)
 var _head_radius: float = 0.20
+var _imported_root: Node3D = null
+
+func _normalize_imported_scale(loaded: Node3D) -> void:
+	# Many imported GLBs have wildly different export scales (1 unit = 1m or 1cm
+	# or 100x). We probe AABB once and shrink to ~1.8m tall target.
+	var aabb := _aabb_of(loaded)
+	var size_y: float = aabb.size.y
+	if size_y > 0.001:
+		var target := 1.7
+		var factor: float = target / size_y
+		# Clamp to a reasonable range so micro-jitter doesn't run wild.
+		factor = clampf(factor, 0.05, 50.0)
+		loaded.scale = loaded.scale * factor
+		# Snap to ground.
+		var new_aabb := _aabb_of(loaded)
+		loaded.position.y = -new_aabb.position.y
+
+func _aabb_of(node: Node) -> AABB:
+	var combined := AABB()
+	var first := true
+	for child in node.get_children():
+		if child is MeshInstance3D:
+			var mi: MeshInstance3D = child
+			var a := mi.get_aabb()
+			a.position = mi.transform * a.position
+			a.size = mi.scale * a.size
+			if first: combined = a; first = false
+			else: combined = combined.merge(a)
+		var sub := _aabb_of(child)
+		if sub.size != Vector3.ZERO:
+			if first: combined = sub; first = false
+			else: combined = combined.merge(sub)
+	return combined
 
 func build(_arch: Archetype) -> void:
 	archetype = _arch
@@ -122,9 +155,10 @@ func build(_arch: Archetype) -> void:
 	var loaded: Node3D = AssetLoader.instance_for_creature(archetype.id, int(archetype.family))
 	if loaded != null:
 		body.add_child(loaded)
-		AssetLoader.play_first_animation(loaded)
+		_imported_root = loaded
+		_normalize_imported_scale(loaded)
+		AssetLoader.play_named_action(loaded, &"idle", true)
 		_apply_tier_scale()
-		# No outline, no procedural feats: the imported model already has its own art.
 		_animator = Animator.new()
 		add_child(_animator)
 		_animator.target = body
@@ -581,6 +615,9 @@ func _add_mutation_mark() -> void:
 
 func react(reaction: StringName) -> void:
 	if _animator == null: return
+	# If we have an imported GLB animation player, route the action to it too.
+	if _imported_root != null:
+		AssetLoader.play_named_action(_imported_root, reaction, false)
 	match reaction:
 		&"die":    _animator.play_die()
 		&"flee":   _animator.play_flee()

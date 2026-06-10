@@ -52,11 +52,51 @@ static func instance_for_biome_prop(biome: StringName, kind: StringName) -> Node
 	if scn == null: return null
 	return scn.instantiate()
 
+static func instance_for_player(class_kind: int) -> Node3D:
+	var names := ["soldat", "eclaireur", "mystique", "voleur"]
+	if class_kind < 0 or class_kind >= names.size(): return null
+	var p := "res://assets/models/player_%s.glb" % names[class_kind]
+	var scn := _load(p)
+	if scn == null: return null
+	return scn.instantiate()
+
 # Play the model's first animation in loop, if any.
 static func play_first_animation(node: Node3D) -> void:
+	play_named_action(node, &"idle", true)
+
+# Find an animation matching any of the keywords (case-insensitive).
+# Falls back to the first available animation if none match.
+static func find_animation_for(node: Node3D, keywords: PackedStringArray) -> String:
 	var ap := node.find_child("AnimationPlayer", true, false)
-	if ap is AnimationPlayer:
-		var names := (ap as AnimationPlayer).get_animation_list()
-		if names.size() > 0:
-			(ap as AnimationPlayer).play(names[0])
-			(ap as AnimationPlayer).get_animation(names[0]).loop_mode = Animation.LOOP_LINEAR
+	if not (ap is AnimationPlayer): return ""
+	var anim_player: AnimationPlayer = ap
+	var names := anim_player.get_animation_list()
+	for kw in keywords:
+		for n in names:
+			if String(n).to_lower().contains(kw.to_lower()):
+				return n
+	if names.size() > 0: return names[0]
+	return ""
+
+# Trigger a named "action" by mapping it to common animation names.
+# loop: true for idle/walk, false for one-shot actions.
+static func play_named_action(node: Node3D, action: StringName, loop: bool) -> void:
+	var ap := node.find_child("AnimationPlayer", true, false)
+	if not (ap is AnimationPlayer): return
+	var anim_player: AnimationPlayer = ap
+	var keywords: PackedStringArray
+	match String(action):
+		"idle":   keywords = PackedStringArray(["idle", "stand", "wait", "breathe", "static"])
+		"walk":   keywords = PackedStringArray(["walk", "run", "march", "move"])
+		"attack": keywords = PackedStringArray(["attack", "strike", "bite", "swing", "punch", "fire"])
+		"hit":    keywords = PackedStringArray(["hit", "hurt", "damage", "impact", "recoil"])
+		"die":    keywords = PackedStringArray(["die", "death", "fall", "dead", "ko"])
+		"flee":   keywords = PackedStringArray(["run", "walk", "flee", "escape"])
+		"mutate": keywords = PackedStringArray(["mutate", "transform", "shake", "summon"])
+		_:        keywords = PackedStringArray([String(action)])
+	var anim_name := find_animation_for(node, keywords)
+	if anim_name == "": return
+	var anim := anim_player.get_animation(anim_name)
+	if anim:
+		anim.loop_mode = Animation.LOOP_LINEAR if loop else Animation.LOOP_NONE
+	anim_player.play(anim_name)

@@ -17,6 +17,15 @@ func build(cls: Dictionary, p_skin: Color = Color(0.92, 0.78, 0.65), p_hair: Col
 	for c in get_children(): c.queue_free()
 	_root = Node3D.new()
 	add_child(_root)
+	# Try a per-class external GLB first.
+	var loaded: Node3D = AssetLoader.instance_for_player(int(cls.kind))
+	if loaded != null:
+		_root.add_child(loaded)
+		_normalize_player_scale(loaded)
+		AssetLoader.play_named_action(loaded, &"idle", true)
+		_injury_overlays = Node3D.new()
+		add_child(_injury_overlays)
+		return
 	_build_body()
 	_build_head()
 	_build_arms()
@@ -24,6 +33,31 @@ func build(cls: Dictionary, p_skin: Color = Color(0.92, 0.78, 0.65), p_hair: Col
 	_build_accessory()
 	_injury_overlays = Node3D.new()
 	add_child(_injury_overlays)
+
+func _normalize_player_scale(loaded: Node3D) -> void:
+	var aabb := _aabb_of(loaded)
+	if aabb.size.y > 0.001:
+		var factor: float = 1.7 / aabb.size.y
+		loaded.scale = loaded.scale * clampf(factor, 0.05, 50.0)
+		var na := _aabb_of(loaded)
+		loaded.position.y = -na.position.y
+
+func _aabb_of(node: Node) -> AABB:
+	var combined := AABB()
+	var first := true
+	for child in node.get_children():
+		if child is MeshInstance3D:
+			var mi: MeshInstance3D = child
+			var a := mi.get_aabb()
+			a.position = mi.transform * a.position
+			a.size = mi.scale * a.size
+			if first: combined = a; first = false
+			else: combined = combined.merge(a)
+		var sub := _aabb_of(child)
+		if sub.size != Vector3.ZERO:
+			if first: combined = sub; first = false
+			else: combined = combined.merge(sub)
+	return combined
 
 func _build_body() -> void:
 	var body := CapsuleMesh.new()
