@@ -100,3 +100,11 @@ static func play_named_action(node: Node3D, action: StringName, loop: bool) -> v
 	if anim:
 		anim.loop_mode = Animation.LOOP_LINEAR if loop else Animation.LOOP_NONE
 	anim_player.play(anim_name)
+	# After a one-shot action, queue back to idle via the AnimationPlayer's queue.
+	if not loop and action != &"die":
+		var idle_name := find_animation_for(node, PackedStringArray(["idle", "stand", "wait"]))
+		if idle_name != "" and idle_name != anim_name:
+			var idle_anim := anim_player.get_animation(idle_name)
+			if idle_anim:
+				idle_anim.loop_mode = Animation.LOOP_LINEAR
+			anim_player.queue(idle_name)
