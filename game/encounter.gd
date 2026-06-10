@@ -75,7 +75,9 @@ func resolve(choice_idx: int, resolver: EventResolver, coop_mod: int) -> Diction
 	var tone: int = choice.tone
 	var difficulty: int = 10 + creature.archetype.aggression / 10 + int(zone.chaos * 5)
 	var world_mod: int = -int(zone.corruption * 3)
-	var actor_stat: int = player.roll_stat_for_tone(tone)
+	difficulty += BiomeRules.tone_difficulty_mod(zone.biome, tone)
+	var stat_key: StringName = PlayerClass.tone_stat(tone)
+	var actor_stat: int = player.roll_stat_for_tone(tone) + BiomeRules.stat_mod(zone.biome, stat_key)
 	var r: Dictionary = resolver.resolve(choice.kind, actor_stat, difficulty, coop_mod, world_mod, [creature.id])
 	var outcome: int = r.outcome
 

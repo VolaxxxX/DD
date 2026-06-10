@@ -35,7 +35,10 @@ func begin() -> void:
 
 func _emit_zone_intro() -> void:
 	var z := world.active_zone()
-	zone_intro.emit(PhrasePool.biome_intro(z.biome, z.corruption), z.biome)
+	var txt := PhrasePool.biome_intro(z.biome, z.corruption)
+	var rule := BiomeRules.label(z.biome)
+	if rule != "": txt += "\n" + rule
+	zone_intro.emit(txt, z.biome)
 
 func next_encounter() -> void:
 	if _encounters_in_zone >= ENCOUNTERS_PER_ZONE:
