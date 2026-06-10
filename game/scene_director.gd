@@ -63,11 +63,29 @@ func next_encounter() -> void:
 func choose(idx: int) -> void:
 	if not _awaiting_choice or current == null: return
 	_awaiting_choice = false
+	# Followup phase if the encounter is waiting on a 2nd dialogue round.
+	if current is Encounter and (current as Encounter).has_followup:
+		var enc := current as Encounter
+		var result_fu: Dictionary = enc.resolve_followup(idx)
+		narrative_logged.emit(result_fu.narrative, result_fu.tone, result_fu.outcome)
+		_apply(result_fu)
+		await _wait(2.5)
+		_encounters_in_zone += 1
+		next_encounter()
+		return
 	var result: Dictionary = current.resolve(idx, resolver, 0)
 	narrative_logged.emit(result.narrative, result.tone, result.outcome)
 	_apply(result)
 	if not player.alive:
 		run_over.emit(StringName("tué par %s" % current.creature_name))
+		return
+	# If encounter triggered a followup dialogue, present its choices instead of moving on.
+	if result.get("has_followup", false) and current is Encounter:
+		await _wait(2.0)
+		_awaiting_choice = true
+		var enc := current as Encounter
+		enc.choices = enc.followup_choices
+		encounter_presented.emit(enc)
 		return
 	await _wait(2.5)
 	_encounters_in_zone += 1

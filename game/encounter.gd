@@ -9,6 +9,8 @@ var rng: DRNG
 var player: PlayerState
 var choices: Array[Dictionary] = []  # [{tone, text, kind}]
 var creature_name: String
+var followup_choices: Array[Dictionary] = []  # populated after successful diplomacy with smart creature
+var has_followup: bool = false
 
 func _init(_zone: Zone, _creature: Creature, _rng: DRNG, _player: PlayerState) -> void:
 	zone = _zone
@@ -82,7 +84,79 @@ func resolve(choice_idx: int, resolver: EventResolver, coop_mod: int) -> Diction
 	cons["narrative"] = narrative
 	cons["outcome"] = outcome
 	cons["tone"] = tone
+	# Trigger followup dialogue on diplomatic/mystical success vs smart creature.
+	if creature.archetype.intelligence >= 70 and outcome >= FateEngine.Outcome.SUCCESS:
+		if tone == PhrasePool.Tone.DIPLOMATIC or tone == PhrasePool.Tone.MYSTICAL:
+			cons["creature_flees"] = false  # keep creature on stage for the conversation
+			followup_choices = _build_followup_choices()
+			has_followup = true
+			cons["has_followup"] = true
 	return cons
+
+func _build_followup_choices() -> Array[Dictionary]:
+	# Three short conversational openings the creature is now willing to discuss.
+	var pool := [
+		{"text": "Tu lui demandes son nom.",
+		 "narr_good": "%s te le donne. Ce n'est pas un nom humain. Tu le garderas.",
+		 "narr_bad":  "%s ne te répond pas. Le moment passe.",
+		 "stat": &"esprit"},
+		{"text": "Tu lui demandes ce qu'il craint.",
+		 "narr_good": "%s te dit ce qu'il craint. C'est utile. C'est terrible.",
+		 "narr_bad":  "%s rit. Il ne craint rien que tu pourrais comprendre.",
+		 "stat": &"instinct"},
+		{"text": "Tu lui demandes ce qu'il y a après ces terres.",
+		 "narr_good": "%s te raconte la route. Tu sais maintenant où ne pas aller.",
+		 "narr_bad":  "%s te dit la vérité. Tu aurais préféré ne pas savoir.",
+		 "stat": &"esprit"},
+		{"text": "Tu lui demandes ce que tu deviens, toi.",
+		 "narr_good": "%s te regarde longtemps. Puis il te dit. Tu ne savais pas.",
+		 "narr_bad":  "%s te dit. Tu aurais préféré ne pas demander.",
+		 "stat": &"instinct"},
+		{"text": "Tu lui demandes une faveur.",
+		 "narr_good": "%s accepte. Quelque chose en toi se répare. Tu n'oublies pas.",
+		 "narr_bad":  "%s rit doucement. Tu n'as plus rien à offrir en échange.",
+		 "stat": &"charisme",
+		 "heal_chance": true},
+		{"text": "Tu lui poses la question que tu te poses depuis ta première zone.",
+		 "narr_good": "%s te répond. Le monde a un peu de sens maintenant.",
+		 "narr_bad":  "%s ne te comprend pas. Ou ne veut pas.",
+		 "stat": &"esprit"},
+	]
+	# Pick 3 deterministically.
+	var out: Array[Dictionary] = []
+	var idxs := []
+	for i in pool.size(): idxs.append(i)
+	while idxs.size() > 3:
+		idxs.remove_at(rng.range_i(0, idxs.size()))
+	for i in idxs:
+		var c: Dictionary = pool[i]
+		out.append({"tone": PhrasePool.Tone.DIPLOMATIC, "text": String(c.text), "kind": 1, "_followup": c})
+	return out
+
+func resolve_followup(idx: int) -> Dictionary:
+	var ui_choice: Dictionary = followup_choices[idx]
+	var c: Dictionary = ui_choice._followup
+	var stat_key: StringName = c.stat
+	var actor: int = player.effective_stat(stat_key)
+	var success: bool = actor + rng.range_i(1, 11) >= 12
+	var narr: String = (c.narr_good if success else c.narr_bad) % creature_name
+	var result := {
+		"narrative": narr,
+		"outcome": 3 if success else 2,
+		"tone": PhrasePool.Tone.DIPLOMATIC,
+		"stat_delta": 1 if success else 0,
+		"stat": stat_key,
+		"creature_dies": false,
+		"creature_flees": true,  # conversation ends, creature leaves
+		"mutate": false,
+		"injury": &"",
+		"heal": &"",
+		"fatal": false,
+	}
+	if success and c.get("heal_chance", false) and not player.injuries.is_empty():
+		result["heal"] = player.injuries[rng.range_i(0, player.injuries.size())]
+	has_followup = false
+	return result
 
 func _consequences(tone: int, outcome: int) -> Dictionary:
 	var c := {
