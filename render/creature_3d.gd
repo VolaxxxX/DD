@@ -118,6 +118,18 @@ func build(_arch: Archetype) -> void:
 	archetype = _arch
 	body = Node3D.new()
 	add_child(body)
+	# Try external GLB first.
+	var loaded: Node3D = AssetLoader.instance_for_creature(archetype.id, int(archetype.family))
+	if loaded != null:
+		body.add_child(loaded)
+		AssetLoader.play_first_animation(loaded)
+		_apply_tier_scale()
+		# No outline, no procedural feats: the imported model already has its own art.
+		_animator = Animator.new()
+		add_child(_animator)
+		_animator.target = body
+		_animator.start_idle()
+		return
 	var override: Dictionary = ID_VISUAL.get(archetype.id, {})
 	var col: Color = override.get("color", FAMILY_COLOR.get(archetype.family, Color.WHITE))
 	var acc: Color = override.get("accent", FAMILY_ACCENT.get(archetype.family, Color.WHITE))

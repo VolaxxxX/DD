@@ -6,6 +6,12 @@ const BOSS_HEIGHT := 8.0    # towering presence
 
 func build(boss_id: StringName) -> void:
 	for c in get_children(): c.queue_free()
+	var loaded: Node3D = AssetLoader.instance_for_boss(boss_id)
+	if loaded != null:
+		add_child(loaded)
+		AssetLoader.play_first_animation(loaded)
+		_glow_light(Vector3(0, 4, 0), Color(1, 0.85, 0.55), 6.0, 25.0)
+		return
 	match String(boss_id):
 		"prismatic_ascendant":  _prismatic_ascendant()
 		"nameless_sovereign":   _nameless_sovereign()

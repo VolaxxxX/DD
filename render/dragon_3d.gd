@@ -22,6 +22,12 @@ func build(id: StringName) -> void:
 	dragon_id = id
 	for c in get_children(): c.queue_free()
 	var pal: Dictionary = DRAGON_PALETTE.get(id, {"body": Color.RED, "accent": Color.WHITE, "eye": Color.YELLOW})
+	var loaded: Node3D = AssetLoader.instance_for_dragon(id)
+	if loaded != null:
+		add_child(loaded)
+		AssetLoader.play_first_animation(loaded)
+		_glow_light(Vector3(0, 0, 0), pal.eye, 5.0, 20.0)
+		return
 	_build_body(pal)
 	_build_specials(id, pal)
 	_glow_light(Vector3(0, 0, 0), pal.eye, 4.0, 18.0)
