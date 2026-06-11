@@ -2,6 +2,7 @@ extends Node3D
 # Main menu: TIARA title, slow-rotating dragon centerpiece, new game / bestiary / lang / quit.
 
 signal start_new_game()
+signal continue_run()
 signal open_bestiary()
 
 @onready var title_label: Label = $UI/Root/Title
@@ -18,6 +19,18 @@ var _dragon: Dragon3D
 
 func _ready() -> void:
 	Lang.load_pref()
+	# Insert a CONTINUE button at the top if a save exists.
+	if Save.has_save():
+		var cont := Button.new()
+		cont.custom_minimum_size = Vector2(0, 60)
+		cont.add_theme_font_size_override("font_size", 22)
+		cont.text = Lang.ui("menu_continue")
+		cont.pressed.connect(func():
+			Audio.play(&"click")
+			continue_run.emit())
+		var box: VBoxContainer = $UI/Root/Buttons
+		box.add_child(cont)
+		box.move_child(cont, 0)
 	new_btn.pressed.connect(func(): start_new_game.emit())
 	codex_btn.pressed.connect(func(): open_bestiary.emit())
 	quit_btn.pressed.connect(func(): get_tree().quit())

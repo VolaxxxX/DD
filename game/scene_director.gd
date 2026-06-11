@@ -7,6 +7,8 @@ signal zone_intro(text: String, biome: StringName)
 signal creature_reaction(reaction: StringName)
 signal stats_changed(force: int, injuries: Array)
 signal injury_added(injury_id: StringName)
+signal stat_changed_for_player(stat_key: StringName, delta: int, player_idx: int)
+signal healed(injury_id: StringName, player_idx: int)
 signal world_boss_spawned(boss: Dictionary)
 signal run_over(cause: StringName)
 
@@ -108,6 +110,7 @@ func choose(idx: int) -> void:
 	_apply(result)
 	if not player.alive:
 		if _all_dead():
+			Save.clear()
 			run_over.emit(StringName("%s %s" % [Lang.ui("killed_by"), current.creature_name]))
 			return
 		# Duo: the survivor carries on, marked by grief.
@@ -135,6 +138,7 @@ func _apply(result: Dictionary) -> void:
 	if stat_delta != 0:
 		var stat_key: StringName = result.get("stat", &"force")
 		player.stats[stat_key] = maxi(1, int(player.stats.get(stat_key, 8)) + stat_delta)
+		stat_changed_for_player.emit(stat_key, stat_delta, active_idx)
 	var inj_id: StringName = result.get("injury", &"")
 	if inj_id != &"":
 		if player.add_injury(inj_id):
@@ -142,6 +146,7 @@ func _apply(result: Dictionary) -> void:
 	var heal_id: StringName = result.get("heal", &"")
 	if heal_id != &"" and heal_id in player.injuries:
 		player.injuries.erase(heal_id)
+		healed.emit(heal_id, active_idx)
 	if bool(result.get("fatal", false)):
 		player.alive = false
 	var has_creature: bool = current.creature != null
@@ -164,9 +169,11 @@ func _advance_zone() -> void:
 	_encounters_in_zone = 0
 	var next_idx := world.active_zone_index + 1
 	if next_idx >= world.zones.size():
+		Save.clear()
 		run_over.emit(&"extrait")
 		return
 	world.advance_zone()
+	Save.save_run(players, world)
 	_maybe_trigger_world_boss()
 	_emit_zone_intro()
 	await _wait(2.0)

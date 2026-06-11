@@ -117,11 +117,30 @@ func _render_injuries(injuries: Array) -> void:
 	for inj_id in injuries:
 		var inj: Dictionary = InjuryRegistry.by_id(inj_id)
 		if inj.is_empty(): continue
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 4)
+		# Colored dot icon (ColorRect with rounded look via theme stylebox).
+		var dot := ColorRect.new()
+		dot.custom_minimum_size = Vector2(14, 14)
+		dot.color = inj.color
+		var stylebox := StyleBoxFlat.new()
+		stylebox.bg_color = inj.color
+		stylebox.corner_radius_top_left = 8
+		stylebox.corner_radius_top_right = 8
+		stylebox.corner_radius_bottom_left = 8
+		stylebox.corner_radius_bottom_right = 8
+		stylebox.shadow_color = Color(inj.color.r, inj.color.g, inj.color.b, 0.5)
+		stylebox.shadow_size = 4
+		var pnl := PanelContainer.new()
+		pnl.add_theme_stylebox_override("panel", stylebox)
+		pnl.custom_minimum_size = Vector2(14, 14)
+		row.add_child(pnl)
 		var lbl := Label.new()
 		lbl.text = String(inj.name)
 		lbl.add_theme_color_override("font_color", inj.color)
-		lbl.add_theme_font_size_override("font_size", 16)
-		injuries_box.add_child(lbl)
+		lbl.add_theme_font_size_override("font_size", 14)
+		row.add_child(lbl)
+		injuries_box.add_child(row)
 
 func update_zone(index: int, biome: StringName) -> void:
 	zone_label.text = "Z.%d  %s" % [index + 1, String(biome).to_upper()]

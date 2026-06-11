@@ -31,8 +31,58 @@ func _show_main_menu() -> void:
 	_menu_root = preload("res://ui/main_menu.tscn").instantiate()
 	add_child(_menu_root)
 	_menu_root.start_new_game.connect(_on_menu_new_game)
+	_menu_root.continue_run.connect(_on_menu_continue)
 	_menu_root.open_bestiary.connect(_on_menu_bestiary)
 	Music.play_menu()
+
+func _on_menu_continue() -> void:
+	var s := Save.load_run()
+	if s.is_empty():
+		_on_menu_new_game()
+		return
+	_clear_overlays()
+	players.clear()
+	for d in s.players:
+		var p := PlayerState.new()
+		p.setup(String(d.name), int(d.class_kind), d.stats)
+		p.injuries = (d.injuries as Array).duplicate()
+		p.alive = bool(d.alive)
+		players.append(p)
+	player_state = players[0]
+	ui.visible = true
+	_start_game_with_saved_seed(int(s.seed), int(s.zone_index))
+
+func _start_game_with_saved_seed(seed: int, zone_index: int) -> void:
+	_started = true
+	_rng = DRNG.new(seed ^ 0xCAFE)
+	orchestrator = RunOrchestrator.new()
+	add_child(orchestrator)
+	orchestrator.start_run(seed)
+	fate = FateEngine.new(DRNG.new(seed ^ 0xFA7E))
+	resolver = EventResolver.new(fate)
+	director = SceneDirector.new(orchestrator.world, resolver, _rng.derive(0xD12EC), players)
+	add_child(director)
+	director.turn_changed.connect(func(p: PlayerState): ui.set_player(p))
+	# Fast-forward to the saved zone.
+	while orchestrator.world.active_zone_index < zone_index and orchestrator.world.active_zone_index < orchestrator.world.zones.size() - 1:
+		orchestrator.world.advance_zone()
+	_setup_camera()
+	_build_stage_for_active_zone()
+	ui.set_player(player_state)
+	ui.update_zone(orchestrator.world.active_zone_index, orchestrator.world.active_zone().biome)
+	director.zone_intro.connect(_on_zone_intro)
+	director.encounter_presented.connect(_on_encounter)
+	director.narrative_logged.connect(_on_narrative)
+	director.creature_reaction.connect(_on_creature_reaction)
+	director.stats_changed.connect(_on_stats)
+	director.run_over.connect(_on_run_over)
+	director.world_boss_spawned.connect(_on_world_boss)
+	director.stat_changed_for_player.connect(_on_player_stat_change)
+	director.healed.connect(_on_player_heal)
+	director.injury_added.connect(_on_player_injury)
+	ui.choice_selected.connect(_on_choice)
+	Bus.zone_changed.connect(_on_zone_changed)
+	director.begin()
 
 func _on_menu_new_game() -> void:
 	_clear_overlays()
@@ -98,6 +148,9 @@ func _start_game() -> void:
 	director.stats_changed.connect(_on_stats)
 	director.run_over.connect(_on_run_over)
 	director.world_boss_spawned.connect(_on_world_boss)
+	director.stat_changed_for_player.connect(_on_player_stat_change)
+	director.healed.connect(_on_player_heal)
+	director.injury_added.connect(_on_player_injury)
 	ui.choice_selected.connect(_on_choice)
 	Bus.zone_changed.connect(_on_zone_changed)
 
@@ -115,7 +168,28 @@ func _process(delta: float) -> void:
 	_breath_time += delta
 	var off_y := sin(_breath_time * 0.6) * 0.04
 	var off_x := sin(_breath_time * 0.4) * 0.03
-	camera.position = Vector3(off_x, 2.2 + off_y, 6.0)
+	camera.position = Vector3(off_x + _shake_offset.x, 2.2 + off_y + _shake_offset.y, 6.0 + _shake_offset.z)
+	if _shake_t > 0.0:
+		_shake_t = maxf(0.0, _shake_t - delta / _shake_dur)
+		var k := _shake_t * _shake_t
+		_shake_offset = Vector3(randf_range(-1, 1), randf_range(-1, 1), 0) * (_shake_amp * k)
+	else:
+		_shake_offset = Vector3.ZERO
+
+var _shake_t: float = 0.0
+var _shake_dur: float = 0.4
+var _shake_amp: float = 0.0
+var _shake_offset: Vector3 = Vector3.ZERO
+
+func _shake_camera(amp: float, dur: float) -> void:
+	_shake_amp = amp
+	_shake_dur = dur
+	_shake_t = 1.0
+
+func _slowmo(scale: float, duration: float) -> void:
+	Engine.time_scale = scale
+	get_tree().create_timer(duration * scale, true, false, true).timeout.connect(func():
+		Engine.time_scale = 1.0)
 
 func _build_stage_for_active_zone() -> void:
 	for child in stage.get_children(): child.queue_free()
@@ -220,6 +294,13 @@ func _on_narrative(text: String, tone: int, outcome: int) -> void:
 	_play_outcome_vfx(tone, outcome)
 
 func _play_outcome_vfx(tone: int, outcome: int) -> void:
+	# Slow-motion + camera shake on extreme outcomes — always plays.
+	match outcome:
+		0:  # CRIT_FAIL
+			_slowmo(0.35, 0.6)
+			_shake_camera(0.30, 0.4)
+		4:  # CRIT_SUCCESS
+			_slowmo(0.45, 0.5)
 	if creature_node == null or not is_instance_valid(creature_node): return
 	var pos: Vector3 = creature_node.position + Vector3(0, 1.0, 0)
 	match outcome:
@@ -261,6 +342,28 @@ func _on_choice(idx: int) -> void:
 func _on_run_over(cause: StringName) -> void:
 	Audio.play(&"death")
 	ui.show_run_over(cause)
+
+func _on_player_stat_change(stat_key: StringName, delta: int, player_idx: int) -> void:
+	var pos := _avatar_world_pos(player_idx) + Vector3(0, 1.6, 0)
+	var col := Color(0.4, 1.0, 0.4) if delta > 0 else Color(1.0, 0.5, 0.4)
+	var sign := "+" if delta > 0 else ""
+	FloatingText.spawn(stage, pos, "%s%d %s" % [sign, delta, String(stat_key).to_upper()], col, 0.6)
+
+func _on_player_heal(injury_id: StringName, player_idx: int) -> void:
+	var pos := _avatar_world_pos(player_idx) + Vector3(0, 1.6, 0)
+	FloatingText.spawn(stage, pos, "+ %s" % Lang.ui("heal"), Color(0.6, 1.0, 0.7), 0.5)
+
+func _on_player_injury(injury_id: StringName) -> void:
+	var pos := _avatar_world_pos(director.active_idx) + Vector3(0, 1.6, 0)
+	var inj: Dictionary = InjuryRegistry.by_id(injury_id)
+	var name: String = String(inj.get("name", "BLESSÉ")) if not inj.is_empty() else "BLESSÉ"
+	FloatingText.spawn(stage, pos, "− %s" % name, Color(1.0, 0.45, 0.35), 0.55)
+	_shake_camera(0.18, 0.3)
+
+func _avatar_world_pos(player_idx: int) -> Vector3:
+	if player_idx >= 0 and player_idx < avatar_nodes.size() and is_instance_valid(avatar_nodes[player_idx]):
+		return avatar_nodes[player_idx].global_position
+	return Vector3.ZERO
 
 func _on_zone_changed(idx: int, _seed: int) -> void:
 	ui.update_zone(idx, orchestrator.world.zones[idx].biome)
