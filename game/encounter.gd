@@ -28,15 +28,24 @@ func _resolve_name() -> String:
 
 func _build_choices() -> Array[Dictionary]:
 	var tones: Array[int] = []
+	var fam := creature.archetype.family
+	# A creature can be reasoned with only if its FAMILY can speak/parley
+	# (or its intel is high enough to be an exception, like the Old Wood Stag).
+	# Beasts, Elementals, Constructs are not speakers regardless of intel.
+	var speaks: bool = (fam == Archetype.Family.HUMANOID
+		or fam == Archetype.Family.UNDEAD
+		or fam == Archetype.Family.FEY
+		or fam == Archetype.Family.DRACONIC
+		or (fam == Archetype.Family.ABERRATION and creature.archetype.intelligence >= 70)
+		or creature.archetype.intelligence >= 85)        # apex exception
 	tones.append(PhrasePool.Tone.AGGRESSIVE)
-	if creature.archetype.intelligence >= 40:
+	if speaks and creature.archetype.intelligence >= 40:
 		tones.append(PhrasePool.Tone.DIPLOMATIC)
 	tones.append(PhrasePool.Tone.CAUTIOUS)
-	if zone.biome == &"anomaly" or zone.biome == &"corrupted" or zone.biome == &"ruins":
-		tones.append(PhrasePool.Tone.CURIOUS)
-	if creature.archetype.intelligence >= 30:
+	# CURIOUS available everywhere — observing is always possible.
+	tones.append(PhrasePool.Tone.CURIOUS)
+	if speaks and creature.archetype.intelligence >= 30:
 		tones.append(PhrasePool.Tone.DECEPTIVE)
-	var fam := creature.archetype.family
 	var mystical_family := fam == Archetype.Family.FEY or fam == Archetype.Family.ABERRATION or fam == Archetype.Family.DRACONIC
 	var mystical_biome := zone.biome == &"anomaly" or zone.biome == &"corrupted"
 	if mystical_family or mystical_biome:
