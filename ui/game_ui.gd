@@ -60,6 +60,7 @@ func _ready() -> void:
 	_lang_btn.offset_top = 60.0; _lang_btn.offset_bottom = 100.0
 	_lang_btn.pressed.connect(_cycle_lang)
 	$Root.add_child(_lang_btn)
+	setup_pause_button()
 
 var _lang_btn: Button
 var _last_force: int = 0
@@ -71,6 +72,20 @@ func _cycle_lang() -> void:
 	Lang.save_pref()
 	_lang_btn.text = Lang.code.to_upper()
 	update_stats(_last_force, _last_injuries)
+
+signal pause_requested()
+
+func setup_pause_button() -> void:
+	var pb := Button.new()
+	pb.text = "❚❚"
+	pb.custom_minimum_size = Vector2(56, 40)
+	pb.anchor_left = 0.0; pb.anchor_right = 0.0
+	pb.offset_left = 12.0; pb.offset_right = 68.0
+	pb.offset_top = 60.0; pb.offset_bottom = 100.0
+	pb.pressed.connect(func():
+		Audio.play(&"click")
+		pause_requested.emit())
+	$Root.add_child(pb)
 
 func set_player(p: PlayerState) -> void:
 	name_label.text = "%s — %s" % [p.name, String(p.class_data.name)]

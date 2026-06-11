@@ -39,7 +39,8 @@ func _ready() -> void:
 
 func _make_player() -> AudioStreamPlayer:
 	var p := AudioStreamPlayer.new()
-	p.volume_db = -16.0
+	p.volume_db = 0.0
+	p.bus = "Music" if AudioServer.get_bus_index("Music") != -1 else "Master"
 	add_child(p)
 	return p
 
@@ -57,20 +58,19 @@ func stop() -> void:
 	_player_b.stop()
 	_current_key = &""
 
-func _crossfade(key: StringName, params: Array, target_db: float = -16.0) -> void:
+func _crossfade(key: StringName, params: Array, _target_db_unused: float = 0.0) -> void:
 	if key == _current_key: return
 	_current_key = key
 	var stream: AudioStreamWAV = _cache.get(key)
 	if stream == null:
 		stream = _build_drone(params[0], params[1])
 		_cache[key] = stream
-	# Swap the inactive player to the new stream and fade.
 	var next_player := _player_b if _active == _player_a else _player_a
 	next_player.stream = stream
 	next_player.volume_db = -50.0
 	next_player.play()
 	var fade_in := next_player.create_tween()
-	fade_in.tween_property(next_player, "volume_db", target_db, 2.0)
+	fade_in.tween_property(next_player, "volume_db", 0.0, 2.0)
 	var fade_out := _active.create_tween()
 	fade_out.tween_property(_active, "volume_db", -50.0, 2.0)
 	fade_out.tween_callback(func():

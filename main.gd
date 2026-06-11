@@ -176,10 +176,27 @@ func _start_game() -> void:
 	director.encounter_progress.connect(func(c: int, t: int): ui.update_encounter_progress(c, t))
 	director.village_offered.connect(_on_village_offered)
 	ui.choice_selected.connect(_on_choice)
+	if not ui.pause_requested.is_connected(_open_pause_menu):
+		ui.pause_requested.connect(_open_pause_menu)
 	Bus.zone_changed.connect(_on_zone_changed)
 
 	Progress.record_run_start()
 	director.begin()
+
+func _open_pause_menu() -> void:
+	var pm: Control = preload("res://ui/pause_menu.gd").new()
+	var layer := CanvasLayer.new(); layer.layer = 95
+	layer.process_mode = Node.PROCESS_MODE_ALWAYS
+	add_child(layer); layer.add_child(pm)
+	pm.resumed.connect(func():
+		if is_instance_valid(layer): layer.queue_free())
+	pm.quit_to_menu.connect(func():
+		if is_instance_valid(layer): layer.queue_free()
+		_show_main_menu())
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("ui_cancel") and _started:
+		_open_pause_menu()
 
 func _on_village_offered(player: PlayerState) -> void:
 	Music.play_menu()  # peaceful theme for the village pause

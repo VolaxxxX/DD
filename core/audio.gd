@@ -25,7 +25,8 @@ func play(key: StringName, pitch: float = 1.0) -> void:
 func _make(key: StringName, stream: AudioStreamWAV) -> void:
 	var p := AudioStreamPlayer.new()
 	p.stream = stream
-	p.volume_db = -8.0
+	p.volume_db = 0.0
+	p.bus = "SFX" if AudioServer.get_bus_index("SFX") != -1 else "Master"
 	add_child(p)
 	_players[key] = p
 

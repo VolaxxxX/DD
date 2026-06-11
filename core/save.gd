@@ -34,6 +34,13 @@ func load_run() -> Dictionary:
 	if f == null: return {}
 	var v = f.get_var()
 	if typeof(v) != TYPE_DICTIONARY: return {}
+	# Defensive validation — a corrupted save is preferable to a crash.
+	if not v.has("players") or not (v.get("players") is Array): return {}
+	if not v.has("seed") or not (v.get("seed") is int): return {}
+	if not v.has("zone_index") or not (v.get("zone_index") is int): return {}
+	for p in v.players:
+		if not (p is Dictionary): return {}
+		if not p.has("name") or not p.has("class_kind") or not p.has("stats"): return {}
 	return v
 
 func clear() -> void:
