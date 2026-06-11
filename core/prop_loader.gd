@@ -17,28 +17,34 @@ static func instance(pack: StringName, name: StringName) -> Node3D:
 
 # Per-biome prop inventory. Each entry: (pack, name, base_scale, y_offset).
 const FOREST_TREES := [
-	[&"nature", &"tree_default", 1.0, 0.0],
-	[&"nature", &"tree_default_dark", 1.0, 0.0],
-	[&"nature", &"tree_blocks", 1.0, 0.0],
-	[&"nature", &"tree_blocks_dark", 1.0, 0.0],
-	[&"nature", &"tree_cone", 1.0, 0.0],
-	[&"nature", &"tree_cone_dark", 1.0, 0.0],
-	[&"nature", &"tree_detailed", 1.0, 0.0],
-	[&"nature", &"tree_detailed_dark", 1.0, 0.0],
-	[&"nature", &"tree_oak", 1.0, 0.0],
-	[&"nature", &"tree_pineDefaultB", 1.0, 0.0],
-	[&"nature", &"tree_pineRoundB", 1.0, 0.0],
-	[&"nature", &"tree_pineTallC", 1.0, 0.0],
+	[&"kayforest", &"Tree_1_A_Color1", 1.0, 0.0],
+	[&"kayforest", &"Tree_1_B_Color1", 1.0, 0.0],
+	[&"kayforest", &"Tree_1_C_Color1", 1.0, 0.0],
+	[&"kayforest", &"Tree_1_D_Color1", 1.0, 0.0],
+	[&"kayforest", &"Tree_2_A_Color1", 1.0, 0.0],
+	[&"kayforest", &"Tree_2_B_Color1", 1.0, 0.0],
+	[&"kayforest", &"Tree_2_C_Color1", 1.0, 0.0],
+	[&"kayforest", &"Tree_3_A_Color1", 1.0, 0.0],
+	[&"kayforest", &"Tree_3_B_Color1", 1.0, 0.0],
+	[&"kayforest", &"Tree_4_A_Color1", 1.0, 0.0],
+	[&"kayforest", &"Tree_4_B_Color1", 1.0, 0.0],
+	[&"kayforest", &"Tree_4_A_Color1", 1.0, 0.0],
 ]
 const FOREST_GROUND := [
-	[&"nature", &"plant_bushSmall", 1.0, 0.0],
-	[&"nature", &"plant_bush", 1.0, 0.0],
-	[&"nature", &"flower_purpleA", 1.0, 0.0],
-	[&"nature", &"flower_redA", 1.0, 0.0],
-	[&"nature", &"mushroom_redGroup", 1.0, 0.0],
-	[&"nature", &"mushroom_tanGroup", 1.0, 0.0],
-	[&"nature", &"stone_smallA", 1.0, 0.0],
-	[&"nature", &"stone_smallE", 1.0, 0.0],
+	[&"kayforest", &"Bush_1_A_Color1", 1.0, 0.0],
+	[&"kayforest", &"Bush_1_B_Color1", 1.0, 0.0],
+	[&"kayforest", &"Bush_2_A_Color1", 1.0, 0.0],
+	[&"kayforest", &"Bush_3_A_Color1", 1.0, 0.0],
+	[&"kayforest", &"Bush_4_A_Color1", 1.0, 0.0],
+	[&"kayforest", &"Flower_1_A_Color1", 1.0, 0.0],
+	[&"kayforest", &"Flower_2_A_Color1", 1.0, 0.0],
+	[&"kayforest", &"Flower_3_A_Color1", 1.0, 0.0],
+	[&"kayforest", &"Grass_1_A_Color1", 1.0, 0.0],
+	[&"kayforest", &"Mushroom_1_A_Color1", 1.0, 0.0],
+	[&"kayforest", &"Mushroom_2_A_Color1", 1.0, 0.0],
+	[&"kayforest", &"Rock_1_A_Color1", 1.0, 0.0],
+	[&"kayforest", &"Rock_2_A_Color1", 1.0, 0.0],
+	[&"kayforest", &"Rock_4_A_Color1", 1.0, 0.0],
 ]
 
 const HIGHLAND_PROPS := [
@@ -91,18 +97,25 @@ const RUINS_PROPS := [
 ]
 
 const CRYPT_PROPS := [
-	[&"graveyard", &"gravestone-cross", 1.0, 0.0],
-	[&"graveyard", &"gravestone-decorative", 1.0, 0.0],
-	[&"graveyard", &"gravestone-roof", 1.0, 0.0],
-	[&"graveyard", &"gravestone-broken", 1.0, 0.0],
-	[&"graveyard", &"crypt", 1.0, 0.0],
-	[&"graveyard", &"cross-column", 1.0, 0.0],
-	[&"graveyard", &"altar-stone", 1.0, 0.0],
-	[&"graveyard", &"column-large", 1.0, 0.0],
-	[&"graveyard", &"pumpkin-tall-carved", 1.0, 0.0],
-	[&"graveyard", &"debris", 1.0, 0.0],
-	[&"graveyard", &"trunk-long", 1.0, 0.0],
-	[&"graveyard", &"iron-fence", 1.0, 0.0],
+	[&"kayhalloween", &"gravestone", 1.0, 0.0],
+	[&"kayhalloween", &"gravestone_pumpkin", 1.0, 0.0],
+	[&"kayhalloween", &"grave_A", 1.0, 0.0],
+	[&"kayhalloween", &"grave_B", 1.0, 0.0],
+	[&"kayhalloween", &"grave_A_destroyed", 1.0, 0.0],
+	[&"kayhalloween", &"gravemarker_A", 1.0, 0.0],
+	[&"kayhalloween", &"gravemarker_B", 1.0, 0.0],
+	[&"kayhalloween", &"crypt", 1.0, 0.0],
+	[&"kayhalloween", &"coffin", 1.0, 0.0],
+	[&"kayhalloween", &"coffin_decorated", 1.0, 0.0],
+	[&"kayhalloween", &"candle_triple", 1.0, 0.0],
+	[&"kayhalloween", &"arch", 1.0, 0.0],
+	[&"kayhalloween", &"arch_gate", 1.0, 0.0],
+	[&"kayhalloween", &"fence_pillar", 1.0, 0.0],
+	[&"kayhalloween", &"tree_dead_large", 1.0, 0.0],
+	[&"kayhalloween", &"tree_dead_large_decorated", 1.0, 0.0],
+	[&"kayhalloween", &"bone_A", 1.0, 0.0],
+	[&"kayhalloween", &"bone_B", 1.0, 0.0],
+	[&"kayhalloween", &"bone_C", 1.0, 0.0],
 ]
 
 const CITY_BIG_PROPS := [
@@ -117,14 +130,16 @@ const CITY_BIG_PROPS := [
 ]
 
 const RUINS_BIG_PROPS := [
+	[&"kaydungeon", &"wall_doorway", 1.0, 0.0],
+	[&"kaydungeon", &"wall_corner", 1.0, 0.0],
+	[&"kaydungeon", &"wall_corner_scaffold", 1.0, 0.0],
+	[&"kaydungeon", &"column", 1.0, 0.0],
+	[&"kaydungeon", &"pillar", 1.0, 0.0],
+	[&"kaydungeon", &"pillar_decorated", 1.0, 0.0],
+	[&"kaydungeon", &"barrier_column", 1.0, 0.0],
 	[&"castle", &"siege-tower-demolished", 1.0, 0.0],
-	[&"castle", &"wall-half", 1.0, 0.0],
 	[&"castle", &"tower-base", 1.0, 0.0],
-	[&"arena", &"column", 1.0, 0.0],
-	[&"arena", &"column-damaged", 1.0, 0.0],
 	[&"arena", &"statue", 1.0, 0.0],
-	[&"graveyard", &"cross-column", 1.0, 0.0],
-	[&"graveyard", &"debris", 1.0, 0.0],
 ]
 
 const CORRUPTED_PROPS := [
