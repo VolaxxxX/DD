@@ -263,6 +263,7 @@ func _build_stage_for_active_zone() -> void:
 	decor.build(z.biome, z.corruption, _rng.derive(z.index + 100), z.sub_biome)
 	_rebuild_player_avatars()
 	Music.play_biome(z.biome)
+	Audio.set_ambient_biome(z.biome)
 	if z.dragon_id != &"":
 		_dragon_flyby(z.dragon_id, z.dragon_intro)
 
@@ -433,6 +434,10 @@ func _on_choice(idx: int) -> void:
 
 func _on_run_over(cause: StringName) -> void:
 	Audio.play(&"death")
+	# Dramatic cinematic: slow camera fall + zoom + fade to black.
+	var cause_s := String(cause)
+	var extracted := cause_s.contains("extrait") or cause_s.contains("extracted") or cause_s.contains("keluar")
+	_play_death_cinematic(extracted)
 	# Track stats and achievements.
 	var extracted := String(cause).contains("extrait") or String(cause).contains("extracted") or String(cause).contains("keluar")
 	var any_inj := false
@@ -446,8 +451,23 @@ func _on_run_over(cause: StringName) -> void:
 		Progress.record_titan_survived()
 	Progress.record_language(Lang.code)
 	ui.show_run_over(cause)
-	# Run summary panel after fade.
-	get_tree().create_timer(2.0).timeout.connect(_show_run_summary.bind(String(cause)))
+	# Run summary panel after the cinematic settles.
+	get_tree().create_timer(4.5, true, false, true).timeout.connect(_show_run_summary.bind(String(cause)))
+
+func _play_death_cinematic(extracted: bool) -> void:
+	Engine.time_scale = 0.55
+	# Camera tween: pull back, slight rise for extraction, slight fall for death.
+	var target_pos := Vector3(0, 4.5, 9.0) if extracted else Vector3(0, 1.4, 7.5)
+	var target_fov := 38.0
+	var t := camera.create_tween().set_parallel(true)
+	t.tween_property(camera, "position", target_pos, 2.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	t.tween_property(camera, "fov", target_fov, 2.0)
+	# Title flash.
+	Cinematic._flash_screen(get_tree(),
+		Color(1, 0.95, 0.65, 0.35) if extracted else Color(0.05, 0.05, 0.10, 0.65),
+		1.2)
+	get_tree().create_timer(2.2, true, false, true).timeout.connect(func():
+		Engine.time_scale = 1.0)
 
 func _show_run_summary(cause: String) -> void:
 	var panel := preload("res://ui/run_summary.gd").new()
@@ -522,8 +542,21 @@ func _avatar_world_pos(player_idx: int) -> Vector3:
 	return Vector3.ZERO
 
 func _on_zone_changed(idx: int, _seed: int) -> void:
+	# Smooth fade-out, swap stage, fade-in — like Hollow Knight's room cuts.
 	ui.update_zone(idx, orchestrator.world.zones[idx].biome)
-	_build_stage_for_active_zone()
+	var layer := CanvasLayer.new(); layer.layer = 70
+	add_child(layer)
+	var fade := ColorRect.new()
+	fade.set_anchors_preset(Control.PRESET_FULL_RECT)
+	fade.color = Color(0, 0, 0, 0)
+	fade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.add_child(fade)
+	var t := fade.create_tween()
+	t.tween_property(fade, "color", Color(0, 0, 0, 1), 0.4)
+	t.tween_callback(_build_stage_for_active_zone)
+	t.tween_property(fade, "color", Color(0, 0, 0, 0), 0.6)
+	t.tween_callback(func():
+		if is_instance_valid(layer): layer.queue_free())
 
 func _on_world_boss(boss: Dictionary) -> void:
 	if creature_node and is_instance_valid(creature_node):

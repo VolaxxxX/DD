@@ -138,13 +138,32 @@ func show_narrative(text: String, _tone: int, outcome: int) -> void:
 		4: Audio.play(&"crit")
 
 func update_stats(force: int, injuries: Array, relics: Array = []) -> void:
+	var prev := _last_force
 	_last_force = force
 	_last_injuries = injuries.duplicate()
 	var relic_str := ""
 	for rid in relics:
 		var r: Dictionary = RelicRegistry.by_id(rid)
 		relic_str += String(r.get("icon", "✦")) + " "
-	stat_label.text = "%s  %d   ✦ %d   %s" % [Lang.ui("force"), force, Progress.fragments, relic_str]
+	# Tween the displayed value so changes feel weighty.
+	if prev != force:
+		var n := prev
+		var d := 1 if force > prev else -1
+		var step_count := abs(force - prev)
+		var t := create_tween()
+		for s in step_count:
+			n += d
+			var cap := n
+			t.tween_callback(func():
+				stat_label.text = "%s  %d   ✦ %d   %s" % [Lang.ui("force"), cap, Progress.fragments, relic_str])
+			t.tween_interval(0.06)
+		# Brief color flash on the label.
+		var col := Color(0.55, 1.0, 0.55) if force > prev else Color(1.0, 0.55, 0.55)
+		stat_label.modulate = col
+		var fb := create_tween()
+		fb.tween_property(stat_label, "modulate", Color(1, 0.9, 0.5), 0.4)
+	else:
+		stat_label.text = "%s  %d   ✦ %d   %s" % [Lang.ui("force"), force, Progress.fragments, relic_str]
 	_render_injuries(injuries)
 
 func _render_injuries(injuries: Array) -> void:
