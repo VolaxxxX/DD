@@ -90,6 +90,11 @@ func resolve(choice_idx: int, resolver: EventResolver, coop_mod: int) -> Diction
 		difficulty -= 3
 	var stat_key: StringName = PlayerClass.tone_stat(tone)
 	var actor_stat: int = player.roll_stat_for_tone(tone) + BiomeRules.stat_mod(zone.biome, stat_key)
+	# Apply relic bonuses for this roll context.
+	actor_stat += player.relic_bonus({
+		"tone": tone, "stat": stat_key, "family": int(creature.archetype.family),
+		"biome": zone.biome, "dragon_present": zone.dragon_id != &"",
+	})
 	# Dragon presence bends the odds.
 	match zone.dragon_effect:
 		"slow_flight":

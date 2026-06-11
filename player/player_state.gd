@@ -6,7 +6,27 @@ var class_kind: int = PlayerClass.Kind.SOLDAT
 var class_data: Dictionary = {}
 var stats: Dictionary = {}                  # stat_key -> int
 var injuries: Array[StringName] = []
+var relics: Array[StringName] = []                # up to 3 relics carried
 var alive: bool = true
+
+const MAX_RELICS := 3
+
+func add_relic(id: StringName) -> bool:
+	if id in relics: return false
+	if relics.size() >= MAX_RELICS:
+		relics.remove_at(0)
+	relics.append(id)
+	# Star Stone applies its passive immediately.
+	var r: Dictionary = RelicRegistry.by_id(id)
+	if String(r.get("passive", "")) == "perma_endurance":
+		stats[&"endurance"] = int(stats.get(&"endurance", 8)) + 1
+	return true
+
+func relic_bonus(ctx: Dictionary) -> int:
+	var total := 0
+	for rid in relics:
+		total += RelicRegistry.bonus_for(rid, ctx)
+	return total
 
 func setup(p_name: String, kind: int, p_stats: Dictionary = {}) -> void:
 	name = p_name if p_name.strip_edges() != "" else "Voyageur"

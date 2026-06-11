@@ -100,6 +100,7 @@ func _start_game_with_saved_seed(seed: int, zone_index: int) -> void:
 	director.first_encounter.connect(_on_first_encounter)
 	director.encounter_progress.connect(func(c: int, t: int): ui.update_encounter_progress(c, t))
 	director.village_offered.connect(_on_village_offered)
+	director.relic_acquired.connect(_on_relic_acquired)
 	ui.choice_selected.connect(_on_choice)
 	Bus.zone_changed.connect(_on_zone_changed)
 	director.begin()
@@ -133,6 +134,7 @@ func _on_characters_ready(player_defs: Array) -> void:
 		var p := PlayerState.new()
 		p.setup(String(d.name), int(d.kind), d.stats)
 		players.append(p)
+		Progress.record_class_played(int(d.kind))
 	player_state = players[0]
 	if _char_create_root and is_instance_valid(_char_create_root):
 		_char_create_root.queue_free()
@@ -175,6 +177,7 @@ func _start_game() -> void:
 	director.first_encounter.connect(_on_first_encounter)
 	director.encounter_progress.connect(func(c: int, t: int): ui.update_encounter_progress(c, t))
 	director.village_offered.connect(_on_village_offered)
+	director.relic_acquired.connect(_on_relic_acquired)
 	ui.choice_selected.connect(_on_choice)
 	if not ui.pause_requested.is_connected(_open_pause_menu):
 		ui.pause_requested.connect(_open_pause_menu)
@@ -199,6 +202,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		_open_pause_menu()
 
 func _on_village_offered(player: PlayerState) -> void:
+	Progress.record_village_visit()
 	Music.play_menu()  # peaceful theme for the village pause
 	var panel: Control = preload("res://ui/village_hub.gd").new()
 	panel.setup(player)
@@ -398,8 +402,8 @@ func _on_creature_reaction(reaction: StringName) -> void:
 		creature_node.react(reaction)
 	if reaction == &"die": _kills_this_run += 1
 
-func _on_stats(force: int, injuries: Array) -> void:
-	ui.update_stats(force, injuries)
+func _on_stats(force: int, injuries: Array, relics: Array = []) -> void:
+	ui.update_stats(force, injuries, relics)
 	_refresh_avatars_injuries()
 
 func _on_choice(idx: int) -> void:
@@ -465,6 +469,17 @@ func _on_second_chance() -> void:
 	_shake_camera(0.40, 0.6)
 	var pos := _avatar_world_pos(director.active_idx) + Vector3(0, 2.0, 0)
 	FloatingText.spawn(stage, pos, "✦ " + Lang.ui("second_chance"), Color(1, 0.95, 0.65), 0.85)
+
+func _on_relic_acquired(relic_id: StringName, player_idx: int) -> void:
+	var r: Dictionary = RelicRegistry.by_id(relic_id)
+	var icon: String = String(r.get("icon", "✦"))
+	var rname: String = Lang.t(r.get("name", {}))
+	var pos := _avatar_world_pos(player_idx) + Vector3(0, 1.8, 0)
+	FloatingText.spawn(stage, pos, "%s  %s" % [icon, rname], Color(1, 0.85, 0.30), 0.85)
+	Cinematic._flash_screen(get_tree(), Color(1, 0.85, 0.30, 0.35), 0.4)
+	Audio.play(&"crit")
+	if player_idx < players.size():
+		Progress.check_relic_hoarder(players[player_idx].relics.size())
 
 func _on_first_encounter(creature_id: StringName, name: String) -> void:
 	# Tint the screen briefly + reveal the creature's name with extra emphasis.

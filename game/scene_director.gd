@@ -6,7 +6,7 @@ signal encounter_progress(current: int, total: int)
 signal narrative_logged(text: String, tone: int, outcome: int)
 signal zone_intro(text: String, biome: StringName)
 signal creature_reaction(reaction: StringName)
-signal stats_changed(force: int, injuries: Array)
+signal stats_changed(force: int, injuries: Array, relics: Array)
 signal injury_added(injury_id: StringName)
 signal second_chance_triggered()
 signal first_encounter(creature_id: StringName, name: String)
@@ -14,6 +14,7 @@ signal stat_changed_for_player(stat_key: StringName, delta: int, player_idx: int
 signal healed(injury_id: StringName, player_idx: int)
 signal world_boss_spawned(boss: Dictionary)
 signal village_offered(player: PlayerState)
+signal relic_acquired(relic_id: StringName, player_idx: int)
 signal run_over(cause: StringName)
 
 const ENCOUNTERS_PER_ZONE := 4
@@ -164,9 +165,19 @@ func _apply(result: Dictionary) -> void:
 	if has_creature and result.get("creature_dies", false):
 		creature_reaction.emit(&"die")
 		Progress.record_kill(current.creature.archetype.id)
-		if int(current.creature.archetype.tier) >= Archetype.Tier.ELITE:
+		var tier := int(current.creature.archetype.tier)
+		if tier >= Archetype.Tier.ELITE:
 			_elite_kills_this_run += 1
 			Progress.record_elite_kill()
+		# Relic drop: ELITE 30 %, APEX 60 %, MYTHIC 100 %.
+		var drop_chance := 0
+		if tier == Archetype.Tier.ELITE:    drop_chance = 30
+		elif tier == Archetype.Tier.APEX:   drop_chance = 60
+		elif tier == Archetype.Tier.MYTHIC: drop_chance = 100
+		if drop_chance > 0 and rng.range_i(0, 100) < drop_chance:
+			var relic: Dictionary = RelicRegistry.pick_random(rng)
+			if player.add_relic(StringName(relic.id)):
+				relic_acquired.emit(StringName(relic.id), active_idx)
 		current.creature.kill()
 	elif has_creature and result.get("creature_flees", false):
 		creature_reaction.emit(&"flee")
@@ -176,11 +187,20 @@ func _apply(result: Dictionary) -> void:
 		current.creature.apply_mutation()
 	elif has_creature:
 		creature_reaction.emit(&"hit")
-	stats_changed.emit(player.effective_force(), player.injuries.duplicate())
+	stats_changed.emit(player.effective_force(), player.injuries.duplicate(), player.relics.duplicate())
 
 func _advance_zone() -> void:
 	_encounters_in_zone = 0
 	Progress.record_zone_cleared()
+	# Apply Witch's Knot passive on every player who has it.
+	for p in players:
+		for rid in p.relics:
+			var r: Dictionary = RelicRegistry.by_id(rid)
+			if String(r.get("passive", "")) == "heal_on_zone" and p.injuries.size() > 0:
+				var removed: StringName = p.injuries[0]
+				p.injuries.remove_at(0)
+				healed.emit(removed, players.find(p))
+				break
 	var next_idx := world.active_zone_index + 1
 	if next_idx >= world.zones.size():
 		Save.clear()

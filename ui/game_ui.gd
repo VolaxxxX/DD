@@ -89,7 +89,7 @@ func setup_pause_button() -> void:
 
 func set_player(p: PlayerState) -> void:
 	name_label.text = "%s — %s" % [p.name, String(p.class_data.name)]
-	update_stats(p.effective_force(), p.injuries)
+	update_stats(p.effective_force(), p.injuries, p.relics)
 
 func present_intro(text: String) -> void:
 	_hide_choices()
@@ -130,10 +130,14 @@ func show_narrative(text: String, _tone: int, outcome: int) -> void:
 		3: Audio.play(&"success")
 		4: Audio.play(&"crit")
 
-func update_stats(force: int, injuries: Array) -> void:
+func update_stats(force: int, injuries: Array, relics: Array = []) -> void:
 	_last_force = force
 	_last_injuries = injuries.duplicate()
-	stat_label.text = "%s  %d   ✦ %d" % [Lang.ui("force"), force, Progress.fragments]
+	var relic_str := ""
+	for rid in relics:
+		var r: Dictionary = RelicRegistry.by_id(rid)
+		relic_str += String(r.get("icon", "✦")) + " "
+	stat_label.text = "%s  %d   ✦ %d   %s" % [Lang.ui("force"), force, Progress.fragments, relic_str]
 	_render_injuries(injuries)
 
 func _render_injuries(injuries: Array) -> void:

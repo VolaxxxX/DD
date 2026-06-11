@@ -29,7 +29,25 @@ const ACHIEVEMENTS := [
 	 "desc":  {"fr": "Jouer dans les 3 langues.", "en": "Play in all 3 languages.", "id": "Mainkan dalam 3 bahasa."}},
 	{"id": &"duo_survives",   "title": {"fr": "Lien indéfectible", "en": "Unbreakable bond", "id": "Ikatan tak terputuskan"},
 	 "desc":  {"fr": "Compléter un run en duo sans perdre personne.", "en": "Finish a duo run with both alive.", "id": "Selesaikan run duo, keduanya hidup."}},
+	{"id": &"relic_hoarder", "title": {"fr": "Collectionneur", "en": "Hoarder", "id": "Pengumpul"},
+	 "desc": {"fr": "Porter 3 reliques en même temps.", "en": "Hold 3 relics at once.", "id": "Bawa 3 relik sekaligus."}},
+	{"id": &"all_classes",   "title": {"fr": "Mille visages", "en": "Many faces", "id": "Banyak wajah"},
+	 "desc": {"fr": "Jouer avec les 4 classes.", "en": "Play all 4 classes.", "id": "Mainkan keempat kelas."}},
+	{"id": &"village_friend","title": {"fr": "Ami du village", "en": "Village friend", "id": "Sahabat desa"},
+	 "desc": {"fr": "Visiter le village 5 fois.", "en": "Visit the village 5 times.", "id": "Kunjungi desa 5 kali."}},
+	{"id": &"long_traveler", "title": {"fr": "Voyageur infatigable", "en": "Tireless traveler", "id": "Pengembara tak kenal lelah"},
+	 "desc": {"fr": "Tenter 20 runs.", "en": "Attempt 20 runs.", "id": "Coba 20 run."}},
+	{"id": &"second_chancer","title": {"fr": "Frôlé par la mort", "en": "Brushed by death", "id": "Disentuh kematian"},
+	 "desc": {"fr": "Survivre grâce à la seconde chance.", "en": "Survive via the second chance.", "id": "Selamat lewat kesempatan kedua."}},
+	{"id": &"witness_all_dragons", "title": {"fr": "Œil pour les onze", "en": "Eyes for the eleven", "id": "Mata bagi sebelas"},
+	 "desc": {"fr": "Voir les 11 dragons.", "en": "Witness all 11 dragons.", "id": "Saksikan semua 11 naga."}},
+	{"id": &"all_titans",   "title": {"fr": "Briseur de mondes", "en": "World breaker", "id": "Pemecah dunia"},
+	 "desc": {"fr": "Voir les 7 titans.", "en": "Witness all 7 titans.", "id": "Saksikan semua 7 titan."}},
 ]
+
+# Track helpers for the new achievements
+var _classes_played: Array = []
+var _village_visits: int = 0
 
 var _langs_played: Array = []         # for polyglot tracking
 var second_chance_used_this_run: bool = false
@@ -62,6 +80,8 @@ func _load() -> void:
 	achievements = v.get("achievements", [])
 	_langs_played = v.get("langs", [])
 	fragments = int(v.get("fragments", 0))
+	_classes_played = v.get("classes_played", [])
+	_village_visits = int(v.get("village_visits", 0))
 
 func save() -> void:
 	var f := FileAccess.open(PATH, FileAccess.WRITE)
@@ -71,6 +91,7 @@ func save() -> void:
 		"runs_completed": runs_completed, "runs_total": runs_total,
 		"deepest_zone": deepest_zone, "achievements": achievements,
 		"langs": _langs_played, "fragments": fragments,
+		"classes_played": _classes_played, "village_visits": _village_visits,
 	})
 
 # ---------- API ----------
@@ -121,6 +142,9 @@ func record_zone_depth(idx: int) -> void:
 
 func record_run_start() -> void:
 	runs_total += 1
+	if runs_total >= 20: _maybe_unlock(&"long_traveler")
+	if dragons_seen.size() >= 11: _maybe_unlock(&"witness_all_dragons")
+	if bosses_seen.size() >= 7: _maybe_unlock(&"all_titans")
 	second_chance_used_this_run = false
 	run_start_msec = Time.get_ticks_msec()
 	save()
@@ -130,6 +154,25 @@ func can_use_second_chance() -> bool:
 
 func consume_second_chance() -> void:
 	second_chance_used_this_run = true
+	_maybe_unlock(&"second_chancer")
+	save()
+
+func record_class_played(kind: int) -> void:
+	if kind not in _classes_played: _classes_played.append(kind)
+	if _classes_played.size() >= 4:
+		_maybe_unlock(&"all_classes")
+	save()
+
+func record_village_visit() -> void:
+	_village_visits += 1
+	if _village_visits >= 5:
+		_maybe_unlock(&"village_friend")
+	save()
+
+func check_relic_hoarder(count: int) -> void:
+	if count >= 3:
+		_maybe_unlock(&"relic_hoarder")
+		save()
 
 func run_duration_seconds() -> int:
 	if run_start_msec == 0: return 0

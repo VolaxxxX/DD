@@ -15,6 +15,7 @@ signal back_pressed()
 const THUMB_SIZE := Vector2i(128, 128)
 
 var _filter: String = "all"
+var _family_filter: int = -1   # -1 = all families
 
 func _ready() -> void:
 	back_btn.pressed.connect(func(): back_pressed.emit())
@@ -23,7 +24,33 @@ func _ready() -> void:
 	tab_dragons.pressed.connect(func(): _set_filter("dragons"))
 	tab_titans.pressed.connect(func(): _set_filter("titans"))
 	_refresh_labels()
+	_build_family_row()
 	_populate()
+
+func _build_family_row() -> void:
+	# Row of small chips under the tab row to filter creatures by family.
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 6)
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.anchor_left = 0.0; row.anchor_right = 1.0
+	row.offset_top = 108.0
+	row.offset_bottom = 138.0
+	row.grow_horizontal = 2
+	$UI/Root.add_child(row)
+	var families := [
+		[-1, "✱"], [0, "👤"], [1, "🐾"], [2, "💀"], [3, "⚙"],
+		[4, "✦"], [5, "🌀"], [6, "❄"], [7, "🐉"],
+	]
+	for f in families:
+		var b := Button.new()
+		b.text = f[1]
+		b.custom_minimum_size = Vector2(40, 30)
+		b.add_theme_font_size_override("font_size", 14)
+		var fam: int = f[0]
+		b.pressed.connect(func():
+			_family_filter = fam
+			_populate())
+		row.add_child(b)
 
 func _refresh_labels() -> void:
 	title.text = Lang.ui("menu_codex")
@@ -42,6 +69,7 @@ func _populate() -> void:
 	# Build entries with deferred thumbnails to keep mobile perf sane.
 	if _filter in ["all", "creatures"]:
 		for t in CreatureRegistry.templates():
+			if _family_filter >= 0 and int(t.family) != _family_filter: continue
 			list.add_child(_creature_entry(t))
 	if _filter in ["all", "dragons"]:
 		for t in DragonRegistry.templates():
