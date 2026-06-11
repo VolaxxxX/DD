@@ -154,6 +154,13 @@ func _render_injuries(injuries: Array) -> void:
 func update_zone(index: int, biome: StringName) -> void:
 	zone_label.text = "Z.%d  %s" % [index + 1, String(biome).to_upper()]
 
+func update_encounter_progress(current: int, total: int) -> void:
+	# Show dots: filled for done, hollow for upcoming.
+	var s := ""
+	for i in total:
+		s += "●" if i < current else "○"
+	zone_label.text = "%s  %s" % [zone_label.text.split("  ")[0], s] if zone_label.text.contains("  ") else s
+
 func show_run_over(cause: StringName) -> void:
 	_hide_choices()
 	narrative.modulate = Color(1, 0.4, 0.4)

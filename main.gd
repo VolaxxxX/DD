@@ -169,6 +169,7 @@ func _start_game() -> void:
 	director.injury_added.connect(_on_player_injury)
 	director.second_chance_triggered.connect(_on_second_chance)
 	director.first_encounter.connect(_on_first_encounter)
+	director.encounter_progress.connect(func(c: int, t: int): ui.update_encounter_progress(c, t))
 	ui.choice_selected.connect(_on_choice)
 	Bus.zone_changed.connect(_on_zone_changed)
 

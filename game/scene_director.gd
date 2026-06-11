@@ -2,6 +2,7 @@ class_name SceneDirector extends Node
 # Orchestrates the encounter flow with class-aware player + injury system.
 
 signal encounter_presented(encounter)
+signal encounter_progress(current: int, total: int)
 signal narrative_logged(text: String, tone: int, outcome: int)
 signal zone_intro(text: String, biome: StringName)
 signal creature_reaction(reaction: StringName)
@@ -88,6 +89,7 @@ func next_encounter() -> void:
 		if Progress.first_kill_of(pick.archetype.id):
 			first_encounter.emit(pick.archetype.id, (current as Encounter).creature_name)
 	_awaiting_choice = true
+	encounter_progress.emit(_encounters_in_zone + 1, ENCOUNTERS_PER_ZONE)
 	encounter_presented.emit(current)
 
 func choose(idx: int) -> void:
