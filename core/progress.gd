@@ -32,6 +32,8 @@ const ACHIEVEMENTS := [
 ]
 
 var _langs_played: Array = []         # for polyglot tracking
+var second_chance_used_this_run: bool = false
+var run_start_msec: int = 0
 
 func _ready() -> void:
 	_load()
@@ -88,7 +90,23 @@ func record_zone_depth(idx: int) -> void:
 
 func record_run_start() -> void:
 	runs_total += 1
+	second_chance_used_this_run = false
+	run_start_msec = Time.get_ticks_msec()
 	save()
+
+func can_use_second_chance() -> bool:
+	return not second_chance_used_this_run
+
+func consume_second_chance() -> void:
+	second_chance_used_this_run = true
+
+func run_duration_seconds() -> int:
+	if run_start_msec == 0: return 0
+	return int((Time.get_ticks_msec() - run_start_msec) / 1000.0)
+
+func first_kill_of(creature_id: StringName) -> bool:
+	# True if this id has never been killed before.
+	return int(kills.get(String(creature_id), 0)) == 0
 
 func record_run_end(extracted: bool, any_injuries: bool, duo_both_alive: bool) -> void:
 	if extracted:

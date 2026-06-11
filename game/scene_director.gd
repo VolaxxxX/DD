@@ -7,6 +7,8 @@ signal zone_intro(text: String, biome: StringName)
 signal creature_reaction(reaction: StringName)
 signal stats_changed(force: int, injuries: Array)
 signal injury_added(injury_id: StringName)
+signal second_chance_triggered()
+signal first_encounter(creature_id: StringName, name: String)
 signal stat_changed_for_player(stat_key: StringName, delta: int, player_idx: int)
 signal healed(injury_id: StringName, player_idx: int)
 signal world_boss_spawned(boss: Dictionary)
@@ -83,6 +85,8 @@ func next_encounter() -> void:
 			return
 		var pick: Creature = alive[er.range_i(0, alive.size())]
 		current = Encounter.new(z, pick, er, player)
+		if Progress.first_kill_of(pick.archetype.id):
+			first_encounter.emit(pick.archetype.id, (current as Encounter).creature_name)
 	_awaiting_choice = true
 	encounter_presented.emit(current)
 
@@ -106,6 +110,8 @@ func choose(idx: int) -> void:
 			if not p.alive: both_alive = false
 		if both_alive: coop_mod = 1
 	var result: Dictionary = current.resolve(idx, resolver, coop_mod)
+	if result.get("second_chance", false):
+		second_chance_triggered.emit()
 	narrative_logged.emit(result.narrative, result.tone, result.outcome)
 	_apply(result)
 	if not player.alive:

@@ -167,9 +167,12 @@ func _start_game() -> void:
 	director.stat_changed_for_player.connect(_on_player_stat_change)
 	director.healed.connect(_on_player_heal)
 	director.injury_added.connect(_on_player_injury)
+	director.second_chance_triggered.connect(_on_second_chance)
+	director.first_encounter.connect(_on_first_encounter)
 	ui.choice_selected.connect(_on_choice)
 	Bus.zone_changed.connect(_on_zone_changed)
 
+	Progress.record_run_start()
 	director.begin()
 
 func _setup_camera() -> void:
@@ -274,6 +277,12 @@ func _spawn_creature(arch: Archetype) -> void:
 	stage.add_child(creature_node)
 	creature_node.build(arch)
 	Cinematic.play_for_creature(arch.id, int(arch.tier), creature_node, camera, get_tree(), int(arch.family))
+	# Turn each player avatar to look at the creature.
+	for a in avatar_nodes:
+		if is_instance_valid(a):
+			a.look_at(creature_node.position + Vector3(0, 1.0, 0), Vector3.UP)
+			# look_at faces -Z; flip so character looks forward.
+			a.rotation.y += PI
 
 func _on_zone_intro(text: String, _biome: StringName) -> void:
 	ui.present_intro(text)
@@ -354,6 +363,7 @@ func _play_outcome_vfx(tone: int, outcome: int) -> void:
 func _on_creature_reaction(reaction: StringName) -> void:
 	if creature_node and is_instance_valid(creature_node):
 		creature_node.react(reaction)
+	if reaction == &"die": _kills_this_run += 1
 
 func _on_stats(force: int, injuries: Array) -> void:
 	ui.update_stats(force, injuries)
@@ -381,8 +391,28 @@ func _on_run_over(cause: StringName) -> void:
 		Progress.record_titan_survived()
 	Progress.record_language(Lang.code)
 	ui.show_run_over(cause)
+	# Run summary panel after fade.
+	get_tree().create_timer(2.0).timeout.connect(_show_run_summary.bind(String(cause)))
+
+func _show_run_summary(cause: String) -> void:
+	var panel := preload("res://ui/run_summary.gd").new()
+	panel.setup(
+		(orchestrator.world.active_zone_index + 1) if orchestrator else 0,
+		_kills_this_run,
+		Progress.run_duration_seconds(),
+		_new_discoveries_this_run,
+		cause)
+	var layer := CanvasLayer.new(); layer.layer = 90
+	add_child(layer); layer.add_child(panel)
+	panel.closed.connect(func():
+		if is_instance_valid(layer): layer.queue_free()
+		_show_main_menu()
+		_new_discoveries_this_run = 0
+		_kills_this_run = 0)
 
 var _world_boss_seen_this_run: bool = false
+var _new_discoveries_this_run: int = 0
+var _kills_this_run: int = 0
 
 func _on_player_stat_change(stat_key: StringName, delta: int, player_idx: int) -> void:
 	var pos := _avatar_world_pos(player_idx) + Vector3(0, 1.6, 0)
@@ -393,6 +423,25 @@ func _on_player_stat_change(stat_key: StringName, delta: int, player_idx: int) -
 func _on_player_heal(injury_id: StringName, player_idx: int) -> void:
 	var pos := _avatar_world_pos(player_idx) + Vector3(0, 1.6, 0)
 	FloatingText.spawn(stage, pos, "+ %s" % Lang.ui("heal"), Color(0.6, 1.0, 0.7), 0.5)
+
+func _on_second_chance() -> void:
+	# Dramatic moment: full white flash + slow-mo + sound + caption.
+	Cinematic._flash_screen(get_tree(), Color(1, 1, 0.85, 0.95), 1.2)
+	Audio.play(&"crit")
+	_slowmo(0.2, 1.2)
+	_shake_camera(0.40, 0.6)
+	var pos := _avatar_world_pos(director.active_idx) + Vector3(0, 2.0, 0)
+	FloatingText.spawn(stage, pos, "✦ " + Lang.ui("second_chance"), Color(1, 0.95, 0.65), 0.85)
+
+func _on_first_encounter(creature_id: StringName, name: String) -> void:
+	# Tint the screen briefly + reveal the creature's name with extra emphasis.
+	Cinematic._flash_screen(get_tree(), Color(0.55, 0.85, 1.0, 0.45), 0.5)
+	Audio.play(&"intro")
+	ui.present_intro("◇ %s\n%s" % [Lang.ui("first_encounter"), name])
+	_new_discoveries_this_run += 1
+
+func _on_creature_killed_for_summary() -> void:
+	_kills_this_run += 1
 
 func _on_player_injury(injury_id: StringName) -> void:
 	var pos := _avatar_world_pos(director.active_idx) + Vector3(0, 1.6, 0)

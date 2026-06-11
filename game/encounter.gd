@@ -222,6 +222,14 @@ func _consequences(tone: int, outcome: int) -> Dictionary:
 			c.mutate = (tone == PhrasePool.Tone.CURIOUS or tone == PhrasePool.Tone.MYSTICAL)
 			c.injury = InjuryRegistry.pick_for(rng, tone, zone.biome)
 			c.fatal = _roll_fatal(tone)
+			# Second-chance: once per run, a fatal blow drops the player to
+			# critical (TERROR + the injury) instead of killing them outright.
+			if c.fatal and Progress.can_use_second_chance():
+				Progress.consume_second_chance()
+				c.fatal = false
+				c["second_chance"] = true
+				if not (&"terror" in player.injuries):
+					c.injury = &"terror"
 	return c
 
 func _roll_fatal(tone: int) -> bool:
