@@ -498,6 +498,7 @@ func _on_player_stat_change(stat_key: StringName, delta: int, player_idx: int) -
 func _on_player_heal(injury_id: StringName, player_idx: int) -> void:
 	var pos := _avatar_world_pos(player_idx) + Vector3(0, 1.6, 0)
 	FloatingText.spawn(stage, pos, "+ %s" % Lang.ui("heal"), Color(0.6, 1.0, 0.7), 0.5)
+	_flash_avatar(player_idx, Color(0.55, 1.0, 0.55))
 
 func _on_second_chance() -> void:
 	# Dramatic moment: full white flash + slow-mo + sound + caption.
@@ -535,6 +536,13 @@ func _on_player_injury(injury_id: StringName) -> void:
 	var name: String = String(inj.get("name", "BLESSÉ")) if not inj.is_empty() else "BLESSÉ"
 	FloatingText.spawn(stage, pos, "− %s" % name, Color(1.0, 0.45, 0.35), 0.55)
 	_shake_camera(0.18, 0.3)
+	_flash_avatar(director.active_idx, Color(1.0, 0.30, 0.30))
+
+func _flash_avatar(idx: int, color: Color) -> void:
+	if idx >= avatar_nodes.size(): return
+	var a = avatar_nodes[idx]
+	if not is_instance_valid(a): return
+	a.flash(color, 0.35)
 
 func _avatar_world_pos(player_idx: int) -> Vector3:
 	if player_idx >= 0 and player_idx < avatar_nodes.size() and is_instance_valid(avatar_nodes[player_idx]):
@@ -575,4 +583,16 @@ func _on_world_boss(boss: Dictionary) -> void:
 	Music.play_boss(StringName(boss.id))
 	Progress.record_boss(StringName(boss.id))
 	_world_boss_seen_this_run = true
+	_darken_environment(0.35, 1.5)
 	Cinematic.play_world_boss(StringName(boss.id), boss_node, camera, get_tree())
+
+func _darken_environment(target_energy: float, duration: float) -> void:
+	# Drop directional + fill light energy on the active backdrop so the boss
+	# stands out via its own glow lights.
+	if backdrop == null: return
+	for prop in ["sun", "fill"]:
+		var n = backdrop.get(prop)
+		if n and is_instance_valid(n) and n is DirectionalLight3D:
+			var orig: float = n.light_energy
+			var t := n.create_tween()
+			t.tween_property(n, "light_energy", target_energy, duration).set_trans(Tween.TRANS_SINE)

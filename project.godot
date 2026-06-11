@@ -21,6 +21,7 @@ Save="*res://core/save.gd"
 Progress="*res://core/progress.gd"
 ThemeLoader="*res://core/theme_loader.gd"
 PostFX="*res://ui/postfx_overlay.gd"
+Toast="*res://ui/toast.gd"
 
 [display]
 

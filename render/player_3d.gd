@@ -207,6 +207,34 @@ func _add_curse_wisps() -> void:
 		var w := SphereMesh.new(); w.radius = 0.06; w.height = 0.12
 		_overlay(w, Vector3(cos(ang) * 0.4, 1.7 + sin(i) * 0.1, sin(ang) * 0.4), Color(0.55, 0.20, 0.85), 3.0)
 
+func flash(color: Color, duration: float = 0.35) -> void:
+	# Briefly retint every mesh child to communicate damage / healing.
+	# Works on both procedural primitive bodies and imported GLBs.
+	var meshes: Array = []
+	_collect_meshes(self, meshes)
+	var originals: Array = []
+	for mi in meshes:
+		var orig: Material = mi.material_override
+		originals.append(orig)
+		var m := StandardMaterial3D.new()
+		m.albedo_color = color
+		m.emission_enabled = true
+		m.emission = color
+		m.emission_energy_multiplier = 2.0
+		mi.material_override = m
+	# Restore originals after the duration.
+	var t := create_tween()
+	t.tween_interval(duration * 0.5)
+	t.tween_callback(func():
+		for i in meshes.size():
+			if is_instance_valid(meshes[i]):
+				meshes[i].material_override = originals[i])
+
+func _collect_meshes(node: Node, out: Array) -> void:
+	for c in node.get_children():
+		if c is MeshInstance3D: out.append(c)
+		_collect_meshes(c, out)
+
 func _tint_body(tint: Color, mix: float) -> void:
 	# Retint the body mesh by replacing its material.
 	if _body_mi == null: return

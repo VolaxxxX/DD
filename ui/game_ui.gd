@@ -217,6 +217,13 @@ func show_run_over(cause: StringName) -> void:
 func _on_choice_pressed(idx: int) -> void:
 	for b in choice_buttons: b.disabled = true
 	Audio.play(&"click")
+	# Press feedback: brief shrink + release on the chosen button.
+	var btn := choice_buttons[idx]
+	var t := btn.create_tween()
+	t.tween_property(btn, "scale", Vector2.ONE * 0.92, 0.06)
+	t.tween_property(btn, "scale", Vector2.ONE, 0.18).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	# Subtle pivot for the punch (so scale shrinks around its center).
+	btn.pivot_offset = btn.size / 2.0
 	choice_selected.emit(idx)
 
 func _hide_choices() -> void:

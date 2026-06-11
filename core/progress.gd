@@ -196,9 +196,12 @@ func record_language(lang: String) -> void:
 	if _langs_played.size() >= 3: _maybe_unlock(&"polyglot")
 	save()
 
+signal achievement_unlocked(id: StringName)
+
 func _maybe_unlock(id: StringName) -> bool:
 	if String(id) in achievements: return false
 	achievements.append(String(id))
+	achievement_unlocked.emit(id)
 	return true
 
 func _total_kills() -> int:
