@@ -17,6 +17,8 @@ Bus="*res://core/event_bus.gd"
 Audio="*res://core/audio.gd"
 Music="*res://core/music.gd"
 Save="*res://core/save.gd"
+Progress="*res://core/progress.gd"
+Settings="*res://core/settings.gd"
 ThemeLoader="*res://core/theme_loader.gd"
 PostFX="*res://ui/postfx_overlay.gd"
 

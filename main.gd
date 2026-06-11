@@ -33,7 +33,23 @@ func _show_main_menu() -> void:
 	_menu_root.start_new_game.connect(_on_menu_new_game)
 	_menu_root.continue_run.connect(_on_menu_continue)
 	_menu_root.open_bestiary.connect(_on_menu_bestiary)
+	_menu_root.open_settings.connect(_on_menu_settings)
+	_menu_root.open_achievements.connect(_on_menu_achievements)
 	Music.play_menu()
+
+func _on_menu_settings() -> void:
+	_open_panel(preload("res://ui/settings_panel.gd").new())
+
+func _on_menu_achievements() -> void:
+	_open_panel(preload("res://ui/achievements_panel.gd").new())
+
+func _open_panel(panel: Control) -> void:
+	var layer := CanvasLayer.new()
+	layer.layer = 75
+	add_child(layer)
+	layer.add_child(panel)
+	panel.closed.connect(func():
+		if is_instance_valid(layer): layer.queue_free())
 
 func _on_menu_continue() -> void:
 	var s := Save.load_run()
@@ -233,6 +249,7 @@ func _refresh_avatars_injuries() -> void:
 			avatar_nodes[i].apply_injuries(players[i].injuries)
 
 func _dragon_flyby(id: StringName, intro: String) -> void:
+	Progress.record_dragon(id)
 	var dragon := Dragon3D.new()
 	stage.add_child(dragon)
 	dragon.build(id)
@@ -264,6 +281,16 @@ func _on_zone_intro(text: String, _biome: StringName) -> void:
 var situation_node: Situation3D
 
 func _on_encounter(enc) -> void:
+	# Show the tutorial overlay on the very first encounter ever played.
+	var tut := preload("res://ui/tutorial_overlay.gd")
+	if tut.should_show():
+		var layer := CanvasLayer.new()
+		layer.layer = 80
+		add_child(layer)
+		var overlay: Control = tut.new()
+		layer.add_child(overlay)
+		overlay.tree_exited.connect(func():
+			if is_instance_valid(layer): layer.queue_free())
 	if situation_node and is_instance_valid(situation_node):
 		situation_node.queue_free()
 		situation_node = null
@@ -341,7 +368,21 @@ func _on_choice(idx: int) -> void:
 
 func _on_run_over(cause: StringName) -> void:
 	Audio.play(&"death")
+	# Track stats and achievements.
+	var extracted := String(cause).contains("extrait") or String(cause).contains("extracted") or String(cause).contains("keluar")
+	var any_inj := false
+	var duo_both := players.size() >= 2
+	for p in players:
+		if p.injuries.size() > 0: any_inj = true
+		if not p.alive: duo_both = false
+	Progress.record_zone_depth(orchestrator.world.active_zone_index if orchestrator else 0)
+	Progress.record_run_end(extracted, any_inj, duo_both)
+	if _world_boss_seen_this_run:
+		Progress.record_titan_survived()
+	Progress.record_language(Lang.code)
 	ui.show_run_over(cause)
+
+var _world_boss_seen_this_run: bool = false
 
 func _on_player_stat_change(stat_key: StringName, delta: int, player_idx: int) -> void:
 	var pos := _avatar_world_pos(player_idx) + Vector3(0, 1.6, 0)
@@ -384,4 +425,6 @@ func _on_world_boss(boss: Dictionary) -> void:
 	boss_node.build(StringName(boss.id))
 	Audio.play(&"boss")
 	Music.play_boss(StringName(boss.id))
+	Progress.record_boss(StringName(boss.id))
+	_world_boss_seen_this_run = true
 	Cinematic.play_world_boss(StringName(boss.id), boss_node, camera, get_tree())

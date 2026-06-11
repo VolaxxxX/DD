@@ -25,6 +25,15 @@ const TONE_COLOR := {
 	5: Color(1.0, 0.65, 1.0),
 }
 
+const TONE_GLYPH := {
+	0: "⚔",   # AGGRESSIVE - sword
+	1: "✿",   # DIPLOMATIC - flower / open hand
+	2: "◯",   # CAUTIOUS - circle / step aside
+	3: "?",   # CURIOUS - question
+	4: "♣",   # DECEPTIVE - club / mask
+	5: "✦",   # MYSTICAL - star / sigil
+}
+
 const OUTCOME_TINT := {
 	0: Color(1.0, 0.25, 0.25),
 	1: Color(1.0, 0.55, 0.30),
@@ -85,7 +94,7 @@ func present_encounter(enc) -> void:
 		if i < enc.choices.size():
 			var c: Dictionary = enc.choices[i]
 			btn.visible = true
-			btn.text = c.text
+			btn.text = "%s   %s" % [TONE_GLYPH.get(c.tone, ""), c.text]
 			btn.modulate = TONE_COLOR.get(c.tone, Color.WHITE)
 			btn.disabled = false
 		else:

@@ -4,6 +4,8 @@ extends Node3D
 signal start_new_game()
 signal continue_run()
 signal open_bestiary()
+signal open_settings()
+signal open_achievements()
 
 @onready var title_label: Label = $UI/Root/Title
 @onready var tagline_label: Label = $UI/Root/Tagline
@@ -34,6 +36,26 @@ func _ready() -> void:
 	new_btn.pressed.connect(func(): start_new_game.emit())
 	codex_btn.pressed.connect(func(): open_bestiary.emit())
 	quit_btn.pressed.connect(func(): get_tree().quit())
+	# Add SETTINGS + ACHIEVEMENTS buttons after the codex.
+	var box: VBoxContainer = $UI/Root/Buttons
+	var ach := Button.new()
+	ach.custom_minimum_size = Vector2(0, 50)
+	ach.add_theme_font_size_override("font_size", 18)
+	ach.text = Lang.ui("menu_achievements")
+	ach.pressed.connect(func():
+		Audio.play(&"click")
+		open_achievements.emit())
+	box.add_child(ach)
+	box.move_child(ach, codex_btn.get_index() + 1)
+	var sett := Button.new()
+	sett.custom_minimum_size = Vector2(0, 46)
+	sett.add_theme_font_size_override("font_size", 16)
+	sett.text = Lang.ui("menu_settings")
+	sett.pressed.connect(func():
+		Audio.play(&"click")
+		open_settings.emit())
+	box.add_child(sett)
+	box.move_child(sett, ach.get_index() + 1)
 	fr_btn.pressed.connect(func(): _set_lang("fr"))
 	en_btn.pressed.connect(func(): _set_lang("en"))
 	id_btn.pressed.connect(func(): _set_lang("id"))

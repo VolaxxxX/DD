@@ -152,6 +152,7 @@ func _apply(result: Dictionary) -> void:
 	var has_creature: bool = current.creature != null
 	if has_creature and result.get("creature_dies", false):
 		creature_reaction.emit(&"die")
+		Progress.record_kill(current.creature.archetype.id)
 		if int(current.creature.archetype.tier) >= Archetype.Tier.ELITE:
 			_elite_kills_this_run += 1
 		current.creature.kill()

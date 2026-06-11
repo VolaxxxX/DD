@@ -135,8 +135,9 @@ func _creature_entry(t: Dictionary) -> Control:
 	var fam := _family_name(int(t.family))
 	var biome_list: String = ""
 	for b in t.biomes: biome_list += String(b) + "  "
+	var kills := Progress.kill_count(StringName(t.id))
 	var lines: Array[String] = []
-	lines.append("[i]%s[/i]   INT %d   AGR %d" % [fam, int(t.intel), int(t.aggr)])
+	lines.append("[i]%s[/i]   INT %d   AGR %d   [color=#ffd57a]× %d[/color]" % [fam, int(t.intel), int(t.aggr), kills])
 	lines.append("[color=#a0c8ff]%s[/color]  %s" % [Lang.ui("biomes"), biome_list.strip_edges()])
 	lines.append("[color=#9fffa8]%s[/color]  %s" % [Lang.ui("weakness"), _approach_hint(t)])
 	var row := _row(thumb, String(t.name), tag, color, lines)
