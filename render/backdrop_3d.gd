@@ -52,12 +52,20 @@ var fill: DirectionalLight3D
 var rim: DirectionalLight3D
 var env: WorldEnvironment
 
-func build(biome: StringName, corruption: float) -> void:
+func build(biome: StringName, corruption: float, sub_biome: int = 0) -> void:
 	_build_environment(biome, corruption)
 	_build_ground(biome, corruption)
 	_build_lights(biome, corruption)
+	_apply_sub_tint(biome, sub_biome)
 	_build_atmosphere(biome, corruption)
 	_build_ambient_critters(biome, DRNG.new(int(Time.get_ticks_msec())))
+
+func _apply_sub_tint(biome: StringName, sub_biome: int) -> void:
+	# Multiply the directional sun + fill light by the sub-biome tint so each
+	# variant of the same biome reads differently (warmer, cooler, darker).
+	var tint: Color = PropLoader.sub_tint(biome, sub_biome)
+	if sun: sun.light_color = sun.light_color * tint
+	if fill: fill.light_color = fill.light_color * tint
 
 func _build_ambient_critters(biome: StringName, rng: DRNG) -> void:
 	# Tiny billboard sprites drifting in the sky / water for life.

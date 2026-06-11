@@ -8,6 +8,7 @@ var memory: WorldMemory
 var index: int
 var seed: int
 var biome: StringName
+var sub_biome: int = 0
 var chaos: float
 var corruption: float
 var ecosystem: Ecosystem
@@ -25,6 +26,8 @@ func _init(_rng: DRNG, _mem: WorldMemory, _idx: int) -> void:
 
 func generate() -> void:
 	biome = BIOMES[rng.range_i(0, BIOMES.size())]
+	var sub_count: int = int(PropLoader.SUB_COUNT.get(biome, 1))
+	sub_biome = rng.range_i(0, sub_count)
 	chaos = float(rng.range_i(20, 90)) / 100.0
 	var drift: float = float(memory.data.get("corruption_drift", 0)) / 1000.0
 	corruption = clampf(chaos + drift, 0.0, 1.0)

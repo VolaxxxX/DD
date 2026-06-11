@@ -1,7 +1,10 @@
 class_name Decor3D extends Node3D
 # Biome-specific decor with stronger silhouettes and layered foliage.
 
-func build(biome: StringName, corruption: float, rng: DRNG) -> void:
+var _sub_biome: int = 0
+
+func build(biome: StringName, corruption: float, rng: DRNG, sub_biome: int = 0) -> void:
+	_sub_biome = sub_biome
 	_grass_tufts(biome, rng)
 	# Try Kenney prop layout first; on failure fall back to procedural.
 	if _try_kenney(biome, corruption, rng):
@@ -246,8 +249,8 @@ func _coast(rng: DRNG, _corr: float) -> void:
 func _try_kenney(biome: StringName, corruption: float, rng: DRNG) -> bool:
 	# Pull props from the per-biome Kenney inventory. Returns true if anything
 	# loaded successfully — false leaves the procedural builder in charge.
-	var hero: Array = PropLoader.pool_for(biome, &"hero")
-	var ground: Array = PropLoader.pool_for(biome, &"ground")
+	var hero: Array = PropLoader.pool_for(biome, &"hero", _sub_biome)
+	var ground: Array = PropLoader.pool_for(biome, &"ground", _sub_biome)
 	var any := 0
 	# Place 9 "hero" props in a half-arc behind the encounter.
 	for i in 9:

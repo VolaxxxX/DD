@@ -221,10 +221,10 @@ func _build_stage_for_active_zone() -> void:
 	var z := orchestrator.world.active_zone()
 	backdrop = Backdrop3D.new()
 	stage.add_child(backdrop)
-	backdrop.build(z.biome, z.corruption)
+	backdrop.build(z.biome, z.corruption, z.sub_biome)
 	decor = Decor3D.new()
 	stage.add_child(decor)
-	decor.build(z.biome, z.corruption, _rng.derive(z.index + 100))
+	decor.build(z.biome, z.corruption, _rng.derive(z.index + 100), z.sub_biome)
 	_rebuild_player_avatars()
 	Music.play_biome(z.biome)
 	if z.dragon_id != &"":

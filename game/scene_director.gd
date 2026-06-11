@@ -60,7 +60,9 @@ func begin() -> void:
 
 func _emit_zone_intro() -> void:
 	var z := world.active_zone()
-	var txt := PhrasePool.biome_intro(z.biome, z.corruption)
+	var sub := PropLoader.sub_name(z.biome, z.sub_biome)
+	var header: String = "%s — %s" % [String(z.biome).to_upper(), sub] if sub != "" else String(z.biome).to_upper()
+	var txt := header + "\n" + PhrasePool.biome_intro(z.biome, z.corruption)
 	var rule := BiomeRules.label(z.biome)
 	if rule != "": txt += "\n" + rule
 	zone_intro.emit(txt, z.biome)
