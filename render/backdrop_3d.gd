@@ -192,22 +192,32 @@ func _build_environment(biome: StringName, corruption: float) -> void:
 	e.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	e.tonemap_exposure = 1.0
 	e.glow_enabled = true
-	e.glow_intensity = 0.6
-	e.glow_strength = 0.9
-	e.glow_bloom = 0.15
+	e.glow_intensity = 0.9
+	e.glow_strength = 1.10
+	e.glow_bloom = 0.25
+	e.glow_hdr_threshold = 0.9
 	e.adjustment_enabled = true
-	# Per-biome grading.
+	# Depth-of-field — focus crisp on the encounter, soften far props.
+	# Mobile renderer supports DOF Bokeh box mode at low cost.
+	e.dof_blur_far_enabled = true
+	e.dof_blur_far_distance = 10.0
+	e.dof_blur_far_transition = 6.0
+	e.dof_blur_amount = 0.10
+	# Stronger SSR-less sense of contrast via SSAO substitute (mobile-safe).
+	e.sdfgi_enabled = false  # not supported on mobile renderer
+	e.fog_aerial_perspective = 0.35
+	# Per-biome grading — stronger character per zone.
 	match String(biome):
-		"forest":    e.adjustment_saturation = 1.20; e.adjustment_contrast = 1.05; e.adjustment_brightness = 1.00
-		"city":      e.adjustment_saturation = 0.85; e.adjustment_contrast = 1.10; e.adjustment_brightness = 0.95
-		"ruins":     e.adjustment_saturation = 1.05; e.adjustment_contrast = 1.10; e.adjustment_brightness = 1.05
-		"corrupted": e.adjustment_saturation = 0.70; e.adjustment_contrast = 1.20; e.adjustment_brightness = 0.90
-		"anomaly":   e.adjustment_saturation = 1.30; e.adjustment_contrast = 1.15; e.adjustment_brightness = 1.05
-		"swamp":     e.adjustment_saturation = 0.85; e.adjustment_contrast = 1.05; e.adjustment_brightness = 0.90
-		"highland":  e.adjustment_saturation = 1.10; e.adjustment_contrast = 1.05; e.adjustment_brightness = 1.10
-		"crypt":     e.adjustment_saturation = 0.65; e.adjustment_contrast = 1.25; e.adjustment_brightness = 0.85
-		"coast":     e.adjustment_saturation = 1.10; e.adjustment_contrast = 1.05; e.adjustment_brightness = 1.05
-		_:           e.adjustment_saturation = 1.10; e.adjustment_contrast = 1.05
+		"forest":    e.adjustment_saturation = 1.30; e.adjustment_contrast = 1.10; e.adjustment_brightness = 1.00
+		"city":      e.adjustment_saturation = 0.80; e.adjustment_contrast = 1.20; e.adjustment_brightness = 0.92
+		"ruins":     e.adjustment_saturation = 1.10; e.adjustment_contrast = 1.15; e.adjustment_brightness = 1.05
+		"corrupted": e.adjustment_saturation = 0.55; e.adjustment_contrast = 1.40; e.adjustment_brightness = 0.85
+		"anomaly":   e.adjustment_saturation = 1.45; e.adjustment_contrast = 1.25; e.adjustment_brightness = 1.05
+		"swamp":     e.adjustment_saturation = 0.75; e.adjustment_contrast = 1.15; e.adjustment_brightness = 0.85
+		"highland":  e.adjustment_saturation = 1.15; e.adjustment_contrast = 1.10; e.adjustment_brightness = 1.15
+		"crypt":     e.adjustment_saturation = 0.45; e.adjustment_contrast = 1.45; e.adjustment_brightness = 0.78
+		"coast":     e.adjustment_saturation = 1.20; e.adjustment_contrast = 1.10; e.adjustment_brightness = 1.10
+		_:           e.adjustment_saturation = 1.10; e.adjustment_contrast = 1.10
 	env.environment = e
 	add_child(env)
 
