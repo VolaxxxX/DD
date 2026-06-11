@@ -26,6 +26,8 @@ func _ready() -> void:
 	_show_main_menu()
 
 func _show_main_menu() -> void:
+	# Safety: ensure no leftover slow-motion if returning from a run.
+	Engine.time_scale = 1.0
 	ui.visible = false
 	_clear_overlays()
 	_menu_root = preload("res://ui/main_menu.tscn").instantiate()

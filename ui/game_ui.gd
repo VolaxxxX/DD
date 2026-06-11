@@ -118,9 +118,17 @@ func present_encounter(enc) -> void:
 			var stat_short: String = PlayerClass.stat_label(StringName(stat_key))
 			btn.text = "%s  %s\n[%s]" % [TONE_GLYPH.get(c.tone, ""), c.text, stat_short]
 			btn.modulate = TONE_COLOR.get(c.tone, Color.WHITE)
+			btn.modulate.a = 0.0
 			btn.disabled = false
 		else:
 			btn.visible = false
+	# Smooth choice fade-in, staggered.
+	for i in choice_buttons.size():
+		var btn := choice_buttons[i]
+		if not btn.visible: continue
+		var t := btn.create_tween()
+		t.tween_interval(0.15 + i * 0.10)
+		t.tween_property(btn, "modulate:a", 1.0, 0.30)
 
 func show_narrative(text: String, _tone: int, outcome: int) -> void:
 	_hide_choices()
