@@ -34,6 +34,15 @@ const ACHIEVEMENTS := [
 var _langs_played: Array = []         # for polyglot tracking
 var second_chance_used_this_run: bool = false
 var run_start_msec: int = 0
+var fragments: int = 0                # village currency, persists across runs
+var next_zone_blessing: StringName = &""   # buff applied at next zone start
+
+const KILL_REWARD := 1
+const ELITE_REWARD := 3
+const APEX_REWARD := 5
+const DRAGON_REWARD := 5
+const TITAN_REWARD := 15
+const ZONE_REWARD := 10
 
 func _ready() -> void:
 	_load()
@@ -52,6 +61,7 @@ func _load() -> void:
 	deepest_zone = int(v.get("deepest_zone", 0))
 	achievements = v.get("achievements", [])
 	_langs_played = v.get("langs", [])
+	fragments = int(v.get("fragments", 0))
 
 func save() -> void:
 	var f := FileAccess.open(PATH, FileAccess.WRITE)
@@ -60,7 +70,7 @@ func save() -> void:
 		"kills": kills, "dragons_seen": dragons_seen, "bosses_seen": bosses_seen,
 		"runs_completed": runs_completed, "runs_total": runs_total,
 		"deepest_zone": deepest_zone, "achievements": achievements,
-		"langs": _langs_played,
+		"langs": _langs_played, "fragments": fragments,
 	})
 
 # ---------- API ----------
@@ -68,16 +78,37 @@ func save() -> void:
 func record_kill(creature_id: StringName) -> void:
 	var k := String(creature_id)
 	kills[k] = int(kills.get(k, 0)) + 1
+	fragments += KILL_REWARD
 	_maybe_unlock(&"first_blood")
 	if _total_kills() >= 100:
 		_maybe_unlock(&"hundred_dead")
 	save()
 
+func record_elite_kill() -> void:
+	fragments += ELITE_REWARD
+	save()
+
 func record_dragon(dragon_id: StringName) -> void:
 	if String(dragon_id) not in dragons_seen:
 		dragons_seen.append(String(dragon_id))
+	fragments += DRAGON_REWARD
 	_maybe_unlock(&"dragon_witness")
 	save()
+
+func record_zone_cleared() -> void:
+	fragments += ZONE_REWARD
+	save()
+
+func record_titan_survived() -> void:
+	fragments += TITAN_REWARD
+	_maybe_unlock(&"titan_breaker")
+	save()
+
+func spend(amount: int) -> bool:
+	if fragments < amount: return false
+	fragments -= amount
+	save()
+	return true
 
 func record_boss(boss_id: StringName) -> void:
 	if String(boss_id) not in bosses_seen:
@@ -115,10 +146,6 @@ func record_run_end(extracted: bool, any_injuries: bool, duo_both_alive: bool) -
 		if not any_injuries: _maybe_unlock(&"clean_run")
 		if duo_both_alive: _maybe_unlock(&"duo_survives")
 		if runs_completed >= 5: _maybe_unlock(&"five_runs")
-	save()
-
-func record_titan_survived() -> void:
-	_maybe_unlock(&"titan_breaker")
 	save()
 
 func record_language(lang: String) -> void:

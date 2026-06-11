@@ -118,7 +118,7 @@ func show_narrative(text: String, _tone: int, outcome: int) -> void:
 func update_stats(force: int, injuries: Array) -> void:
 	_last_force = force
 	_last_injuries = injuries.duplicate()
-	stat_label.text = "%s  %d" % [Lang.ui("force"), force]
+	stat_label.text = "%s  %d   ✦ %d" % [Lang.ui("force"), force, Progress.fragments]
 	_render_injuries(injuries)
 
 func _render_injuries(injuries: Array) -> void:

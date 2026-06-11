@@ -96,6 +96,10 @@ func _start_game_with_saved_seed(seed: int, zone_index: int) -> void:
 	director.stat_changed_for_player.connect(_on_player_stat_change)
 	director.healed.connect(_on_player_heal)
 	director.injury_added.connect(_on_player_injury)
+	director.second_chance_triggered.connect(_on_second_chance)
+	director.first_encounter.connect(_on_first_encounter)
+	director.encounter_progress.connect(func(c: int, t: int): ui.update_encounter_progress(c, t))
+	director.village_offered.connect(_on_village_offered)
 	ui.choice_selected.connect(_on_choice)
 	Bus.zone_changed.connect(_on_zone_changed)
 	director.begin()
@@ -170,11 +174,22 @@ func _start_game() -> void:
 	director.second_chance_triggered.connect(_on_second_chance)
 	director.first_encounter.connect(_on_first_encounter)
 	director.encounter_progress.connect(func(c: int, t: int): ui.update_encounter_progress(c, t))
+	director.village_offered.connect(_on_village_offered)
 	ui.choice_selected.connect(_on_choice)
 	Bus.zone_changed.connect(_on_zone_changed)
 
 	Progress.record_run_start()
 	director.begin()
+
+func _on_village_offered(player: PlayerState) -> void:
+	Music.play_menu()  # peaceful theme for the village pause
+	var panel: Control = preload("res://ui/village_hub.gd").new()
+	panel.setup(player)
+	var layer := CanvasLayer.new(); layer.layer = 85
+	add_child(layer); layer.add_child(panel)
+	panel.continue_journey.connect(func():
+		if is_instance_valid(layer): layer.queue_free()
+		director.resume_after_village())
 
 func _setup_camera() -> void:
 	camera.projection = Camera3D.PROJECTION_PERSPECTIVE

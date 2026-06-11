@@ -13,6 +13,7 @@ signal first_encounter(creature_id: StringName, name: String)
 signal stat_changed_for_player(stat_key: StringName, delta: int, player_idx: int)
 signal healed(injury_id: StringName, player_idx: int)
 signal world_boss_spawned(boss: Dictionary)
+signal village_offered(player: PlayerState)
 signal run_over(cause: StringName)
 
 const ENCOUNTERS_PER_ZONE := 4
@@ -165,6 +166,7 @@ func _apply(result: Dictionary) -> void:
 		Progress.record_kill(current.creature.archetype.id)
 		if int(current.creature.archetype.tier) >= Archetype.Tier.ELITE:
 			_elite_kills_this_run += 1
+			Progress.record_elite_kill()
 		current.creature.kill()
 	elif has_creature and result.get("creature_flees", false):
 		creature_reaction.emit(&"flee")
@@ -178,11 +180,37 @@ func _apply(result: Dictionary) -> void:
 
 func _advance_zone() -> void:
 	_encounters_in_zone = 0
+	Progress.record_zone_cleared()
 	var next_idx := world.active_zone_index + 1
 	if next_idx >= world.zones.size():
 		Save.clear()
 		run_over.emit(&"extrait")
 		return
+	# Apply a queued blessing (from the village storyteller) on entry.
+	if Progress.next_zone_blessing != &"":
+		for p in players:
+			p.stats[Progress.next_zone_blessing] = int(p.stats.get(Progress.next_zone_blessing, 8)) + 2
+		Progress.next_zone_blessing = &""
+		Progress.save()
+	# Village stop offered between zones (~35% chance after zone 0, always
+	# after the 2nd cleared zone).  Guarantees player relief.
+	var any_inj := false
+	for p in players:
+		if p.injuries.size() > 0: any_inj = true
+	var should_village := (world.active_zone_index >= 1 and (rng.range_i(0, 100) < 35 or any_inj))
+	if should_village:
+		_awaiting_choice = false
+		village_offered.emit(players[active_idx])
+		return
+	world.advance_zone()
+	Save.save_run(players, world)
+	_maybe_trigger_world_boss()
+	_emit_zone_intro()
+	await _wait(2.0)
+	next_encounter()
+
+func resume_after_village() -> void:
+	# Called by main.gd when the village panel is closed.
 	world.advance_zone()
 	Save.save_run(players, world)
 	_maybe_trigger_world_boss()

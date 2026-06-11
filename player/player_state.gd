@@ -68,5 +68,5 @@ func roll_stat_for_tone(tone: int) -> int:
 	return effective_stat(key) + tone_modifier(tone)
 
 func endurance_mitigation() -> int:
-	# Higher endurance reduces fatal threshold.
-	return int(stat(&"endurance") / 3)
+	# Higher endurance reduces fatal threshold (~1 per 2 points instead of 3).
+	return int(stat(&"endurance") / 2)

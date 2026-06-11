@@ -76,6 +76,9 @@ func resolve(choice_idx: int, resolver: EventResolver, coop_mod: int) -> Diction
 	var difficulty: int = 10 + creature.archetype.aggression / 10 + int(zone.chaos * 5)
 	var world_mod: int = -int(zone.corruption * 3)
 	difficulty += BiomeRules.tone_difficulty_mod(zone.biome, tone)
+	# Onboarding: first zone is gentler so the player can learn the system.
+	if zone.index == 0:
+		difficulty -= 3
 	var stat_key: StringName = PlayerClass.tone_stat(tone)
 	var actor_stat: int = player.roll_stat_for_tone(tone) + BiomeRules.stat_mod(zone.biome, stat_key)
 	# Dragon presence bends the odds.
