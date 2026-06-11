@@ -41,10 +41,11 @@ func _place(mesh: Mesh, pos: Vector3, color: Color, scale_v: Vector3 = Vector3.O
 		mi.set_meta("sway_phase", randf() * TAU)
 
 func _process(delta: float) -> void:
-	# Apply wind sway on all meshes marked with sway metadata.
+	# Apply wind sway on all marked nodes (procedural meshes OR imported
+	# Kenney/KayKit Node3D props).
 	var t := Time.get_ticks_msec() / 1000.0
 	for child in get_children():
-		if child is MeshInstance3D and child.has_meta("sway_amp"):
+		if child is Node3D and child.has_meta("sway_amp"):
 			var amp: float = child.get_meta("sway_amp")
 			var ph: float = child.get_meta("sway_phase")
 			child.rotation.z = sin(t * 0.8 + ph) * amp
@@ -269,6 +270,12 @@ func _try_kenney(biome: StringName, corruption: float, rng: DRNG) -> bool:
 		# Corruption tint via per-instance modulate on the meshes.
 		if corruption > 0.4:
 			_tint_children(n, Color(1.0, 1.0, 1.0).lerp(Color(0.55, 0.20, 0.45), corruption * 0.5))
+		# Mark hero props for wind sway (only foliage-like names to avoid
+		# stone walls swaying like jelly).
+		var nm := String(pick[1]).to_lower()
+		if "tree" in nm or "bush" in nm or "grass" in nm or "plant" in nm:
+			n.set_meta("sway_amp", 0.035 + (randf() * 0.025))
+			n.set_meta("sway_phase", randf() * TAU)
 	# Place 14 "ground" props (bushes, rocks, mushrooms) scattered.
 	for i in 14:
 		var pick: Array = ground[rng.range_i(0, ground.size())] if ground.size() > 0 else []
@@ -283,6 +290,10 @@ func _try_kenney(biome: StringName, corruption: float, rng: DRNG) -> bool:
 		n.rotation.y = _frng(rng, 0, 6.28)
 		n.scale = Vector3.ONE * scl
 		add_child(n)
+		var nm2 := String(pick[1]).to_lower()
+		if "bush" in nm2 or "grass" in nm2 or "flower" in nm2 or "mushroom" in nm2:
+			n.set_meta("sway_amp", 0.05 + (randf() * 0.04))
+			n.set_meta("sway_phase", randf() * TAU)
 	return any > 0
 
 func _tint_children(node: Node, tint: Color) -> void:

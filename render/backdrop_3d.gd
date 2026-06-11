@@ -53,12 +53,17 @@ var rim: DirectionalLight3D
 var env: WorldEnvironment
 
 func build(biome: StringName, corruption: float, sub_biome: int = 0) -> void:
+	# Each zone gets a deterministic time-of-day so two runs in the same forest
+	# feel different — bright noon vs golden dusk vs pre-dawn cold.
+	_time_of_day = (Time.get_ticks_msec() / 1000) % 3
 	_build_environment(biome, corruption)
 	_build_ground(biome, corruption)
 	_build_lights(biome, corruption)
 	_apply_sub_tint(biome, sub_biome)
 	_build_atmosphere(biome, corruption)
 	_build_ambient_critters(biome, DRNG.new(int(Time.get_ticks_msec())))
+
+var _time_of_day: int = 0   # 0=noon, 1=dusk, 2=pre-dawn
 
 func _apply_sub_tint(biome: StringName, sub_biome: int) -> void:
 	# Multiply the directional sun + fill light by the sub-biome tint so each
@@ -205,7 +210,19 @@ func _build_environment(biome: StringName, corruption: float) -> void:
 	e.dof_blur_amount = 0.10
 	# Stronger SSR-less sense of contrast via SSAO substitute (mobile-safe).
 	e.sdfgi_enabled = false  # not supported on mobile renderer
-	e.fog_aerial_perspective = 0.35
+	e.fog_aerial_perspective = 0.55
+	# Real volumetric fog (mobile renderer supports it as of Godot 4.3).
+	e.volumetric_fog_enabled = true
+	e.volumetric_fog_density = 0.012 + corruption * 0.022
+	e.volumetric_fog_albedo = sky_h
+	e.volumetric_fog_emission = sky_top * 0.3
+	e.volumetric_fog_emission_energy = 0.5 + corruption * 1.2
+	e.volumetric_fog_anisotropy = 0.3
+	e.volumetric_fog_length = 64.0
+	e.volumetric_fog_detail_spread = 4.0
+	# Height-based base fog gives ground mist in low areas.
+	e.fog_height_density = 0.04
+	e.fog_height = 1.5
 	# Per-biome grading — stronger character per zone.
 	match String(biome):
 		"forest":    e.adjustment_saturation = 1.30; e.adjustment_contrast = 1.10; e.adjustment_brightness = 1.00
@@ -239,10 +256,27 @@ func _build_ground(biome: StringName, corruption: float) -> void:
 
 func _build_lights(biome: StringName, corruption: float) -> void:
 	var tint: Color = BIOME_LIGHT_TINT.get(biome, Color.WHITE)
+	# Time-of-day modulates angle + warmth + energy.
+	var sun_rot := Vector3(-45, -28, 0)
+	var sun_energy_mul := 1.0
+	var warmth_mul := Color(1, 1, 1)
+	match _time_of_day:
+		0:   # NOON: high sun, bright, neutral
+			sun_rot = Vector3(-65, -20, 0)
+			sun_energy_mul = 1.10
+			warmth_mul = Color(1.00, 0.98, 0.92)
+		1:   # DUSK: low sun, warm, golden
+			sun_rot = Vector3(-15, -45, 0)
+			sun_energy_mul = 0.85
+			warmth_mul = Color(1.20, 0.85, 0.55)
+		2:   # PRE-DAWN: low cool, blue
+			sun_rot = Vector3(-12, -160, 0)
+			sun_energy_mul = 0.55
+			warmth_mul = Color(0.65, 0.75, 1.00)
 	sun = DirectionalLight3D.new()
-	sun.rotation_degrees = Vector3(-45, -28, 0)
-	sun.light_energy = 1.1 - corruption * 0.3
-	sun.light_color = tint
+	sun.rotation_degrees = sun_rot
+	sun.light_energy = (1.1 - corruption * 0.3) * sun_energy_mul
+	sun.light_color = tint * warmth_mul
 	sun.shadow_enabled = true
 	sun.directional_shadow_max_distance = 30.0
 	sun.light_angular_distance = 1.5
@@ -250,12 +284,15 @@ func _build_lights(biome: StringName, corruption: float) -> void:
 
 	fill = DirectionalLight3D.new()
 	fill.rotation_degrees = Vector3(-15, 130, 0)
-	fill.light_energy = 0.35
-	fill.light_color = tint.lerp(Color(0.6, 0.7, 1.0), 0.55)
+	fill.light_energy = 0.40
+	fill.light_color = tint.lerp(Color(0.55, 0.70, 1.00), 0.55) * warmth_mul
 	add_child(fill)
 
+	# Rim light — explicitly stronger so creature silhouettes glow against the
+	# darker background.  Mounted behind the camera-relative encounter focal point.
 	rim = DirectionalLight3D.new()
-	rim.rotation_degrees = Vector3(-8, 200, 0)
-	rim.light_energy = 0.45
-	rim.light_color = Color(1.0, 0.85, 0.7).lerp(Color(0.8, 0.6, 1.0), corruption)
+	rim.rotation_degrees = Vector3(-12, 195, 0)
+	rim.light_energy = 0.85
+	var rim_warm := Color(1.00, 0.85, 0.55) if _time_of_day == 1 else Color(0.85, 0.95, 1.00)
+	rim.light_color = rim_warm.lerp(Color(0.85, 0.55, 1.00), corruption)
 	add_child(rim)

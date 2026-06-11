@@ -222,24 +222,41 @@ func _make_material(col: Color, rough: float, glow: bool) -> StandardMaterial3D:
 	var m := StandardMaterial3D.new()
 	m.albedo_color = col
 	m.roughness = rough
-	if glow or archetype == null: pass
+	# Per-family surface properties break the plastic look.
 	if archetype != null:
 		var f := archetype.family
-		if f == Archetype.Family.ELEMENTAL:
-			m.emission_enabled = true
-			m.emission = Color(1.0, 0.6, 0.2)
-			m.emission_energy_multiplier = 1.4
-		elif f == Archetype.Family.ABERRATION:
-			m.emission_enabled = true
-			m.emission = Color(0.7, 0.2, 1.0)
-			m.emission_energy_multiplier = 0.7
-		elif f == Archetype.Family.FEY:
-			m.emission_enabled = true
-			m.emission = Color(0.9, 0.8, 1.0)
-			m.emission_energy_multiplier = 0.5
+		match f:
+			Archetype.Family.HUMANOID:
+				m.roughness = 0.65; m.metallic = 0.05
+			Archetype.Family.BEAST:
+				m.roughness = 0.85; m.metallic = 0.0
+				m.rim_enabled = true; m.rim = 0.4; m.rim_tint = 0.2     # subsurface-ish wet fur
+			Archetype.Family.UNDEAD:
+				m.roughness = 0.92; m.metallic = 0.0
+			Archetype.Family.CONSTRUCT:
+				m.roughness = 0.35; m.metallic = 0.6                    # metallic armor
+				m.metallic_specular = 0.7
+			Archetype.Family.ELEMENTAL:
+				m.roughness = 0.30; m.metallic = 0.0
+				m.emission_enabled = true; m.emission = Color(1.0, 0.6, 0.2)
+				m.emission_energy_multiplier = 1.6
+			Archetype.Family.ABERRATION:
+				m.roughness = 0.45; m.metallic = 0.1
+				m.emission_enabled = true; m.emission = Color(0.7, 0.2, 1.0)
+				m.emission_energy_multiplier = 0.8
+				m.rim_enabled = true; m.rim = 0.5; m.rim_tint = 0.5      # eldritch sheen
+			Archetype.Family.FEY:
+				m.roughness = 0.55; m.metallic = 0.0
+				m.emission_enabled = true; m.emission = Color(0.9, 0.8, 1.0)
+				m.emission_energy_multiplier = 0.6
+				m.rim_enabled = true; m.rim = 0.6; m.rim_tint = 0.3      # ethereal glow on edges
+			Archetype.Family.DRACONIC:
+				m.roughness = 0.40; m.metallic = 0.4                    # scaly armor
+				m.metallic_specular = 0.6
+				m.rim_enabled = true; m.rim = 0.3; m.rim_tint = 0.1
 		if archetype.tier >= Archetype.Tier.ELITE:
 			m.emission_enabled = true
-			m.emission_energy_multiplier += 0.8
+			m.emission_energy_multiplier = max(m.emission_energy_multiplier, 0.0) + 0.9
 	return m
 
 func _add(mesh: Mesh, pos: Vector3, mat: StandardMaterial3D = null, scale_v: Vector3 = Vector3.ONE, rot_deg: Vector3 = Vector3.ZERO) -> MeshInstance3D:

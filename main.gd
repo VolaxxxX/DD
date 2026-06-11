@@ -224,8 +224,10 @@ var _breath_time: float = 0.0
 func _process(delta: float) -> void:
 	if camera == null or boss_node != null: return
 	_breath_time += delta
-	var off_y := sin(_breath_time * 0.6) * 0.04
-	var off_x := sin(_breath_time * 0.4) * 0.03
+	# Multi-frequency idle drift — closer to a hand-held cinematic camera,
+	# not a metronome.
+	var off_y := sin(_breath_time * 0.55) * 0.035 + sin(_breath_time * 1.7) * 0.012
+	var off_x := sin(_breath_time * 0.37) * 0.028 + sin(_breath_time * 1.3 + 1.7) * 0.014
 	camera.position = Vector3(off_x + _shake_offset.x, 2.2 + off_y + _shake_offset.y, 6.0 + _shake_offset.z)
 	if _shake_t > 0.0:
 		_shake_t = maxf(0.0, _shake_t - delta / _shake_dur)
