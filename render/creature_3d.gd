@@ -278,7 +278,13 @@ func _add_eye(pos: Vector3, radius: float = 0.05) -> void:
 	glow.emission_enabled = true
 	glow.emission = _eye_color
 	glow.emission_energy_multiplier = 4.0
-	_add(eye, pos, glow)
+	var mi := _add(eye, pos, glow)
+	# Pulse the emission energy so the eyes feel alive.
+	var dup_mat := glow.duplicate() as StandardMaterial3D
+	mi.material_override = dup_mat
+	var t := mi.create_tween().set_loops()
+	t.tween_property(dup_mat, "emission_energy_multiplier", 6.0, 0.9).set_trans(Tween.TRANS_SINE)
+	t.tween_property(dup_mat, "emission_energy_multiplier", 3.5, 0.9).set_trans(Tween.TRANS_SINE)
 
 # ---------- Family builders ----------
 
@@ -639,6 +645,7 @@ func react(reaction: StringName) -> void:
 		&"die":    _animator.play_die()
 		&"flee":   _animator.play_flee()
 		&"hit":    _animator.play_hit()
+		&"attack": _animator.play_attack()
 		&"mutate":
 			_add_mutation_mark()
 			_animator.play_mutate()

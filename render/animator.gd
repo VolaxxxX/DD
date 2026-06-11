@@ -34,6 +34,17 @@ func play_hit() -> void:
 	t.tween_property(target, "position:x", _base_pos.x, 0.10)
 	_flash(Color(1.0, 0.3, 0.3))
 
+func play_attack() -> void:
+	# Forward lunge + downward tilt + recoil. Used for procedural creatures
+	# without an imported attack animation.
+	if target == null: return
+	var t := create_tween()
+	t.tween_property(target, "position:z", _base_pos.z + 0.85, 0.12).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
+	t.parallel().tween_property(target, "rotation_degrees:x", _base_rot.x - 18.0, 0.10)
+	t.tween_property(target, "position:z", _base_pos.z, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	t.parallel().tween_property(target, "rotation_degrees:x", _base_rot.x, 0.25)
+	_flash(Color(1.0, 0.6, 0.2))
+
 func play_die() -> void:
 	if target == null: return
 	_stop_idle()

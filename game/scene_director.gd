@@ -186,7 +186,12 @@ func _apply(result: Dictionary) -> void:
 		creature_reaction.emit(&"mutate")
 		current.creature.apply_mutation()
 	elif has_creature:
-		creature_reaction.emit(&"hit")
+		# If the player took an injury, the creature successfully attacked.
+		var inj_id: StringName = result.get("injury", &"")
+		if inj_id != &"":
+			creature_reaction.emit(&"attack")
+		else:
+			creature_reaction.emit(&"hit")
 	stats_changed.emit(player.effective_force(), player.injuries.duplicate(), player.relics.duplicate())
 
 func _advance_zone() -> void:

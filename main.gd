@@ -251,6 +251,22 @@ func _slowmo(scale: float, duration: float) -> void:
 	get_tree().create_timer(duration * scale, true, false, true).timeout.connect(func():
 		Engine.time_scale = 1.0)
 
+func _light_burst(color: Color, energy: float, duration: float) -> void:
+	# A short-lived OmniLight3D at the encounter focal point that fades.
+	# Creates the "lightning strike" feel on crits without baked light maps.
+	if stage == null: return
+	var light := OmniLight3D.new()
+	light.light_color = color
+	light.light_energy = energy
+	light.omni_range = 14.0
+	light.position = Vector3(0, 1.6, 0)
+	stage.add_child(light)
+	var t := light.create_tween()
+	t.tween_property(light, "light_energy", energy, 0.06)
+	t.tween_property(light, "light_energy", 0.0, duration).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
+	t.tween_callback(func():
+		if is_instance_valid(light): light.queue_free())
+
 func _build_stage_for_active_zone() -> void:
 	for child in stage.get_children(): child.queue_free()
 	boss_node = null
@@ -390,13 +406,15 @@ func _on_narrative(text: String, tone: int, outcome: int) -> void:
 	_play_outcome_vfx(tone, outcome)
 
 func _play_outcome_vfx(tone: int, outcome: int) -> void:
-	# Slow-motion + camera shake on extreme outcomes — always plays.
+	# Slow-motion + camera shake + light burst on extreme outcomes.
 	match outcome:
 		0:  # CRIT_FAIL
 			_slowmo(0.35, 0.6)
 			_shake_camera(0.30, 0.4)
+			_light_burst(Color(1.0, 0.20, 0.20), 6.0, 0.6)
 		4:  # CRIT_SUCCESS
 			_slowmo(0.45, 0.5)
+			_light_burst(Color(1.0, 0.95, 0.55), 7.0, 0.7)
 	if creature_node == null or not is_instance_valid(creature_node): return
 	var pos: Vector3 = creature_node.position + Vector3(0, 1.0, 0)
 	match outcome:
@@ -423,7 +441,13 @@ func _play_outcome_vfx(tone: int, outcome: int) -> void:
 func _on_creature_reaction(reaction: StringName) -> void:
 	if creature_node and is_instance_valid(creature_node):
 		creature_node.react(reaction)
-	if reaction == &"die": _kills_this_run += 1
+	if reaction == &"die":
+		_kills_this_run += 1
+		# Death burst + light + particles for a satisfying kill moment.
+		if creature_node and is_instance_valid(creature_node):
+			var pos: Vector3 = creature_node.position + Vector3(0, 1.0, 0)
+			_light_burst(Color(1.0, 0.85, 0.55), 5.0, 0.55)
+			CombatVFX.dust_puff(stage, pos, Color(0.95, 0.85, 0.60))
 
 func _on_stats(force: int, injuries: Array, relics: Array = []) -> void:
 	ui.update_stats(force, injuries, relics)
