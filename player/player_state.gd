@@ -16,10 +16,14 @@ func add_relic(id: StringName) -> bool:
 	if relics.size() >= MAX_RELICS:
 		relics.remove_at(0)
 	relics.append(id)
-	# Star Stone applies its passive immediately.
+	# Apply pickup-time passives.
 	var r: Dictionary = RelicRegistry.by_id(id)
-	if String(r.get("passive", "")) == "perma_endurance":
-		stats[&"endurance"] = int(stats.get(&"endurance", 8)) + 1
+	match String(r.get("passive", "")):
+		"perma_endurance":
+			stats[&"endurance"] = int(stats.get(&"endurance", 8)) + 1
+		"cleanse_on_pickup":
+			injuries.erase(&"terror")
+			injuries.erase(&"curse")
 	return true
 
 func relic_bonus(ctx: Dictionary) -> int:

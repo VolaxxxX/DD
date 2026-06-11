@@ -101,6 +101,10 @@ func present_intro(text: String) -> void:
 	t.tween_interval(1.6)
 	t.tween_property(intro_label, "modulate:a", 0.0, 0.8)
 
+const TONE_STAT_LABEL := {
+	0: "force", 1: "charisme", 2: "vivacite", 3: "instinct", 4: "charisme", 5: "esprit",
+}
+
 func present_encounter(enc) -> void:
 	narrative.text = ""
 	_show_choices()
@@ -109,7 +113,10 @@ func present_encounter(enc) -> void:
 		if i < enc.choices.size():
 			var c: Dictionary = enc.choices[i]
 			btn.visible = true
-			btn.text = "%s   %s" % [TONE_GLYPH.get(c.tone, ""), c.text]
+			# Format: "<glyph>  text\n— STAT" so the player sees which stat is rolled.
+			var stat_key: String = TONE_STAT_LABEL.get(c.tone, "force")
+			var stat_short: String = PlayerClass.stat_label(StringName(stat_key))
+			btn.text = "%s  %s\n[%s]" % [TONE_GLYPH.get(c.tone, ""), c.text, stat_short]
 			btn.modulate = TONE_COLOR.get(c.tone, Color.WHITE)
 			btn.disabled = false
 		else:

@@ -363,7 +363,25 @@ func _reset_camera_if_boss() -> void:
 		Cinematic.reset_camera(camera)
 
 func _on_narrative(text: String, tone: int, outcome: int) -> void:
-	ui.show_narrative(text, tone, outcome)
+	# If a relic actively boosted this roll, surface its icon next to the narration.
+	var prefix := ""
+	if director != null and director.current is Encounter:
+		var enc: Encounter = director.current as Encounter
+		var p: PlayerState = director.player
+		for rid in p.relics:
+			var ctx := {
+				"tone": tone, "stat": PlayerClass.tone_stat(tone),
+				"family": int(enc.creature.archetype.family),
+				"biome": enc.zone.biome,
+				"dragon_present": enc.zone.dragon_id != &"",
+			}
+			if RelicRegistry.bonus_for(rid, ctx) > 0:
+				var r: Dictionary = RelicRegistry.by_id(rid)
+				prefix += String(r.get("icon", "✦")) + " "
+	if prefix != "":
+		ui.show_narrative(prefix + text, tone, outcome)
+	else:
+		ui.show_narrative(text, tone, outcome)
 	_play_outcome_vfx(tone, outcome)
 
 func _play_outcome_vfx(tone: int, outcome: int) -> void:

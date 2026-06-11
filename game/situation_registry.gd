@@ -954,6 +954,150 @@ static func all() -> Array:
 			 "good": {"stat_delta": 2, "stat": &"esprit", "narr": "L'ombre s'arrête. Elle écoute. Elle te confie quelque chose, dans le silence."},
 			 "bad":  {"injury": &"terror", "narr": "L'ombre s'arrête. Elle t'écoute. Trop bien."}},
 		 ]},
+
+		# --- ROADSIDE SHRINE LIT ---
+		{"id": &"lit_shrine",
+		 "title": "Un autel récemment éclairé. Quelqu'un est passé il y a peu.",
+		 "biomes": [&"forest", &"city", &"ruins", &"crypt", &"highland"],
+		 "choices": [
+			{"tone": T_DIPL, "text": "Tu y déposes une pièce et tu murmures une prière.",
+			 "good": {"heal": &"bleeding", "narr": "Une chaleur t'enveloppe. Tu repars la plaie refermée."},
+			 "bad":  {"narr": "Tu repars. Rien ne se passe. Mais quelque chose est apaisé."}},
+			{"tone": T_DECE, "text": "Tu rallumes la bougie en récupérant la pièce.",
+			 "good": {"stat_delta": 1, "stat": &"vivacite", "narr": "Tu repars avec la pièce et la conscience tranquille."},
+			 "bad":  {"injury": &"curse", "narr": "La pièce te brûle dans la poche, longtemps."}},
+			{"tone": T_MYST, "text": "Tu ajoutes une mèche de tes cheveux à la bougie.",
+			 "good": {"stat_delta": 2, "stat": &"esprit", "narr": "Tu repars avec un savoir qui n'était pas là avant."},
+			 "bad":  {"injury": &"curse", "narr": "Tu y as laissé plus que des cheveux. Tu le sentiras."}},
+		 ]},
+
+		# --- TIRED SOLDIER ---
+		{"id": &"tired_soldier",
+		 "title": "Un soldat assis dans la poussière, son épée brisée à côté. 'Tu ne saurais pas où je peux dormir ?'",
+		 "biomes": [&"ruins", &"city", &"highland", &"coast"],
+		 "choices": [
+			{"tone": T_DIPL, "text": "Tu lui indiques un coin tranquille que tu as repéré.",
+			 "good": {"stat_delta": 1, "stat": &"charisme", "narr": "Il te remercie et te confie un secret de campagne — utile."},
+			 "bad":  {"narr": "Il ne te croit pas. Il te tourne le dos."}},
+			{"tone": T_AGGR, "text": "Tu lui prends son épée brisée et tu pars.",
+			 "good": {"stat_delta": 1, "stat": &"force", "narr": "Il ne dit rien. La lame se révèle pas si brisée que ça."},
+			 "bad":  {"injury": &"bleeding", "narr": "Il était plus rapide qu'il en avait l'air. La lame brisée trouve sa cible."}},
+			{"tone": T_CAUT, "text": "Tu fais un signe et tu pars sans lui parler.",
+			 "good": {"narr": "Tu pars. Il s'endort là où il était."},
+			 "bad":  {"narr": "Il te suit du regard. Tu accélères."}},
+		 ]},
+
+		# --- GLOWING CHEST ---
+		{"id": &"glowing_chest",
+		 "title": "Un petit coffre qui pulse doucement à travers les planches. Il a l'air vivant.",
+		 "biomes": [&"ruins", &"crypt", &"city", &"anomaly"],
+		 "choices": [
+			{"tone": T_CURI, "text": "Tu l'ouvres calmement.",
+			 "good": {"stat_delta": 2, "stat": &"esprit", "narr": "À l'intérieur, un fragment précieux. Tu le glisses dans ta poche."},
+			 "bad":  {"injury": &"poison", "narr": "À l'intérieur, une vapeur. Tu en respires une bouffée."}},
+			{"tone": T_AGGR, "text": "Tu le brises d'un coup de pied.",
+			 "good": {"stat_delta": 1, "stat": &"force", "narr": "Tu en tires une bonne pièce et un morceau de cristal."},
+			 "bad":  {"injury": &"bleeding", "narr": "Un éclat te tranche le tibia."}},
+			{"tone": T_MYST, "text": "Tu poses la main et tu écoutes ce qu'il a à dire.",
+			 "good": {"heal": &"curse", "narr": "Le coffre absorbe quelque chose en toi. Tu repars plus léger."},
+			 "bad":  {"injury": &"curse", "narr": "Le coffre te transfère ce qu'il portait. Tu le portes maintenant."}},
+		 ]},
+
+		# --- BLOOD FRUIT ---
+		{"id": &"blood_fruit",
+		 "title": "Un fruit rouge sang pend à un arbre par ailleurs mort. Il sent encore frais.",
+		 "biomes": [&"forest", &"corrupted", &"swamp"],
+		 "choices": [
+			{"tone": T_AGGR, "text": "Tu le manges tout cru.",
+			 "good": {"heal": &"exhaustion", "narr": "Le jus est sucré et te remplit. Tu repars avec de l'énergie."},
+			 "bad":  {"injury": &"poison", "narr": "C'était sucré au début, puis amer. Très amer."}},
+			{"tone": T_CAUT, "text": "Tu le cueilles et tu le gardes pour plus tard.",
+			 "good": {"stat_delta": 1, "stat": &"endurance", "narr": "Tu le gardes. Il ne pourrit pas. Bon présage."},
+			 "bad":  {"narr": "Il fond entre tes doigts. Tu pars sans rien."}},
+			{"tone": T_MYST, "text": "Tu le laisses en offrande sur l'arbre.",
+			 "good": {"stat_delta": 1, "stat": &"esprit", "narr": "L'arbre frémit. Tu reçois un mot ancien en retour."},
+			 "bad":  {"narr": "Tu pars. L'arbre ne dit rien. Le fruit pourrit derrière toi."}},
+		 ]},
+
+		# --- WANDERING HORSE ---
+		{"id": &"wandering_horse",
+		 "title": "Un cheval sellé broute paisiblement, sans cavalier. Il te regarde sans crainte.",
+		 "biomes": [&"highland", &"coast", &"forest", &"ruins"],
+		 "choices": [
+			{"tone": T_DIPL, "text": "Tu lui parles doucement et tu le mènes par la bride.",
+			 "good": {"stat_delta": 2, "stat": &"vivacite", "narr": "Il te suit. Tu traverses la zone bien plus vite."},
+			 "bad":  {"narr": "Il s'éloigne quand tu approches. Il ne veut pas de toi."}},
+			{"tone": T_AGGR, "text": "Tu le montes en force.",
+			 "good": {"stat_delta": 1, "stat": &"force", "narr": "Tu réussis. Il accepte ton autorité. Tu pars sur lui."},
+			 "bad":  {"injury": &"broken_arm", "narr": "Il te jette à terre. Quelque chose dans ton bras a cédé."}},
+			{"tone": T_CAUT, "text": "Tu le contournes pour voir ce qu'il broute.",
+			 "good": {"stat_delta": 1, "stat": &"instinct", "narr": "Tu trouves les restes de son cavalier — et ce qu'il portait."},
+			 "bad":  {"narr": "Tu ne trouves rien. Le cheval te regarde, agacé."}},
+		 ]},
+
+		# --- BURNING SCROLL ---
+		{"id": &"burning_scroll",
+		 "title": "Un parchemin enflammé qui ne se consume pas. Il flotte à hauteur d'homme.",
+		 "biomes": [&"ruins", &"crypt", &"anomaly", &"corrupted"],
+		 "choices": [
+			{"tone": T_MYST, "text": "Tu prononces le mot qu'il attend.",
+			 "good": {"stat_delta": 2, "stat": &"esprit", "narr": "Il s'éteint et tombe dans ta main. Tu peux le lire."},
+			 "bad":  {"injury": &"curse", "narr": "Tu as dit le mot. Mais pas celui qu'il attendait."}},
+			{"tone": T_CURI, "text": "Tu essaies de le lire à travers les flammes.",
+			 "good": {"stat_delta": 1, "stat": &"instinct", "narr": "Tu retiens trois mots. Ils te serviront."},
+			 "bad":  {"injury": &"bleeding", "narr": "La flamme te brûle les yeux. Tu pars en pleurant."}},
+			{"tone": T_AGGR, "text": "Tu l'attrapes malgré le feu.",
+			 "good": {"stat_delta": 1, "stat": &"force", "narr": "Tu encaisses la brûlure. Le parchemin est à toi."},
+			 "bad":  {"injury": &"bleeding", "narr": "Le feu refuse de s'éteindre. Tu lâches en hurlant."}},
+		 ]},
+
+		# --- WHISPERING WIND ---
+		{"id": &"whispering_wind",
+		 "title": "Le vent te parle clairement. Trois mots, lentement. Il te demande quelque chose.",
+		 "biomes": [&"highland", &"coast", &"anomaly"],
+		 "choices": [
+			{"tone": T_DIPL, "text": "Tu réponds à voix haute.",
+			 "good": {"stat_delta": 2, "stat": &"charisme", "narr": "Le vent t'accompagne ensuite, doux, pendant longtemps."},
+			 "bad":  {"narr": "Le vent te coupe la voix. Tu pars sans avoir fini."}},
+			{"tone": T_MYST, "text": "Tu chantes une seule note en réponse.",
+			 "good": {"heal": &"exhaustion", "narr": "Le vent te porte. Tu retrouves des forces sans effort."},
+			 "bad":  {"injury": &"terror", "narr": "La note est fausse. Le vent reprend la sienne, plus fort."}},
+			{"tone": T_CAUT, "text": "Tu te tais et tu attends qu'il passe.",
+			 "good": {"narr": "Tu attends. Le vent finit par s'éloigner. Tu pars."},
+			 "bad":  {"injury": &"exhaustion", "narr": "Le vent ne s'arrête pas. Tu marches contre lui longtemps."}},
+		 ]},
+
+		# --- WOUNDED ANIMAL ---
+		{"id": &"wounded_animal",
+		 "title": "Un cerf à terre, une flèche fichée dans le flanc. Il respire encore.",
+		 "biomes": [&"forest", &"highland", &"coast"],
+		 "choices": [
+			{"tone": T_DIPL, "text": "Tu retires la flèche avec douceur.",
+			 "good": {"stat_delta": 1, "stat": &"charisme", "narr": "Il se lève, faiblement, et te confie un regard avant de fuir. Plus tard, tu trouveras une bois de cerf utile sur ton chemin."},
+			 "bad":  {"injury": &"bleeding", "narr": "Il se débat. Le bois de la flèche te griffe."}},
+			{"tone": T_AGGR, "text": "Tu l'achèves d'un coup propre.",
+			 "good": {"heal": &"exhaustion", "narr": "Tu manges un repas honnête. Tu repars rassasié."},
+			 "bad":  {"injury": &"terror", "narr": "Il te regarde pendant que tu frappes. Tu ne dormiras plus pareil."}},
+			{"tone": T_MYST, "text": "Tu poses la main et tu prends un peu de sa douleur.",
+			 "good": {"stat_delta": 2, "stat": &"esprit", "narr": "Il se relève. Tu sens son nom dans ta tête. Tu peux désormais l'appeler."},
+			 "bad":  {"injury": &"poison", "narr": "Tu prends trop. Tu titubes."}},
+		 ]},
+
+		# --- OLD WELL TREASURE ---
+		{"id": &"old_well_treasure",
+		 "title": "Un puits asséché. Au fond, du métal brille faiblement. La pierre est friable.",
+		 "biomes": [&"ruins", &"city", &"swamp"],
+		 "choices": [
+			{"tone": T_AGGR, "text": "Tu descends en force, sans corde.",
+			 "good": {"stat_delta": 2, "stat": &"force", "narr": "Tu remontes avec une poignée de pièces et un anneau gravé."},
+			 "bad":  {"injury": &"broken_arm", "narr": "Tu glisses. Ton bras heurte la pierre. Tu remontes seul, à grand peine."}},
+			{"tone": T_CAUT, "text": "Tu trouves une corde et tu descends prudemment.",
+			 "good": {"stat_delta": 1, "stat": &"instinct", "narr": "Tu remontes sans dommage avec ce que tu voulais."},
+			 "bad":  {"injury": &"exhaustion", "narr": "La descente prend des heures. Tu remontes vidé."}},
+			{"tone": T_DECE, "text": "Tu fais semblant de partir et tu reviens à la tombée du jour.",
+			 "good": {"stat_delta": 1, "stat": &"vivacite", "narr": "Plus simple dans le noir. Tu repars avec deux pièces de plus."},
+			 "bad":  {"narr": "Le puits est plus profond la nuit. Tu repars sans rien."}},
+		 ]},
 	]
 
 static func for_biome(biome: StringName) -> Array:
