@@ -68,7 +68,9 @@ func _apply_sub_tint(biome: StringName, sub_biome: int) -> void:
 	if fill: fill.light_color = fill.light_color * tint
 
 func _build_ambient_critters(biome: StringName, rng: DRNG) -> void:
-	# Tiny billboard sprites drifting in the sky / water for life.
+	# Small genuine 3D birds (body + 2 wings + occasional beak) drifting in
+	# the sky for life. No billboards — real geometry so the silhouette holds
+	# from any angle.
 	var n := 0
 	var color := Color.WHITE
 	var height_lo := 4.0
@@ -77,29 +79,45 @@ func _build_ambient_critters(biome: StringName, rng: DRNG) -> void:
 		"forest":   n = 4; color = Color(0.20, 0.18, 0.15)        # crows
 		"coast":    n = 6; color = Color(0.95, 0.95, 0.95)        # gulls
 		"highland": n = 4; color = Color(0.90, 0.90, 0.95)        # eagles
-		"city":    n = 3; color = Color(0.15, 0.15, 0.15)
-		"swamp":   n = 3; color = Color(0.55, 0.70, 0.45); height_lo = 0.5; height_hi = 3.0
-		_:         return
+		"city":     n = 3; color = Color(0.15, 0.15, 0.15)
+		"swamp":    n = 3; color = Color(0.55, 0.70, 0.45); height_lo = 0.5; height_hi = 3.0
+		_:          return
 	for i in n:
-		var mi := MeshInstance3D.new()
-		var mesh := QuadMesh.new(); mesh.size = Vector2(0.6, 0.25)
-		mi.mesh = mesh
-		var mat := StandardMaterial3D.new()
-		mat.albedo_color = color
-		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
-		mat.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
-		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		mi.material_override = mat
+		var bird := Node3D.new()
 		var x := randf_range(-20, 20)
 		var z := randf_range(-15, -3)
 		var y := randf_range(height_lo, height_hi)
-		mi.position = Vector3(x, y, z)
-		add_child(mi)
+		bird.position = Vector3(x, y, z)
+		add_child(bird)
+		# Body (small capsule)
+		var body_m := CapsuleMesh.new()
+		body_m.radius = 0.05; body_m.height = 0.18
+		_ambient_part(bird, body_m, Vector3(0, 0, 0), color, Vector3(0, 0, 90))
+		# Two wings (thin prisms angled outward)
+		var wing := PrismMesh.new()
+		wing.size = Vector3(0.20, 0.04, 0.06)
+		_ambient_part(bird, wing, Vector3(0, 0.02, 0), color, Vector3(0, 0, 12))
+		_ambient_part(bird, wing, Vector3(0, 0.02, 0), color, Vector3(180, 0, -12))
 		# Drifting motion in a loop
-		var t := mi.create_tween().set_loops()
-		var endpoint := mi.position + Vector3(randf_range(-15, 15), randf_range(-1, 1), randf_range(-5, 5))
-		t.tween_property(mi, "position", endpoint, randf_range(8, 16)).set_trans(Tween.TRANS_SINE)
-		t.tween_property(mi, "position", mi.position, randf_range(8, 16)).set_trans(Tween.TRANS_SINE)
+		var endpoint := bird.position + Vector3(randf_range(-15, 15), randf_range(-1, 1), randf_range(-5, 5))
+		var t := bird.create_tween().set_loops()
+		t.tween_property(bird, "position", endpoint, randf_range(10, 18)).set_trans(Tween.TRANS_SINE)
+		t.tween_property(bird, "position", bird.position, randf_range(10, 18)).set_trans(Tween.TRANS_SINE)
+		# Flap the wings (subtle scale pulse).
+		var flap := bird.create_tween().set_loops()
+		flap.tween_property(bird, "scale", Vector3(1, 0.85, 1), 0.30).set_trans(Tween.TRANS_SINE)
+		flap.tween_property(bird, "scale", Vector3(1, 1.0, 1), 0.30).set_trans(Tween.TRANS_SINE)
+
+func _ambient_part(parent: Node3D, mesh: Mesh, pos: Vector3, color: Color, rot_deg: Vector3 = Vector3.ZERO) -> void:
+	var mi := MeshInstance3D.new()
+	mi.mesh = mesh
+	mi.position = pos
+	mi.rotation_degrees = rot_deg
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = color
+	mat.roughness = 0.85
+	mi.material_override = mat
+	parent.add_child(mi)
 
 func _build_atmosphere(biome: StringName, corruption: float) -> void:
 	var amount := 80
