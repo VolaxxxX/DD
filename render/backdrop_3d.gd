@@ -60,6 +60,7 @@ func build(biome: StringName, corruption: float, sub_biome: int = 0) -> void:
 	_build_ground(biome, corruption)
 	_build_lights(biome, corruption)
 	_apply_sub_tint(biome, sub_biome)
+	_build_far_silhouettes(biome, corruption)
 	_build_atmosphere(biome, corruption)
 	_build_ambient_critters(biome, DRNG.new(int(Time.get_ticks_msec())))
 
@@ -123,6 +124,84 @@ func _ambient_part(parent: Node3D, mesh: Mesh, pos: Vector3, color: Color, rot_d
 	mat.roughness = 0.85
 	mi.material_override = mat
 	parent.add_child(mi)
+
+func _build_far_silhouettes(biome: StringName, corruption: float) -> void:
+	# A row of large dim shapes ~30 m behind the encounter, plus a second further
+	# row, to fill the empty sky and give the scene a sense of distance.
+	# All shapes use a flat dark material so they read as silhouettes against
+	# the sky / fog.
+	var rng := DRNG.new(int(biome.hash()) ^ 0x5EED)
+	var horizon: Color = BIOME_SKY_HORIZON.get(biome, Color(0.6, 0.6, 0.6))
+	var silhouette_col: Color = horizon.darkened(0.55).lerp(Color(0.10, 0.02, 0.15), corruption * 0.5)
+	var par := Node3D.new()
+	par.name = "FarSilhouettes"
+	add_child(par)
+	# Two depth rows so they layer.
+	for row in 2:
+		var z_base := -22.0 - float(row) * 12.0
+		var count := 9
+		var y_scale_range := Vector2(4.0, 9.0)
+		match String(biome):
+			"highland":  count = 11; y_scale_range = Vector2(6.0, 14.0)
+			"coast":     count = 7;  y_scale_range = Vector2(0.8, 2.5)   # rocky islets
+			"swamp":     count = 10; y_scale_range = Vector2(3.0, 6.0)   # dead trees + cypress
+			"forest":    count = 11; y_scale_range = Vector2(4.0, 8.0)
+			"city":      count = 8;  y_scale_range = Vector2(5.0, 12.0)  # towers
+			"ruins":     count = 8;  y_scale_range = Vector2(3.0, 8.0)   # broken columns
+			"crypt":     count = 7;  y_scale_range = Vector2(4.0, 7.0)   # tombstones / mausolea
+			"corrupted": count = 9;  y_scale_range = Vector2(3.0, 7.0)
+			"anomaly":   count = 8;  y_scale_range = Vector2(3.0, 8.0)
+		for i in count:
+			var x := _frng_h(rng, -28, 28)
+			var z := z_base + _frng_h(rng, -3, 3)
+			var h := _frng_h(rng, y_scale_range.x, y_scale_range.y)
+			var w := _frng_h(rng, 1.5, 4.0)
+			var mesh: Mesh
+			match String(biome):
+				"city":
+					var box := BoxMesh.new(); box.size = Vector3(w, h, w * 0.8); mesh = box
+				"crypt":
+					var box := BoxMesh.new(); box.size = Vector3(w * 0.7, h, w * 0.4); mesh = box
+				"ruins":
+					var cyl := CylinderMesh.new(); cyl.top_radius = w * 0.3; cyl.bottom_radius = w * 0.4; cyl.height = h; mesh = cyl
+				"swamp":
+					var cyl := CylinderMesh.new(); cyl.top_radius = 0.08; cyl.bottom_radius = w * 0.18; cyl.height = h; mesh = cyl
+				"coast":
+					var sph := SphereMesh.new(); sph.radius = w * 0.6; sph.height = h * 1.2; mesh = sph
+				_:
+					var pri := PrismMesh.new(); pri.size = Vector3(w * 2.5, h, w * 1.2); mesh = pri
+			var mi := MeshInstance3D.new()
+			mi.mesh = mesh
+			mi.position = Vector3(x, h * 0.5, z)
+			mi.rotation.y = _frng_h(rng, 0, 6.28)
+			var mat := StandardMaterial3D.new()
+			# Dimmer for the second row so layering reads.
+			var fade := 1.0 - float(row) * 0.25
+			mat.albedo_color = silhouette_col.darkened(0.2 * (1.0 - fade))
+			mat.roughness = 1.0
+			mat.metallic_specular = 0.0
+			mat.shading_mode = BaseMaterial3D.SHADING_MODE_PER_VERTEX
+			mi.material_override = mat
+			par.add_child(mi)
+	# Soft cloud band along the horizon to break the sky color.
+	for i in 6:
+		var cloud := SphereMesh.new()
+		cloud.radius = 4.0
+		cloud.height = 2.0
+		var mi := MeshInstance3D.new()
+		mi.mesh = cloud
+		mi.position = Vector3(_frng_h(rng, -30, 30), _frng_h(rng, 8, 14), -36)
+		var cm := StandardMaterial3D.new()
+		cm.albedo_color = horizon.lerp(Color(1, 1, 1), 0.3)
+		cm.albedo_color.a = 0.35
+		cm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		cm.roughness = 1.0
+		mi.material_override = cm
+		par.add_child(mi)
+
+func _frng_h(rng: DRNG, lo: float, hi: float) -> float:
+	var span := int((hi - lo) * 100.0)
+	return lo + float(rng.range_i(0, maxi(1, span))) / 100.0
 
 func _build_atmosphere(biome: StringName, corruption: float) -> void:
 	var amount := 80

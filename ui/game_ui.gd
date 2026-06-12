@@ -92,29 +92,35 @@ func set_player(p: PlayerState) -> void:
 	update_stats(p.effective_force(), p.injuries, p.relics)
 
 var _intro_tween: Tween
+var _intro_active: bool = false
 
 func present_intro(text: String) -> void:
-	# Stays visible until the next narrative outcome (or a new intro replaces it),
-	# so the player can read it while choosing.
+	# Render in the narrative box (the dark bar above the choices) so the player
+	# can read the title while the choices are visible. Stays until the next
+	# narrative outcome (or a new intro replaces it).
 	if _intro_tween and _intro_tween.is_valid(): _intro_tween.kill()
-	narrative.text = ""
-	intro_label.text = text
-	intro_label.modulate = Color(1, 1, 1, 0)
+	intro_label.text = ""
+	intro_label.modulate.a = 0.0
+	_intro_active = true
+	narrative.modulate = Color(1, 0.95, 0.78)
+	narrative.text = "[center][b]%s[/b][/center]" % text
+	narrative.visible_characters = -1
+	narrative.modulate.a = 0.0
 	_intro_tween = create_tween()
-	_intro_tween.tween_property(intro_label, "modulate:a", 1.0, 0.5)
+	_intro_tween.tween_property(narrative, "modulate:a", 1.0, 0.45)
 
 func _dismiss_intro() -> void:
-	if intro_label.modulate.a <= 0.001: return
-	if _intro_tween and _intro_tween.is_valid(): _intro_tween.kill()
-	_intro_tween = create_tween()
-	_intro_tween.tween_property(intro_label, "modulate:a", 0.0, 0.5)
+	# Outcome text takes over the narrative box, so we just clear the flag.
+	_intro_active = false
 
 const TONE_STAT_LABEL := {
 	0: "force", 1: "charisme", 2: "vivacite", 3: "instinct", 4: "charisme", 5: "esprit",
 }
 
 func present_encounter(enc) -> void:
-	narrative.text = ""
+	# Keep the intro visible in the narrative box if one was just set, so the
+	# player reads "the fey with red eyes" while picking a choice.
+	if not _intro_active: narrative.text = ""
 	_show_choices()
 	for i in choice_buttons.size():
 		var btn := choice_buttons[i]

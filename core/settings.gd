@@ -5,8 +5,8 @@ extends Node
 
 const PATH := "user://settings.cfg"
 
-var music_db: float = -16.0
-var sfx_db: float = -8.0
+var music_db: float = -4.0
+var sfx_db: float = -4.0
 var quality: int = 1               # 0=low, 1=mid, 2=high
 var grain_amount: float = 0.06
 
@@ -31,6 +31,10 @@ func _load() -> void:
 	if cfg.load(PATH) != OK: return
 	music_db = float(cfg.get_value("audio", "music_db", music_db))
 	sfx_db = float(cfg.get_value("audio", "sfx_db", sfx_db))
+	# One-time migration: previous builds saved music at -16 dB which is nearly
+	# inaudible on mobile speakers. Lift any legacy value back into hearing range.
+	if music_db < -10.0: music_db = -4.0
+	if sfx_db < -10.0: sfx_db = -4.0
 	quality = int(cfg.get_value("graphics", "quality", quality))
 	grain_amount = float(cfg.get_value("graphics", "grain", grain_amount))
 

@@ -80,8 +80,11 @@ func _grass_tufts(biome: StringName, rng: DRNG) -> void:
 		"crypt":     color = Color(0.15, 0.14, 0.15)
 		"coast":     color = Color(0.55, 0.48, 0.30)
 	for i in 24:
+		# Grass is tiny so it can go anywhere — but keep the central spawn point
+		# clean for the creature footprint.
 		var x := _frng(rng, -10, 10)
 		var z := _frng(rng, -9, 0.5)
+		if absf(x) < 1.2 and z > -2.0: continue
 		var h := _frng(rng, 0.05, 0.18)
 		var tuft := BoxMesh.new()
 		tuft.size = Vector3(_frng(rng, 0.05, 0.18), h, _frng(rng, 0.05, 0.18))
@@ -226,27 +229,29 @@ func _highland(rng: DRNG, _corr: float) -> void:
 	_place(canopy, Vector3(-3, 2.6, -2), Color(0.20, 0.32, 0.18), Vector3(1.4, 0.6, 1.0))
 
 func _crypt(rng: DRNG, _corr: float) -> void:
-	# Stone tomb walls + sarcophagi + candles + cobwebs (bars).
+	# Stone tomb walls + sarcophagi + candles + arch — all kept behind the
+	# play area so the avatars never end up inside the geometry.
 	for i in 4:
 		var wall := BoxMesh.new()
 		wall.size = Vector3(_frng(rng, 1.5, 3.5), _frng(rng, 2.0, 3.0), 0.4)
-		var x := _frng(rng, -7, 7); var z := _frng(rng, -7, -3)
-		_place(wall, Vector3(x, wall.size.y * 0.5, z), Color(0.18, 0.17, 0.18), Vector3.ONE, 0.0, 0.9)
+		var xz := _safe_xz(rng, -7, 7, -8, -4)
+		_place(wall, Vector3(xz.x, wall.size.y * 0.5, xz.y), Color(0.18, 0.17, 0.18), Vector3.ONE, 0.0, 0.9)
 	for i in 4:
 		var sarco := BoxMesh.new(); sarco.size = Vector3(0.8, 0.6, 1.8)
-		_place(sarco, Vector3(_frng(rng, -5, 5), 0.3, _frng(rng, -5, -1)), Color(0.30, 0.28, 0.26))
+		var xz := _safe_xz(rng, -6, 6, -6, -3)
+		_place(sarco, Vector3(xz.x, 0.3, xz.y), Color(0.30, 0.28, 0.26))
 	for i in 6:
-		var cx := _frng(rng, -6, 6); var cz := _frng(rng, -5, -1)
+		var xz := _safe_xz(rng, -7, 7, -6, -2.5)
 		var candle := CylinderMesh.new(); candle.top_radius = 0.04; candle.bottom_radius = 0.04; candle.height = 0.25
-		_place(candle, Vector3(cx, 0.13, cz), Color(0.85, 0.80, 0.65))
+		_place(candle, Vector3(xz.x, 0.13, xz.y), Color(0.85, 0.80, 0.65))
 		var flame := SphereMesh.new(); flame.radius = 0.06; flame.height = 0.12
-		_place(flame, Vector3(cx, 0.30, cz), Color(1.0, 0.55, 0.20), Vector3.ONE, 4.0)
-	# Stone arch
+		_place(flame, Vector3(xz.x, 0.30, xz.y), Color(1.0, 0.55, 0.20), Vector3.ONE, 4.0)
+	# Stone arch — far behind the creature focal so it frames the scene.
 	var arch_l := BoxMesh.new(); arch_l.size = Vector3(0.4, 3.0, 0.4)
-	_place(arch_l, Vector3(-1.6, 1.5, -2), Color(0.22, 0.20, 0.20))
-	_place(arch_l, Vector3(1.6, 1.5, -2), Color(0.22, 0.20, 0.20))
-	var arch_top := BoxMesh.new(); arch_top.size = Vector3(3.4, 0.4, 0.4)
-	_place(arch_top, Vector3(0, 3.2, -2), Color(0.22, 0.20, 0.20))
+	_place(arch_l, Vector3(-2.4, 1.5, -5), Color(0.22, 0.20, 0.20))
+	_place(arch_l, Vector3(2.4, 1.5, -5), Color(0.22, 0.20, 0.20))
+	var arch_top := BoxMesh.new(); arch_top.size = Vector3(5.0, 0.4, 0.4)
+	_place(arch_top, Vector3(0, 3.2, -5), Color(0.22, 0.20, 0.20))
 
 func _coast(rng: DRNG, _corr: float) -> void:
 	# Sea horizon + rocky outcrops + driftwood + gulls (small white triangles).
@@ -270,17 +275,17 @@ func _try_kenney(biome: StringName, corruption: float, rng: DRNG) -> bool:
 	var hero: Array = PropLoader.pool_for(biome, &"hero", _sub_biome)
 	var ground: Array = PropLoader.pool_for(biome, &"ground", _sub_biome)
 	var any := 0
-	# Place 9 "hero" props in a half-arc behind the encounter.
+	# Place 9 "hero" props in a half-arc behind the encounter, keeping the play
+	# area (center column + avatar slots) clear of geometry.
 	for i in 9:
 		var pick: Array = hero[rng.range_i(0, hero.size())] if hero.size() > 0 else []
 		if pick.size() < 2: continue
 		var n: Node3D = PropLoader.instance(pick[0], pick[1])
 		if n == null: continue
 		any += 1
-		var x := _frng(rng, -9, 9)
-		var z := _frng(rng, -8, -1)
+		var xz := _safe_xz(rng, -9, 9, -8, -2)
 		var scl := _frng(rng, 1.2, 2.4) * float(pick[2])
-		n.position = Vector3(x, float(pick[3]), z)
+		n.position = Vector3(xz.x, float(pick[3]), xz.y)
 		n.rotation.y = _frng(rng, 0, 6.28)
 		n.scale = Vector3.ONE * scl
 		add_child(n)
@@ -293,17 +298,17 @@ func _try_kenney(biome: StringName, corruption: float, rng: DRNG) -> bool:
 		if "tree" in nm or "bush" in nm or "grass" in nm or "plant" in nm:
 			n.set_meta("sway_amp", 0.035 + (randf() * 0.025))
 			n.set_meta("sway_phase", randf() * TAU)
-	# Place 14 "ground" props (bushes, rocks, mushrooms) scattered.
+	# Place 14 "ground" props (bushes, rocks, mushrooms) scattered around the
+	# play area but never inside it.
 	for i in 14:
 		var pick: Array = ground[rng.range_i(0, ground.size())] if ground.size() > 0 else []
 		if pick.size() < 2: continue
 		var n: Node3D = PropLoader.instance(pick[0], pick[1])
 		if n == null: continue
 		any += 1
-		var x := _frng(rng, -8, 8)
-		var z := _frng(rng, -7, -0.5)
+		var xz := _safe_xz(rng, -8, 8, -7, -2)
 		var scl := _frng(rng, 0.8, 1.6) * float(pick[2])
-		n.position = Vector3(x, float(pick[3]), z)
+		n.position = Vector3(xz.x, float(pick[3]), xz.y)
 		n.rotation.y = _frng(rng, 0, 6.28)
 		n.scale = Vector3.ONE * scl
 		add_child(n)
@@ -405,3 +410,23 @@ func _tint_children(node: Node, tint: Color) -> void:
 func _frng(rng: DRNG, lo: float, hi: float) -> float:
 	var span := int((hi - lo) * 100.0)
 	return lo + float(rng.range_i(0, maxi(1, span))) / 100.0
+
+# Returns true if (x, z) lies in the player/creature playspace and a prop there
+# would block the camera view or clip into an avatar.  The playspace is a
+# rectangle from the camera at z=6 back to z=-2 around the center column.
+func _is_blocked(x: float, z: float) -> bool:
+	# Hard exclusion: anything in front of z = -2 with |x| < 4 is the play area.
+	if z > -2.0 and absf(x) < 4.0: return true
+	# Soft exclusion: a corridor right in front of the creature focal point.
+	if z > -3.5 and absf(x) < 1.5: return true
+	return false
+
+# Tries up to 8 random positions for a prop, keeping them outside the play area.
+# Returns (Vector2(x, z), true) on success, or the last attempt with false.
+func _safe_xz(rng: DRNG, x_lo: float, x_hi: float, z_lo: float, z_hi: float) -> Vector2:
+	for _i in 8:
+		var x := _frng(rng, x_lo, x_hi)
+		var z := _frng(rng, z_lo, z_hi)
+		if not _is_blocked(x, z): return Vector2(x, z)
+	# Fallback: push back to a guaranteed safe row.
+	return Vector2(_frng(rng, x_lo, x_hi), minf(z_lo, -4.0))

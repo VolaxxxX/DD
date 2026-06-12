@@ -9,7 +9,7 @@ var _player_b: AudioStreamPlayer
 var _active: AudioStreamPlayer
 var _cache: Dictionary = {}        # key -> AudioStreamWAV
 var _current_key: StringName = &""
-var _base_volume_db: float = -6.0  # ambient, never dominant
+var _base_volume_db: float = 0.0  # bus-level fader handles overall balance
 var _current_pitch_offset: float = 0.0
 
 # (base_freq_hz, chord_intervals_in_semitones, melody_pattern_semitone_offsets)

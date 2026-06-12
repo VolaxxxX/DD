@@ -202,6 +202,56 @@ func _open_pause_menu() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel") and _started:
 		_open_pause_menu()
+	# Hold a finger / mouse button on the 3D area to orbit the camera around the
+	# encounter focal point — release to glide back to the rest pose.
+	if event is InputEventScreenTouch:
+		var t: InputEventScreenTouch = event
+		if t.pressed: _start_orbit(t.position)
+		else: _end_orbit()
+	elif event is InputEventScreenDrag:
+		var d: InputEventScreenDrag = event
+		_apply_orbit_delta(d.relative)
+	elif event is InputEventMouseButton:
+		var mb: InputEventMouseButton = event
+		if mb.button_index == MOUSE_BUTTON_LEFT:
+			if mb.pressed: _start_orbit(mb.position)
+			else: _end_orbit()
+	elif event is InputEventMouseMotion and _orbit_active:
+		_apply_orbit_delta((event as InputEventMouseMotion).relative)
+
+var _orbit_active: bool = false
+var _orbit_yaw: float = 0.0       # radians
+var _orbit_pitch: float = 0.0     # radians
+var _orbit_radius: float = 6.4
+var _orbit_return_tween: Tween
+
+func _start_orbit(screen_pos: Vector2) -> void:
+	# Ignore taps on the choice buttons / HUD top bar — only treat presses on
+	# the 3D viewport (anywhere below the top bar and above the choices) as
+	# orbit gestures.
+	var vp_size := get_viewport().get_visible_rect().size
+	if screen_pos.y < 110: return                                   # HUD top
+	if screen_pos.y > vp_size.y - 220: return                       # choices
+	if _orbit_return_tween and _orbit_return_tween.is_valid():
+		_orbit_return_tween.kill()
+	_orbit_active = true
+
+func _end_orbit() -> void:
+	if not _orbit_active: return
+	_orbit_active = false
+	# Glide back to the rest pose so the encounter framing stays consistent.
+	if _orbit_return_tween and _orbit_return_tween.is_valid():
+		_orbit_return_tween.kill()
+	_orbit_return_tween = create_tween().set_parallel(true)
+	_orbit_return_tween.tween_property(self, "_orbit_yaw", 0.0, 0.8).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	_orbit_return_tween.tween_property(self, "_orbit_pitch", 0.0, 0.8).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+
+func _apply_orbit_delta(rel: Vector2) -> void:
+	if not _orbit_active: return
+	_orbit_yaw -= rel.x * 0.006
+	_orbit_pitch = clampf(_orbit_pitch - rel.y * 0.004, -0.6, 0.9)
+	# Wrap yaw so it never explodes.
+	_orbit_yaw = wrapf(_orbit_yaw, -PI, PI)
 
 func _on_village_offered(player: PlayerState) -> void:
 	Progress.record_village_visit()
@@ -228,7 +278,19 @@ func _process(delta: float) -> void:
 	# not a metronome.
 	var off_y := sin(_breath_time * 0.55) * 0.035 + sin(_breath_time * 1.7) * 0.012
 	var off_x := sin(_breath_time * 0.37) * 0.028 + sin(_breath_time * 1.3 + 1.7) * 0.014
-	camera.position = Vector3(off_x + _shake_offset.x, 2.2 + off_y + _shake_offset.y, 6.0 + _shake_offset.z)
+	# Orbital component: rotate around the focal point (0, 1, 0) at radius
+	# _orbit_radius.  Yaw 0 / pitch 0 puts the camera back at its rest pose.
+	var focal := Vector3(0, 1.0, 0)
+	var cy := cos(_orbit_pitch)
+	var orbit_offset := Vector3(
+		sin(_orbit_yaw) * cy,
+		sin(_orbit_pitch),
+		cos(_orbit_yaw) * cy
+	) * _orbit_radius
+	var rest_pos := focal + Vector3(0, 1.2, 0) + orbit_offset    # base pose lifted 1.2 m
+	var pos := rest_pos + Vector3(off_x + _shake_offset.x, off_y + _shake_offset.y, _shake_offset.z)
+	camera.position = pos
+	camera.look_at(focal, Vector3.UP)
 	if _shake_t > 0.0:
 		_shake_t = maxf(0.0, _shake_t - delta / _shake_dur)
 		var k := _shake_t * _shake_t
@@ -295,8 +357,11 @@ func _rebuild_player_avatars() -> void:
 	avatar_nodes.clear()
 	for i in players.size():
 		var av := Player3D.new()
-		var x := -3.6 if i == 0 else 3.6
-		av.position = Vector3(x, 0, 1.2)
+		# Solo: stand off-center to the left so the creature is visible in the
+		# right half of the frame. Duo: flanks on either side, narrower spread.
+		var x := -2.4 if i == 0 else 2.4
+		if players.size() == 1: x = -2.2
+		av.position = Vector3(x, 0, 2.8)
 		av.scale = Vector3.ONE * 0.85
 		av.rotation_degrees.y = 25.0 if i == 0 else -25.0
 		stage.add_child(av)
@@ -331,9 +396,12 @@ func _spawn_creature(arch: Archetype) -> void:
 	if creature_node and is_instance_valid(creature_node):
 		creature_node.queue_free()
 	creature_node = Creature3D.new()
-	creature_node.position = Vector3(0, 0, 0)
+	# Sit slightly to the right of dead center and forward of the decor zone so
+	# the silhouette reads clearly against the backdrop.
+	creature_node.position = Vector3(0.6, 0.0, -0.5)
 	stage.add_child(creature_node)
 	creature_node.build(arch)
+	_focal_spotlight(creature_node.position + Vector3(0, 1.0, 0))
 	Cinematic.play_for_creature(arch.id, int(arch.tier), creature_node, camera, get_tree(), int(arch.family))
 	# Turn each player avatar to look at the creature.
 	for a in avatar_nodes:
@@ -627,6 +695,21 @@ func _on_world_boss(boss: Dictionary) -> void:
 	_world_boss_seen_this_run = true
 	_darken_environment(0.35, 1.5)
 	Cinematic.play_world_boss(StringName(boss.id), boss_node, camera, get_tree())
+
+var _focal_light: OmniLight3D
+
+func _focal_spotlight(at: Vector3) -> void:
+	# Soft warm rim that pops the creature out of the backdrop. Lives until the
+	# next creature spawn or zone change (it's parented to `stage`).
+	if _focal_light and is_instance_valid(_focal_light):
+		_focal_light.queue_free()
+	_focal_light = OmniLight3D.new()
+	_focal_light.position = at + Vector3(0, 1.5, 1.5)
+	_focal_light.light_color = Color(1.0, 0.92, 0.78)
+	_focal_light.light_energy = 2.2
+	_focal_light.omni_range = 6.0
+	_focal_light.omni_attenuation = 1.2
+	stage.add_child(_focal_light)
 
 func _nudge_environment(encounter_idx: int) -> void:
 	# Tiny per-encounter shift in sun rotation + warmth + fill intensity.  Keeps
