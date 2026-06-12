@@ -32,12 +32,42 @@ static func instance_for_creature(id: StringName, family: int) -> Node3D:
 	return scn.instantiate()
 
 static func instance_for_dragon(id: StringName) -> Node3D:
-	var p := "res://assets/models/dragon_%s.glb" % String(id)
-	var scn := _load(p)
+	# Per-dragon file first (both naming conventions), then generic fallback.
+	var scn := _load("res://assets/models/%s.glb" % String(id))
+	if scn == null:
+		scn = _load("res://assets/models/dragon_%s.glb" % String(id))
 	if scn == null:
 		scn = _load("res://assets/models/dragon.glb")
 	if scn == null: return null
 	return scn.instantiate()
+
+# Rescale an imported model to a target height and snap its feet to y=0.
+# Imported GLBs arrive in wildly different units (cm vs m); this fixes both
+# the kilometre-tall whale and the 0.8 m vampire problems.
+static func normalize_height(node: Node3D, target_height: float) -> void:
+	var aabb := _aabb_in_parent_space(node)
+	if aabb.size.y <= 0.001: return
+	var factor: float = clampf(target_height / aabb.size.y, 0.0005, 500.0)
+	node.scale = node.scale * factor
+	var snapped := _aabb_in_parent_space(node)
+	node.position.y -= snapped.position.y
+
+# AABB of all meshes under `node`, expressed in node's PARENT space, so the
+# result is directly comparable to node.position / node.scale adjustments.
+static func _aabb_in_parent_space(node: Node3D) -> AABB:
+	var base: Transform3D = Transform3D.IDENTITY
+	var parent := node.get_parent()
+	if parent is Node3D:
+		base = (parent as Node3D).global_transform.affine_inverse()
+	var combined := AABB()
+	var first := true
+	for mi in node.find_children("*", "MeshInstance3D", true, false):
+		var a: AABB = (mi as MeshInstance3D).get_aabb()
+		var xf: Transform3D = base * (mi as MeshInstance3D).global_transform
+		a = xf * a
+		if first: combined = a; first = false
+		else: combined = combined.merge(a)
+	return combined
 
 static func instance_for_boss(id: StringName) -> Node3D:
 	var p := "res://assets/models/boss_%s.glb" % String(id)

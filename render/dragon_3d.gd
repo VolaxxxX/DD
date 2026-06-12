@@ -25,8 +25,9 @@ func build(id: StringName) -> void:
 	var loaded: Node3D = AssetLoader.instance_for_dragon(id)
 	if loaded != null:
 		add_child(loaded)
-		AssetLoader.play_first_animation(loaded)
-		_glow_light(Vector3(0, 0, 0), pal.eye, 5.0, 20.0)
+		AssetLoader.normalize_height(loaded, 3.5)
+		AssetLoader.play_named_action(loaded, &"idle", true)
+		_glow_light(Vector3(0, 1.5, 0), pal.eye, 5.0, 20.0)
 		return
 	_build_body(pal)
 	_build_specials(id, pal)

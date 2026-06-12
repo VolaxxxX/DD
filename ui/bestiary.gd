@@ -247,20 +247,20 @@ func _build_thumb_creature(t: Dictionary) -> Control:
 	return cont
 
 func _build_thumb_dragon(id: StringName) -> Control:
-	var cont := _new_viewport(Vector3(0, 1.5, 9.0), Vector3(0, 1.0, 0))
+	# Dragons normalize to 3.5 m tall — frame mid-body from a 3/4 angle.
+	var cont := _new_viewport(Vector3(2.5, 2.4, 6.0), Vector3(0, 1.6, 0))
 	var d := Dragon3D.new()
 	cont.get_child(0).add_child(d)
 	d.build(id)
-	d.scale = Vector3.ONE * 0.55
-	d.rotation_degrees.y = -20.0
+	d.rotation_degrees.y = -25.0
 	return cont
 
 func _build_thumb_titan(id: StringName) -> Control:
-	var cont := _new_viewport(Vector3(0, 5.0, 14.0), Vector3(0, 3.0, 0))
+	# Titans normalize to 6.5 m (imported) or build ~8 m (procedural).
+	var cont := _new_viewport(Vector3(3.0, 5.0, 13.0), Vector3(0, 3.2, 0))
 	var b := WorldBoss3D.new()
 	cont.get_child(0).add_child(b)
 	b.build(id)
-	b.scale = Vector3.ONE * 0.4
 	return cont
 
 # ---------- helpers ----------

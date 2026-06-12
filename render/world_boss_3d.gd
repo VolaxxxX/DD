@@ -9,6 +9,9 @@ func build(boss_id: StringName) -> void:
 	var loaded: Node3D = AssetLoader.instance_for_boss(boss_id)
 	if loaded != null:
 		add_child(loaded)
+		# Imported models arrive in wildly different units — normalize to a
+		# towering 6.5 m so every titan dominates the stage equally.
+		AssetLoader.normalize_height(loaded, 6.5)
 		# Bosses arrive in a dramatic attack pose, then settle to idle (queued).
 		AssetLoader.play_named_action(loaded, &"attack", false)
 		_glow_light(Vector3(0, 4, 0), Color(1, 0.85, 0.55), 6.0, 25.0)
