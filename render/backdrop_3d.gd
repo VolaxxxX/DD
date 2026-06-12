@@ -567,29 +567,49 @@ func _build_ground_fauna(biome: StringName, rng: DRNG) -> void:
 			_fauna_rabbit(Vector3(6.0, 0, -6.5))
 			_fauna_rabbit(Vector3(-7.5, 0, -8.0))
 			_fauna_deer(Vector3(-11.0, 0, -11.0))
+			for i in 4:
+				_fauna_butterfly(Vector3(_frng_h(rng, -9, 9), _frng_h(rng, 0.5, 1.6), _frng_h(rng, -8, -3)))
 		"coast":
 			for i in 3:
 				_fauna_crab(Vector3(4.0 + float(i) * 2.6, 0, -5.0 - float(i) * 1.2))
-		"city", "crypt":
+			_fauna_fish_jumper(Vector3(-6.0, 0.0, -18.0))
+			_fauna_fish_jumper(Vector3(7.0, 0.0, -19.0))
+		"city":
 			for i in 3:
 				_fauna_rat(Vector3(-5.0 - float(i) * 2.0, 0, -5.0 - float(i)))
+			_fauna_pigeon(Vector3(5.5, 0, -6.0))
+			_fauna_pigeon(Vector3(-4.0, 0, -9.0))
+		"crypt":
+			for i in 3:
+				_fauna_rat(Vector3(-5.0 - float(i) * 2.0, 0, -5.0 - float(i)))
+			for i in 3:
+				_fauna_bat(Vector3(_frng_h(rng, -7, 7), _frng_h(rng, 2.2, 3.8), _frng_h(rng, -9, -4)))
 		"swamp":
 			_fauna_frog(Vector3(5.5, 0.06, -6.0))
 			_fauna_frog(Vector3(-6.0, 0.06, -7.5))
 			for i in 3:
 				_fauna_dragonfly(Vector3(_frng_h(rng, -8, 8), _frng_h(rng, 0.6, 1.4), _frng_h(rng, -9, -4)))
+			_fauna_fish_jumper(Vector3(4.0, 0.0, -9.0))
 		"highland":
 			_fauna_goat(Vector3(8.0, 0, -9.0))
 			_fauna_goat(Vector3(-9.5, 0, -10.5))
+			for i in 3:
+				_fauna_butterfly(Vector3(_frng_h(rng, -8, 8), _frng_h(rng, 0.4, 1.2), _frng_h(rng, -7, -3)))
 		"ruins":
 			_fauna_lizard(Vector3(5.0, 0, -5.5))
 			_fauna_lizard(Vector3(-6.5, 0, -7.0))
+			for i in 2:
+				_fauna_bat(Vector3(_frng_h(rng, -7, 7), _frng_h(rng, 2.5, 4.0), _frng_h(rng, -10, -6)))
 		"corrupted":
 			for i in 2:
 				_fauna_tendril_bug(Vector3(-5.0 + float(i) * 10.0, 0, -7.0))
+			for i in 3:
+				_fauna_butterfly(Vector3(_frng_h(rng, -8, 8), _frng_h(rng, 0.6, 1.8), _frng_h(rng, -8, -4)), Color(0.85, 0.25, 0.75))
 		"anomaly":
 			for i in 3:
 				_fauna_orbiting_shard(Vector3(_frng_h(rng, -9, 9), _frng_h(rng, 1.0, 2.4), _frng_h(rng, -10, -5)))
+			for i in 2:
+				_fauna_jellyfish(Vector3(_frng_h(rng, -8, 8), _frng_h(rng, 1.5, 3.0), _frng_h(rng, -9, -5)))
 
 func _fauna_body(pos: Vector3) -> Node3D:
 	var n := Node3D.new()
@@ -747,6 +767,94 @@ func _fauna_tendril_bug(pos: Vector3) -> void:
 	t.parallel().tween_property(b, "scale", Vector3(1.1, 0.9, 1.1), 1.3)
 	t.tween_property(b, "position", pos, 2.6).set_trans(Tween.TRANS_SINE)
 	t.parallel().tween_property(b, "scale", Vector3.ONE, 1.3)
+
+func _fauna_butterfly(pos: Vector3, tint: Color = Color(0.95, 0.75, 0.35)) -> void:
+	var b := _fauna_body(pos)
+	var wing := BoxMesh.new(); wing.size = Vector3(0.07, 0.005, 0.05)
+	_ambient_part(b, wing, Vector3(0.035, 0, 0), tint)
+	_ambient_part(b, wing, Vector3(-0.035, 0, 0), tint.lightened(0.15))
+	# Wing flutter: rapid scale flap.
+	var flap := b.create_tween().set_loops()
+	flap.tween_property(b, "scale", Vector3(0.4, 1, 1), 0.09).set_trans(Tween.TRANS_SINE)
+	flap.tween_property(b, "scale", Vector3.ONE, 0.09).set_trans(Tween.TRANS_SINE)
+	# Erratic wandering path.
+	var path := b.create_tween().set_loops()
+	for i in 4:
+		var nxt := pos + Vector3(randf_range(-1.8, 1.8), randf_range(-0.4, 0.6), randf_range(-1.2, 1.2))
+		path.tween_property(b, "position", nxt, randf_range(1.4, 2.4)).set_trans(Tween.TRANS_SINE)
+	path.tween_property(b, "position", pos, randf_range(1.4, 2.2)).set_trans(Tween.TRANS_SINE)
+
+func _fauna_bat(pos: Vector3) -> void:
+	var b := _fauna_body(pos)
+	var body := SphereMesh.new(); body.radius = 0.035; body.height = 0.06
+	_ambient_part(b, body, Vector3.ZERO, Color(0.12, 0.10, 0.12))
+	var wing := PrismMesh.new(); wing.size = Vector3(0.16, 0.03, 0.06)
+	_ambient_part(b, wing, Vector3(0.09, 0, 0), Color(0.15, 0.12, 0.15))
+	_ambient_part(b, wing, Vector3(-0.09, 0, 0), Color(0.15, 0.12, 0.15))
+	# Jittery circular flight.
+	var t := b.create_tween().set_loops()
+	var r := randf_range(1.2, 2.2)
+	var dur := randf_range(2.6, 3.8)
+	for i in 4:
+		var ang := TAU * float(i + 1) / 4.0
+		t.tween_property(b, "position", pos + Vector3(cos(ang) * r, sin(ang * 2.0) * 0.4, sin(ang) * r), dur / 4.0).set_trans(Tween.TRANS_SINE)
+	var flap := b.create_tween().set_loops()
+	flap.tween_property(b, "scale", Vector3(0.55, 1, 1), 0.07)
+	flap.tween_property(b, "scale", Vector3.ONE, 0.07)
+
+func _fauna_pigeon(pos: Vector3) -> void:
+	var p := _fauna_body(pos)
+	var grey := Color(0.55, 0.55, 0.60)
+	var body := SphereMesh.new(); body.radius = 0.06; body.height = 0.10
+	_ambient_part(p, body, Vector3(0, 0.06, 0), grey)
+	var head := SphereMesh.new(); head.radius = 0.03; head.height = 0.055
+	_ambient_part(p, head, Vector3(0.055, 0.11, 0), Color(0.35, 0.40, 0.50))
+	# Peck-walk loop: small forward steps with head bobs, then a startled hop.
+	var t := p.create_tween().set_loops()
+	for i in 3:
+		t.tween_property(p, "position", pos + Vector3(0.18 * float(i + 1), 0, 0.06 * float(i)), 0.45)
+		t.tween_property(p, "rotation:x", 0.35, 0.18)
+		t.tween_property(p, "rotation:x", 0.0, 0.18)
+	t.tween_interval(1.2)
+	t.tween_property(p, "position:y", 0.35, 0.18).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	t.parallel().tween_property(p, "position", pos, 0.4)
+	t.tween_property(p, "position:y", pos.y, 0.20).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	t.tween_interval(1.8)
+
+func _fauna_fish_jumper(pos: Vector3) -> void:
+	# Periodic silver arc out of the water with a splash mote at re-entry.
+	var f := _fauna_body(pos)
+	var fish := CapsuleMesh.new(); fish.radius = 0.04; fish.height = 0.22
+	_ambient_part(f, fish, Vector3.ZERO, Color(0.75, 0.82, 0.88), Vector3(0, 0, 55))
+	f.position.y = -0.4   # hidden under water between jumps
+	var t := f.create_tween().set_loops()
+	t.tween_interval(randf_range(3.0, 6.0))
+	# Arc up + flip
+	t.tween_property(f, "position:y", pos.y + 1.1, 0.45).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	t.parallel().tween_property(f, "position:x", pos.x + 0.8, 0.9)
+	t.parallel().tween_property(f, "rotation:z", -2.6, 0.9)
+	t.tween_property(f, "position:y", -0.4, 0.45).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	# Reset for next leap
+	t.tween_callback(func():
+		if is_instance_valid(f):
+			f.position = pos + Vector3(randf_range(-1.0, 1.0), -0.4, randf_range(-0.5, 0.5))
+			f.rotation.z = 0.0)
+
+func _fauna_jellyfish(pos: Vector3) -> void:
+	# Anomaly: translucent bell drifting through the air, pulsing as it rises.
+	var j := _fauna_body(pos)
+	var bell := SphereMesh.new(); bell.radius = 0.18; bell.height = 0.22
+	_ambient_part(j, bell, Vector3.ZERO, Color(0.55, 0.75, 1.0))
+	for i in 4:
+		var ang := TAU * float(i) / 4.0
+		var tent := CylinderMesh.new(); tent.top_radius = 0.008; tent.bottom_radius = 0.015; tent.height = 0.30
+		_ambient_part(j, tent, Vector3(cos(ang) * 0.08, -0.22, sin(ang) * 0.08), Color(0.65, 0.80, 1.0))
+	var pulse := j.create_tween().set_loops()
+	pulse.tween_property(j, "scale", Vector3(1.15, 0.85, 1.15), 0.9).set_trans(Tween.TRANS_SINE)
+	pulse.tween_property(j, "scale", Vector3.ONE, 0.9).set_trans(Tween.TRANS_SINE)
+	var drift := j.create_tween().set_loops()
+	drift.tween_property(j, "position", pos + Vector3(randf_range(-1.5, 1.5), 0.8, randf_range(-1, 1)), 4.0).set_trans(Tween.TRANS_SINE)
+	drift.tween_property(j, "position", pos, 4.0).set_trans(Tween.TRANS_SINE)
 
 func _fauna_orbiting_shard(pos: Vector3) -> void:
 	var s := _fauna_body(pos)

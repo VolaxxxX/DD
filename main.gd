@@ -382,16 +382,24 @@ func _dragon_flyby(id: StringName, intro: String) -> void:
 	var dragon := Dragon3D.new()
 	stage.add_child(dragon)
 	dragon.build(id)
-	dragon.position = Vector3(-22, 7, -8)
-	dragon.scale = Vector3.ONE * 0.85
+	# Closer, larger, slightly banked — it should OWN the sky for those seconds.
+	dragon.position = Vector3(-30, 9, -7)
+	dragon.scale = Vector3.ONE * 1.35
+	dragon.rotation_degrees.z = -6.0
 	if intro != "":
 		ui.present_intro(intro)
 	Audio.play(&"dragon")
 	var t := create_tween().set_parallel(true)
-	t.tween_property(dragon, "position", Vector3(22, 9, -10), 6.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	t.tween_property(dragon, "rotation:y", -0.4, 6.0)
+	t.tween_property(dragon, "position", Vector3(30, 11, -9), 7.5).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	t.tween_property(dragon, "rotation:y", -0.45, 7.5)
+	# Mid-pass: the closest point. Roar again, shake the ground, flash the sky.
+	get_tree().create_timer(3.4).timeout.connect(func():
+		if not is_instance_valid(dragon): return
+		Audio.play(&"dragon", 0.85)
+		_shake_camera(0.22, 0.9)
+		_light_burst(Color(1.0, 0.85, 0.60), 3.5, 1.0))
 	# Auto-cleanup
-	get_tree().create_timer(6.5).timeout.connect(func():
+	get_tree().create_timer(8.2).timeout.connect(func():
 		if is_instance_valid(dragon): dragon.queue_free())
 
 func _spawn_creature(arch: Archetype) -> void:
@@ -701,6 +709,14 @@ func _on_world_boss(boss: Dictionary) -> void:
 	_world_boss_seen_this_run = true
 	_darken_environment(0.35, 1.5)
 	Cinematic.play_world_boss(StringName(boss.id), boss_node, camera, get_tree())
+	# Ground impact when the grow-in lands (1.8s entrance tween): quake +
+	# dust ring + light burst — the world acknowledges the titan's weight.
+	get_tree().create_timer(1.8).timeout.connect(func():
+		if boss_node == null or not is_instance_valid(boss_node): return
+		_shake_camera(0.45, 1.1)
+		_light_burst(Color(1.0, 0.75, 0.45), 8.0, 0.9)
+		for off in [Vector3(-2.0, 0.3, 0.5), Vector3(2.0, 0.3, 0.5), Vector3(0, 0.3, 1.5)]:
+			CombatVFX.dust_puff(stage, boss_node.position + off, Color(0.75, 0.68, 0.55)))
 
 var _focal_light: OmniLight3D
 

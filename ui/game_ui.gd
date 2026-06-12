@@ -87,9 +87,25 @@ func setup_pause_button() -> void:
 		pause_requested.emit())
 	$Root.add_child(pb)
 
+var _player: PlayerState = null
+
 func set_player(p: PlayerState) -> void:
+	_player = p
 	name_label.text = "%s — %s" % [p.name, String(p.class_data.name)]
 	update_stats(p.effective_force(), p.injuries, p.relics)
+
+# The stat key the active player is best at — used to star the choice that
+# plays to their strengths (subtle build-around guidance, no numbers shown).
+func _best_stat_key() -> String:
+	if _player == null: return ""
+	var best_key := ""
+	var best_val := -999
+	for k in _player.stats.keys():
+		var v: int = _player.effective_stat(StringName(k))
+		if v > best_val:
+			best_val = v
+			best_key = String(k)
+	return best_key
 
 var _intro_tween: Tween
 var _intro_active: bool = false
@@ -130,7 +146,9 @@ func present_encounter(enc) -> void:
 			# Format: "<glyph>  text\n— STAT" so the player sees which stat is rolled.
 			var stat_key: String = TONE_STAT_LABEL.get(c.tone, "force")
 			var stat_short: String = PlayerClass.stat_label(StringName(stat_key))
-			btn.text = "%s %s  ·  %s" % [TONE_GLYPH.get(c.tone, ""), c.text, stat_short]
+			# Star the choice that rolls the player's strongest stat.
+			var star := "  ★" if stat_key == _best_stat_key() else ""
+			btn.text = "%s %s  ·  %s%s" % [TONE_GLYPH.get(c.tone, ""), c.text, stat_short, star]
 			btn.modulate = TONE_COLOR.get(c.tone, Color.WHITE)
 			btn.modulate.a = 0.0
 			btn.disabled = false

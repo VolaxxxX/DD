@@ -126,6 +126,7 @@ static func play_named_action(node: Node3D, action: StringName, loop: bool) -> v
 		"hit":    keywords = PackedStringArray(["hit", "hurt", "damage", "impact", "recoil"])
 		"die":    keywords = PackedStringArray(["die", "death", "fall", "dead", "ko"])
 		"flee":   keywords = PackedStringArray(["run", "walk", "flee", "escape"])
+		"fly":    keywords = PackedStringArray(["fly", "flap", "glide", "hover", "wing"])
 		"mutate": keywords = PackedStringArray(["mutate", "transform", "shake", "summon"])
 		_:        keywords = PackedStringArray([String(action)])
 	var anim_name := find_animation_for(node, keywords)
