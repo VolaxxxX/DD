@@ -352,7 +352,9 @@ func _drift_props(step: int) -> void:
 		var dz := cos(seed_f * 2.3) * 1.2
 		var target := p.position + Vector3(dx, 0, dz)
 		target.x = clampf(target.x, -9.5, 9.5)
-		target.z = clampf(target.z, -8.5, -0.5)
+		target.z = clampf(target.z, -8.5, -2.0)
+		# Never drift a prop into the player/creature playspace.
+		if _is_blocked(target.x, target.z): continue
 		var t := p.create_tween()
 		t.tween_property(p, "position:x", target.x, 2.5).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 		t.parallel().tween_property(p, "position:z", target.z, 2.5).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)

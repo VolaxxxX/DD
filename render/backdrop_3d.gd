@@ -271,8 +271,7 @@ func _build_environment(biome: StringName, corruption: float) -> void:
 	e.ambient_light_energy = 0.8
 	e.fog_enabled = true
 	e.fog_light_color = sky_h
-	e.fog_density = 0.012 + corruption * 0.025
-	e.fog_sun_scatter = 0.4
+	e.fog_sun_scatter = 0.25
 	e.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	e.tonemap_exposure = 1.0
 	e.glow_enabled = true
@@ -281,13 +280,14 @@ func _build_environment(biome: StringName, corruption: float) -> void:
 	e.glow_bloom = 0.25
 	e.glow_hdr_threshold = 0.9
 	e.adjustment_enabled = true
-	e.fog_aerial_perspective = 0.55
+	e.fog_aerial_perspective = 0.30
 	# Volumetric fog requires Forward+ — not available on the mobile renderer.
-	# Depth fog + height fog below give the atmosphere instead.
-	e.fog_density = (0.012 + corruption * 0.025) * 1.4
-	# Height-based base fog gives ground mist in low areas.
-	e.fog_height_density = 0.04
-	e.fog_height = 1.5
+	# Keep depth fog light so the playspace stays crisp; the far silhouettes
+	# carry the sense of depth instead of a milky veil.
+	e.fog_density = 0.007 + corruption * 0.015
+	# Thin ground mist only.
+	e.fog_height_density = 0.015
+	e.fog_height = 0.8
 	# Per-biome grading — stronger character per zone.
 	match String(biome):
 		"forest":    e.adjustment_saturation = 1.30; e.adjustment_contrast = 1.10; e.adjustment_brightness = 1.00
@@ -312,19 +312,88 @@ func _build_environment(biome: StringName, corruption: float) -> void:
 
 func _build_ground(biome: StringName, corruption: float) -> void:
 	ground = MeshInstance3D.new()
-	var plane := PlaneMesh.new()
-	plane.size = Vector2(60, 60)
-	plane.subdivide_width = 20
-	plane.subdivide_depth = 20
-	ground.mesh = plane
+	ground.mesh = _displaced_ground_mesh(biome)
 	var mat := StandardMaterial3D.new()
 	var base: Color = BIOME_GROUND.get(biome, Color(0.2, 0.2, 0.2))
 	mat.albedo_color = base.lerp(Color(0.28, 0.05, 0.22), corruption * 0.4)
-	mat.roughness = 0.95
+	mat.roughness = 0.92
 	mat.metallic_specular = 0.05
+	# Real surface detail: noise albedo (mottling) + noise normal map (grain).
+	var n := FastNoiseLite.new()
+	n.seed = int(biome.hash()) & 0x7FFFFFFF
+	n.frequency = 0.012
+	n.fractal_octaves = 4
+	var albedo_tex := NoiseTexture2D.new()
+	albedo_tex.noise = n
+	albedo_tex.width = 512; albedo_tex.height = 512
+	albedo_tex.seamless = true
+	mat.albedo_texture = albedo_tex
+	mat.uv1_scale = Vector3(6, 6, 6)
+	var n2 := FastNoiseLite.new()
+	n2.seed = (int(biome.hash()) >> 3) & 0x7FFFFFFF
+	n2.frequency = 0.05
+	n2.fractal_octaves = 5
+	var normal_tex := NoiseTexture2D.new()
+	normal_tex.noise = n2
+	normal_tex.width = 512; normal_tex.height = 512
+	normal_tex.seamless = true
+	normal_tex.as_normal_map = true
+	normal_tex.bump_strength = 6.0
+	mat.normal_enabled = true
+	mat.normal_texture = normal_tex
+	mat.normal_scale = 0.7
 	ground.material_override = mat
 	ground.position = Vector3(0, 0, -2)
 	add_child(ground)
+
+# Grid mesh with gentle rolling hills outside the flat play area, so the
+# terrain has real relief instead of an infinite billiard table.
+func _displaced_ground_mesh(biome: StringName) -> ArrayMesh:
+	var size := 60.0
+	var div := 48
+	var hn := FastNoiseLite.new()
+	hn.seed = (int(biome.hash()) >> 7) & 0x7FFFFFFF
+	hn.frequency = 0.06
+	hn.fractal_octaves = 3
+	var amp := 0.9
+	match String(biome):
+		"highland": amp = 1.8
+		"swamp", "coast": amp = 0.35
+		"city", "crypt": amp = 0.45
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var step := size / float(div)
+	for iz in div:
+		for ix in div:
+			var x0 := -size * 0.5 + float(ix) * step
+			var z0 := -size * 0.5 + float(iz) * step
+			var p00 := Vector3(x0, _ground_h(hn, x0, z0, amp), z0)
+			var p10 := Vector3(x0 + step, _ground_h(hn, x0 + step, z0, amp), z0)
+			var p01 := Vector3(x0, _ground_h(hn, x0, z0 + step, amp), z0 + step)
+			var p11 := Vector3(x0 + step, _ground_h(hn, x0 + step, z0 + step, amp), z0 + step)
+			var uv00 := Vector2(float(ix) / div, float(iz) / div)
+			var uv10 := Vector2(float(ix + 1) / div, float(iz) / div)
+			var uv01 := Vector2(float(ix) / div, float(iz + 1) / div)
+			var uv11 := Vector2(float(ix + 1) / div, float(iz + 1) / div)
+			st.set_uv(uv00); st.add_vertex(p00)
+			st.set_uv(uv01); st.add_vertex(p01)
+			st.set_uv(uv10); st.add_vertex(p10)
+			st.set_uv(uv10); st.add_vertex(p10)
+			st.set_uv(uv01); st.add_vertex(p01)
+			st.set_uv(uv11); st.add_vertex(p11)
+	st.generate_normals()
+	return st.commit()
+
+# Height function: dead flat inside the play disc (radius 7 around the stage
+# center at z=-2 local → world z≈-2..6 covered), rising smoothly outside.
+func _ground_h(hn: FastNoiseLite, x: float, z: float, amp: float) -> float:
+	# Local coords: stage center in this mesh's space is (0, 0) since the
+	# ground node itself sits at z=-2.
+	var d := Vector2(x, z + 2.0).length()      # distance from encounter focus
+	var mask := clampf((d - 7.0) / 8.0, 0.0, 1.0)
+	mask = mask * mask * (3.0 - 2.0 * mask)    # smoothstep
+	var h := hn.get_noise_2d(x, z) * amp
+	return h * mask
 
 func _build_lights(biome: StringName, corruption: float) -> void:
 	var tint: Color = BIOME_LIGHT_TINT.get(biome, Color.WHITE)
