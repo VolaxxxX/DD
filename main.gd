@@ -105,6 +105,7 @@ func _start_game_with_saved_seed(seed: int, zone_index: int) -> void:
 	director.village_offered.connect(_on_village_offered)
 	director.relic_acquired.connect(_on_relic_acquired)
 	director.path_offered.connect(_on_path_offered)
+	director.final_duel.connect(_on_final_duel)
 	ui.choice_selected.connect(_on_choice)
 	Bus.zone_changed.connect(_on_zone_changed)
 	director.begin()
@@ -183,6 +184,7 @@ func _start_game() -> void:
 	director.village_offered.connect(_on_village_offered)
 	director.relic_acquired.connect(_on_relic_acquired)
 	director.path_offered.connect(_on_path_offered)
+	director.final_duel.connect(_on_final_duel)
 	ui.choice_selected.connect(_on_choice)
 	if not ui.pause_requested.is_connected(_open_pause_menu):
 		ui.pause_requested.connect(_open_pause_menu)
@@ -255,6 +257,40 @@ func _apply_orbit_delta(rel: Vector2) -> void:
 	_orbit_pitch = clampf(_orbit_pitch - rel.y * 0.004, -0.6, 0.9)
 	# Wrap yaw so it never explodes.
 	_orbit_yaw = wrapf(_orbit_yaw, -PI, PI)
+
+# Run finale: the dragon that haunted this run lands to bar the way out.
+func _on_final_duel(dragon_id: StringName) -> void:
+	if creature_node and is_instance_valid(creature_node):
+		creature_node.queue_free()
+		creature_node = null
+	if situation_node and is_instance_valid(situation_node):
+		situation_node.queue_free()
+		situation_node = null
+	_reset_camera_if_boss()
+	var dragon := Dragon3D.new()
+	dragon.position = Vector3(0.8, 0, -2.5)
+	dragon.scale = Vector3.ONE * 1.15
+	dragon.rotation_degrees.y = 15.0
+	stage.add_child(dragon)
+	dragon.build(dragon_id)
+	# Landed entrance: drops from the sky with a quake.
+	dragon.position.y = 9.0
+	var t := dragon.create_tween()
+	t.tween_property(dragon, "position:y", 0.0, 1.1).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	t.tween_callback(func():
+		_shake_camera(0.5, 1.2)
+		_light_burst(Color(1.0, 0.6, 0.3), 9.0, 1.0)
+		for off in [Vector3(-1.5, 0.3, 0.8), Vector3(1.5, 0.3, 0.8)]:
+			CombatVFX.dust_puff(stage, dragon.position + off, Color(0.75, 0.68, 0.55)))
+	Audio.play(&"dragon")
+	Audio.play(&"boss")
+	Music.play_boss(&"prismatic_ascendant")
+	_darken_environment(0.35, 1.5)
+	# Track it like a boss so the camera idle loop yields during the duel.
+	boss_node = null
+	_final_dragon = dragon
+
+var _final_dragon: Dragon3D = null
 
 # Path choice between zones: two doors with visible biome + stakes.
 func _on_path_offered(options: Array) -> void:
@@ -549,6 +585,17 @@ func _mood_line(a: Archetype) -> String:
 		tags.append(Lang.t({"fr": "🐾 bestial — inutile de parler", "en": "🐾 feral — talking is useless", "id": "🐾 buas — bicara sia-sia"}))
 	if int(a.tier) >= 3:
 		tags.append(Lang.t({"fr": "☠ redoutable", "en": "☠ fearsome", "id": "☠ menakutkan"}))
+	# Karma: the family's memory of you this run.
+	if director != null:
+		var k: Dictionary = director.karma_info(int(a.family))
+		if int(k.kills) >= 3:
+			tags.append(Lang.t({"fr": "🩸 il connaît ton odeur de tueur",
+				"en": "🩸 it knows your killer's scent",
+				"id": "🩸 ia mengenali bau pembunuhmu"}))
+		elif int(k.spared) >= 2 and int(k.kills) == 0:
+			tags.append(Lang.t({"fr": "🕊 ta clémence te précède",
+				"en": "🕊 your mercy precedes you",
+				"id": "🕊 belas kasihmu mendahuluimu"}))
 	return " · ".join(tags)
 
 func _reset_camera_if_boss() -> void:

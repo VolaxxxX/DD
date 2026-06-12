@@ -11,6 +11,8 @@ var choices: Array[Dictionary] = []  # [{tone, text, kind}]
 var creature_name: String
 var followup_choices: Array[Dictionary] = []  # populated after successful diplomacy with smart creature
 var has_followup: bool = false
+# Per-family run karma injected by the director: {"kills": int, "spared": int}.
+var karma: Dictionary = {"kills": 0, "spared": 0}
 
 func _init(_zone: Zone, _creature: Creature, _rng: DRNG, _player: PlayerState) -> void:
 	zone = _zone
@@ -94,6 +96,14 @@ func resolve(choice_idx: int, resolver: EventResolver, coop_mod: int) -> Diction
 	difficulty += BiomeRules.tone_difficulty_mod(zone.biome, tone)
 	# Route taken into this zone (safe door eases rolls, risky door hardens).
 	difficulty += zone.route_diff_mod
+	# Karma: families remember. A known killer faces tighter guards and
+	# closed ears; consistent mercy opens doors for words.
+	if int(karma.kills) >= 3:
+		difficulty += 2
+		if tone == PhrasePool.Tone.DIPLOMATIC: difficulty += 1
+	elif int(karma.spared) >= 2 and int(karma.kills) == 0:
+		if tone == PhrasePool.Tone.DIPLOMATIC or tone == PhrasePool.Tone.DECEPTIVE:
+			difficulty -= 2
 	# Story mode: globally gentler rolls for relaxed sessions.
 	if Settings.story_mode:
 		difficulty -= 2

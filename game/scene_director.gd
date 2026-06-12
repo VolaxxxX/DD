@@ -16,6 +16,7 @@ signal world_boss_spawned(boss: Dictionary)
 signal village_offered(player: PlayerState)
 signal relic_acquired(relic_id: StringName, player_idx: int)
 signal path_offered(options: Array)
+signal final_duel(dragon_id: StringName)
 signal run_over(cause: StringName)
 
 const ENCOUNTERS_PER_ZONE := 4
@@ -29,6 +30,13 @@ var current   # Encounter or SituationEncounter (duck-typed)
 var _encounters_in_zone: int = 0
 var _awaiting_choice: bool = false
 var _elite_kills_this_run: int = 0
+# Karma: per-family memory of this run. Kill a family often and its members
+# meet you harder; consistently spare one and words open doors.
+var _karma_kills: Dictionary = {}    # family int -> kills
+var _karma_spared: Dictionary = {}   # family int -> spared via words/retreat
+var _last_dragon_id: StringName = &""   # a dragon seen this run = finale duel
+var _npc_done_this_zone: bool = false
+var _pending_boss: Dictionary = {}
 var _world_boss_triggered: bool = false
 
 signal turn_changed(player: PlayerState)
@@ -63,6 +71,8 @@ func begin() -> void:
 
 func _emit_zone_intro() -> void:
 	var z := world.active_zone()
+	if z.dragon_id != &"":
+		_last_dragon_id = z.dragon_id
 	var sub := PropLoader.sub_name(z.biome, z.sub_biome)
 	var header: String = "%s — %s" % [String(z.biome).to_upper(), sub] if sub != "" else String(z.biome).to_upper()
 	var txt := header + "\n" + PhrasePool.biome_intro(z.biome, z.corruption)
@@ -77,6 +87,18 @@ func next_encounter() -> void:
 	_rotate_player()
 	var z := world.active_zone()
 	var er := rng.derive(_encounters_in_zone + 1)
+	# Biome NPC: each biome has a signature character with a spawn chance,
+	# at most one meeting per zone. They remember you across runs.
+	if not _npc_done_this_zone and _encounters_in_zone > 0:
+		var npc: Dictionary = NPCRegistry.for_biome(z.biome)
+		if not npc.is_empty() and er.range_i(0, 100) < int(npc.chance):
+			_npc_done_this_zone = true
+			var meetings: int = Progress.record_npc_meeting(StringName(npc.id))
+			current = SituationEncounter.new(z, er, player, NPCRegistry.template(npc, meetings > 1))
+			_awaiting_choice = true
+			encounter_progress.emit(_encounters_in_zone + 1, ENCOUNTERS_PER_ZONE)
+			encounter_presented.emit(current)
+			return
 	# 30% situation, 70% creature.
 	var as_situation := er.range_i(0, 100) < 30 and _encounters_in_zone > 0
 	if as_situation:
@@ -91,6 +113,11 @@ func next_encounter() -> void:
 			return
 		var pick: Creature = alive[er.range_i(0, alive.size())]
 		current = Encounter.new(z, pick, er, player)
+		var fam := int(pick.archetype.family)
+		(current as Encounter).karma = {
+			"kills": int(_karma_kills.get(fam, 0)),
+			"spared": int(_karma_spared.get(fam, 0)),
+		}
 		if Progress.first_kill_of(pick.archetype.id):
 			first_encounter.emit(pick.archetype.id, (current as Encounter).creature_name)
 	_awaiting_choice = true
@@ -134,6 +161,18 @@ func choose(idx: int) -> void:
 		_encounters_in_zone += 1
 		next_encounter()
 		return
+	# Multi-phase duel routing (world boss / finale dragon).
+	if result.get("duel_phase_done", false) and current is DuelEncounter:
+		var duel := current as DuelEncounter
+		if not result.duel_finished:
+			await _wait(2.6)
+			zone_intro.emit("%s\n%s" % [duel.phase_title(), duel.creature_name], world.active_zone().biome)
+			_awaiting_choice = true
+			encounter_presented.emit(duel)
+			return
+		await _wait(2.6)
+		_finish_duel(duel, bool(result.duel_victory))
+		return
 	# If encounter triggered a followup dialogue, present its choices instead of moving on.
 	if result.get("has_followup", false) and current is Encounter:
 		await _wait(2.0)
@@ -162,8 +201,19 @@ func _apply(result: Dictionary) -> void:
 		healed.emit(heal_id, active_idx)
 	if bool(result.get("fatal", false)):
 		player.alive = false
+	# NPC trades: fragment gains/losses and relic gifts.
+	var frag_delta: int = int(result.get("fragments", 0))
+	if frag_delta != 0:
+		Progress.fragments = maxi(0, Progress.fragments + frag_delta)
+		Progress.save()
+	if bool(result.get("grant_relic", false)):
+		var gift: Dictionary = RelicRegistry.pick_random(rng)
+		if player.add_relic(StringName(gift.id)):
+			relic_acquired.emit(StringName(gift.id), active_idx)
 	var has_creature: bool = current.creature != null
 	if has_creature and result.get("creature_dies", false):
+		var kfam := int(current.creature.archetype.family)
+		_karma_kills[kfam] = int(_karma_kills.get(kfam, 0)) + 1
 		creature_reaction.emit(&"die")
 		Progress.record_kill(current.creature.archetype.id)
 		var tier := int(current.creature.archetype.tier)
@@ -181,6 +231,11 @@ func _apply(result: Dictionary) -> void:
 				relic_acquired.emit(StringName(relic.id), active_idx)
 		current.creature.kill()
 	elif has_creature and result.get("creature_flees", false):
+		# Sparing through words or restraint builds mercy karma with the family.
+		var tone_used := int(result.get("tone", 0))
+		if tone_used in [1, 2, 4] and int(result.get("outcome", 0)) >= FateEngine.Outcome.SUCCESS:
+			var sfam := int(current.creature.archetype.family)
+			_karma_spared[sfam] = int(_karma_spared.get(sfam, 0)) + 1
 		creature_reaction.emit(&"flee")
 		current.creature.kill()
 	elif has_creature and result.get("mutate", false):
@@ -209,6 +264,13 @@ func _advance_zone() -> void:
 				break
 	var next_idx := world.active_zone_index + 1
 	if next_idx >= world.zones.size():
+		# Run finale: if a dragon manifested during this run, it descends to
+		# bar the way out — a 3-phase duel concludes the act. Otherwise the
+		# classic quiet extraction (so the finale stays an event, not a habit).
+		if _last_dragon_id != &"":
+			_awaiting_choice = false
+			_start_final_duel()
+			return
 		Save.clear()
 		run_over.emit(StringName(Lang.ui("extracted")))
 		return
@@ -274,19 +336,76 @@ func _enter_next_zone() -> void:
 	world.advance_zone()
 	Save.save_run(players, world)
 	Progress.fragment_scale = world.active_zone().route_fragment_scale if world.active_zone_index < world.zones.size() else 1.0
-	_maybe_trigger_world_boss()
+	_npc_done_this_zone = false
+	if world.active_zone().dragon_id != &"":
+		_last_dragon_id = world.active_zone().dragon_id
+	if _maybe_trigger_world_boss():
+		# The titan blocks the threshold: the zone starts with a 3-phase duel.
+		await _wait(4.0)
+		_start_boss_duel()
+		return
 	_emit_zone_intro()
 	await _wait(2.0)
 	next_encounter()
 
-func _maybe_trigger_world_boss() -> void:
-	if _world_boss_triggered: return
-	if world.active_zone_index != world.zones.size() - 1: return
+func _maybe_trigger_world_boss() -> bool:
+	if _world_boss_triggered: return false
+	if world.active_zone_index != world.zones.size() - 1: return false
 	var boss: Dictionary = WorldBossSystem.maybe_trigger(world.memory, world.active_zone(), _elite_kills_this_run, rng.derive(0x80551))
-	if boss.is_empty(): return
+	if boss.is_empty(): return false
 	_world_boss_triggered = true
+	_pending_boss = boss
 	world_boss_spawned.emit(boss)
 	zone_intro.emit("[%s]\n%s" % [WorldBossRegistry.title_of(boss).to_upper(), WorldBossRegistry.intro_of(boss)], world.active_zone().biome)
+	return true
+
+# ---- Multi-phase duels (world boss + dragon finale) ----
+
+func _start_boss_duel() -> void:
+	var duel := DuelEncounter.new(world.active_zone(), rng.derive(0xD0E1), player,
+		&"boss", StringName(_pending_boss.id), WorldBossRegistry.name_of(_pending_boss))
+	current = duel
+	_awaiting_choice = true
+	zone_intro.emit("%s\n%s" % [duel.phase_title(), duel.creature_name], world.active_zone().biome)
+	encounter_presented.emit(duel)
+
+func _start_final_duel() -> void:
+	var d: Dictionary = DragonRegistry.by_id(_last_dragon_id)
+	var dname := DragonRegistry.name_of(d) if not d.is_empty() else Lang.t({"fr": "le dragon", "en": "the dragon", "id": "sang naga"})
+	final_duel.emit(_last_dragon_id)
+	var duel := DuelEncounter.new(world.active_zone(), rng.derive(0xF17A), player,
+		&"dragon", _last_dragon_id, dname)
+	current = duel
+	_awaiting_choice = true
+	zone_intro.emit("%s\n%s" % [duel.phase_title(), dname], world.active_zone().biome)
+	encounter_presented.emit(duel)
+
+func _finish_duel(duel: DuelEncounter, victory: bool) -> void:
+	if victory:
+		narrative_logged.emit(duel.victory_text(), 0, 4)
+		Progress.fragments += int(round(25 * Progress.fragment_scale))
+		var relic: Dictionary = RelicRegistry.pick_random(rng)
+		if player.add_relic(StringName(relic.id)):
+			relic_acquired.emit(StringName(relic.id), active_idx)
+		if duel.foe_kind == &"boss":
+			Progress.record_titan_survived()
+		Progress.save()
+	else:
+		narrative_logged.emit(duel.defeat_text(), 0, 1)
+	stats_changed.emit(player.effective_force(), player.injuries.duplicate(), player.relics.duplicate())
+	await _wait(3.2)
+	if duel.foe_kind == &"dragon":
+		# Finale: win or survive-diminished, the run concludes here.
+		Save.clear()
+		run_over.emit(StringName(Lang.ui("extracted")))
+		return
+	# Boss survived: the last zone now plays out normally.
+	_emit_zone_intro()
+	await _wait(2.0)
+	next_encounter()
+
+func karma_info(family: int) -> Dictionary:
+	return {"kills": int(_karma_kills.get(family, 0)), "spared": int(_karma_spared.get(family, 0))}
 
 func _wait(seconds: float) -> void:
 	await Engine.get_main_loop().create_timer(seconds).timeout

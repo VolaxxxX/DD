@@ -54,11 +54,15 @@ func resolve(choice_idx: int, _resolver: EventResolver, _coop_mod: int) -> Dicti
 		"outcome": 3 if success else 1,
 		"tone": tone,
 		"stat_delta": int(section.get("stat_delta", 0)),
+		"stat": StringName(section.get("stat", &"force")),
 		"creature_dies": false,
 		"creature_flees": false,
 		"mutate": false,
 		"injury": StringName(section.get("injury", &"")),
 		"heal": StringName(section.get("heal", &"")),
 		"fatal": false,
+		# NPC trade extensions (applied by the director).
+		"fragments": int(section.get("fragments", 0)),
+		"grant_relic": bool(section.get("grant_relic", false)),
 	}
 	return result

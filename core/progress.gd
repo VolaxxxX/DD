@@ -54,6 +54,7 @@ var second_chance_used_this_run: bool = false
 var run_start_msec: int = 0
 var fragments: int = 0                # village currency, persists across runs
 var fragment_scale: float = 1.0       # route multiplier (set per zone, not saved)
+var npc_meetings: Dictionary = {}     # npc_id -> times met (persists: they remember you)
 var next_zone_blessing: StringName = &""   # buff applied at next zone start
 
 const KILL_REWARD := 1
@@ -83,6 +84,7 @@ func _load() -> void:
 	fragments = int(v.get("fragments", 0))
 	_classes_played = v.get("classes_played", [])
 	_village_visits = int(v.get("village_visits", 0))
+	npc_meetings = v.get("npc_meetings", {})
 
 func save() -> void:
 	var f := FileAccess.open(PATH, FileAccess.WRITE)
@@ -93,7 +95,15 @@ func save() -> void:
 		"deepest_zone": deepest_zone, "achievements": achievements,
 		"langs": _langs_played, "fragments": fragments,
 		"classes_played": _classes_played, "village_visits": _village_visits,
+		"npc_meetings": npc_meetings,
 	})
+
+# Returns the new meeting count (1 = first time ever).
+func record_npc_meeting(npc_id: StringName) -> int:
+	var k := String(npc_id)
+	npc_meetings[k] = int(npc_meetings.get(k, 0)) + 1
+	save()
+	return int(npc_meetings[k])
 
 # ---------- API ----------
 
