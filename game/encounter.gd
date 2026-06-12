@@ -61,10 +61,15 @@ func _build_choices() -> Array[Dictionary]:
 	while allowed.size() > 3: allowed.remove_at(rng.range_i(0, allowed.size()))
 	while allowed.size() < 3: allowed.append(PhrasePool.Tone.CAUTIOUS)
 
+	# Context-aware texts: variants specific to the creature's family, the
+	# zone's biome and its tier, deduplicated across the three buttons.
+	var used: Array = []
 	for t in allowed:
+		var txt := PhrasePool.pick_choice(rng, t, int(fam), zone.biome, int(creature.archetype.tier), used)
+		used.append(txt)
 		out.append({
 			"tone": t,
-			"text": PhrasePool.pick_choice(rng, t),
+			"text": txt,
 			"kind": _tone_to_kind(t),
 		})
 	return out

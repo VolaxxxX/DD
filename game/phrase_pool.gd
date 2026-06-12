@@ -326,13 +326,168 @@ static func outcomes_for(tone: int, outcome: int) -> Array:
 			]
 	return ["Rien ne se passe."]
 
-static func pick_choice(rng: DRNG, tone: int) -> String:
+# ---------- Contextual choice variants ----------
+# Family order matches Archetype.Family:
+# 0 HUMANOID, 1 BEAST, 2 UNDEAD, 3 CONSTRUCT, 4 ELEMENTAL, 5 ABERRATION, 6 FEY, 7 DRACONIC
+
+static func family_choices(tone: int, family: int) -> Array:
+	var pools := {}
+	match tone:
+		0: pools = {
+			0: ["Tu vises le genou — un homme à terre ne poursuit personne.",
+				"Tu frappes là où son armure baille, sous le bras."],
+			1: ["Tu vises le museau — la douleur le fera reculer.",
+				"Tu attends qu'il bondisse pour frapper par en dessous."],
+			2: ["Tu vises les jambes — qu'il rampe, comme il aurait dû rester.",
+				"Tu frappes l'os. Il n'y a plus rien d'autre à trancher."],
+			3: ["Tu cherches la jointure — tout mécanisme a un défaut.",
+				"Tu frappes la lueur dans sa poitrine. C'est forcément ça, le cœur."],
+			4: ["Tu frappes au centre du tourbillon, là où ça tient ensemble.",
+				"Tu attaques sans te demander ce que ta lame peut couper ici."],
+			5: ["Tu frappes sans regarder — la voir entière coûte trop cher.",
+				"Tu vises l'œil. Celui du milieu. Celui qui te fixe."],
+			6: ["Tu frappes avant qu'elle finisse sa phrase. Le fer d'abord.",
+				"Tu trahis tous les usages : attaquer une fée. Tant pis."],
+			7: ["Tu glisses sous sa garde, vers l'écaille manquante.",
+				"Tu charges droit vers la gueule. Autant la voir en face."],
+		}
+		1: pools = {
+			0: ["Tu lui rappelles que vous étiez du même peuple, avant tout ça.",
+				"Tu lui tends ta ration. Un homme qui mange écoute."],
+			1: ["Tu baisses les yeux et exposes ta gorge. Langage de meute.",
+				"Tu déposes de la viande entre vous, et tu recules d'un pas."],
+			2: ["Tu prononces les mots qu'on doit aux morts. Peut-être les attendait-il.",
+				"Tu lui demandes qui il attend. Les morts attendent toujours quelqu'un."],
+			3: ["Tu énonces ton nom et ton intention, clairement, comme un protocole.",
+				"Tu montres tes mains vides au gardien, paumes vers le ciel."],
+			4: ["Tu parles à l'élément comme on parle au temps : sans rien exiger.",
+				"Tu t'adresses à ce qui l'anime, pas à ce qu'il montre."],
+			5: ["Tu penses ta phrase au lieu de la dire. Peut-être qu'elle écoute là.",
+				"Tu salues ce qu'elle était avant de devenir ça."],
+			6: ["Tu pèses chaque mot — un pacte avec une fée se paie au mot près.",
+				"Tu lui offres une vérité sur toi. Les fées s'en nourrissent."],
+			7: ["Tu t'adresses à lui par ses titres. Les dragons collectionnent leurs noms.",
+				"Tu lui offres le seul objet brillant que tu possèdes."],
+		}
+		2: pools = {
+			0: ["Tu lèves les mains et recules — un pas, puis deux, sans tourner le dos."],
+			1: ["Tu évites son regard et recules face au vent, très lentement."],
+			2: ["Tu longes le bord de son territoire — les morts gardent rarement plus loin."],
+			3: ["Tu restes immobile. Beaucoup de gardiens ne voient que le mouvement."],
+			4: ["Tu cherches l'endroit où l'air est calme, et tu t'y tiens."],
+			5: ["Tu fixes le sol. Surtout, ne pas la regarder directement."],
+			6: ["Tu retournes ta veste à l'envers, comme dans les vieilles histoires."],
+			7: ["Tu te fais petit entre les rochers. On ne distance pas un dragon."],
+		}
+		3: pools = {
+			0: ["Tu détailles son équipement — d'où vient-il, qui l'a payé ?"],
+			1: ["Tu lis ses flancs : cicatrices de chasse, ou de fuite ?"],
+			2: ["Tu cherches sur lui ce qui l'a tué, la première fois."],
+			3: ["Tu cherches la marque du faiseur sous la rouille."],
+			4: ["Tu regardes ce qui l'alimente. Tout feu a une source."],
+			5: ["Tu comptes ses membres. Le résultat change à chaque fois."],
+			6: ["Tu regardes son ombre — les fées n'en portent pas toujours la bonne."],
+			7: ["Tu lis ses écailles comme des annales. Chaque brûlure est une date."],
+		}
+		4: pools = {
+			0: ["Tu invoques le nom d'un capitaine inventé qui te couvrirait."],
+			1: ["Tu imites le cri d'un congénère blessé, plus loin sur la gauche."],
+			2: ["Tu marches comme marchent les morts. Tu deviens l'un des leurs."],
+			3: ["Tu répètes le geste gravé sur son socle — peut-être un sceau de passage."],
+			4: ["Tu jettes ta gourde au loin : que l'eau l'occupe ailleurs."],
+			5: ["Tu penses très fort à autre chose. Qu'elle lise autre chose."],
+			6: ["Tu lui proposes un marché truqué — un jeu de fée contre une fée."],
+			7: ["Tu le flattes — son orgueil pèse plus lourd que toi."],
+		}
+		5: pools = {
+			0: ["Tu traces le signe du voyageur dans l'air entre vous deux."],
+			1: ["Tu souffles dans ta paume et offres ton odeur au monde."],
+			2: ["Tu improvises le rite du repos. Maladroit, mais avec respect."],
+			3: ["Tu poses ta main sur sa surface et cherches l'écho du faiseur."],
+			4: ["Tu nommes l'élément par son vieux nom. Les éléments s'en souviennent."],
+			5: ["Tu ouvres ton esprit, juste une fente, pour voir ce qui entre."],
+			6: ["Tu traces un cercle de sel — tout ce qu'il t'en reste."],
+			7: ["Tu jures sur le feu. La seule langue qu'ils respectent tous."],
+		}
+	return pools.get(family, [])
+
+static func biome_choices(tone: int, biome: StringName) -> Array:
+	var pools := {}
+	match tone:
+		2: pools = {
+			&"forest":    ["Tu grimpes dans les branches basses et laisses la forêt te cacher."],
+			&"city":      ["Tu te fonds dans l'embrasure d'une porte morte."],
+			&"ruins":     ["Tu te glisses derrière un pan de mur effondré."],
+			&"corrupted": ["Tu suis les veines saines du sol, là où la terre ne palpite pas."],
+			&"anomaly":   ["Tu marches là où la lumière tombe droit. C'est rare, ici."],
+			&"swamp":     ["Tu t'enfonces dans l'eau jusqu'au cou, parmi les roseaux."],
+			&"highland":  ["Tu te plaques contre la roche, sous le vent."],
+			&"crypt":     ["Tu souffles ta lanterne et comptes tes pas dans le noir."],
+			&"coast":     ["Tu suis la ligne de marée, là où le sable efface tes traces."],
+		}
+		3: pools = {
+			&"forest":    ["Tu lis les marques de griffes sur les troncs. Une carte se dessine."],
+			&"city":      ["Tu déchiffres ce qui reste d'une enseigne. Quelqu'un vivait ici."],
+			&"ruins":     ["Tu compares les gravures du socle avec ce qui te fait face."],
+			&"corrupted": ["Tu observes comment la corruption l'a changé, lui."],
+			&"anomaly":   ["Tu lances un caillou et suis sa trajectoire. Elle a tort."],
+			&"swamp":     ["Tu suis les bulles qui remontent. Quelque chose respire en dessous."],
+			&"highland":  ["Tu observes les pierres dressées au sommet. Un alignement."],
+			&"crypt":     ["Tu lis les noms sur les dalles. Le sien y est peut-être."],
+			&"coast":     ["Tu examines ce que la mer a déposé cette nuit."],
+		}
+		5: pools = {
+			&"forest":    ["Tu presses ta paume contre le plus vieil arbre et tu attends."],
+			&"city":      ["Tu appelles les noms des anciens habitants, au hasard."],
+			&"ruins":     ["Tu réveilles l'écho des pierres d'un mot frappé deux fois."],
+			&"corrupted": ["Tu goûtes la corruption du bout du doigt. Pour comprendre."],
+			&"anomaly":   ["Tu pries dans le mauvais sens. Ici, ça pourrait marcher."],
+			&"swamp":     ["Tu confies un souhait à l'eau noire et la regardes le prendre."],
+			&"highland":  ["Tu cries ton nom au vent et écoutes ce qu'il en rapporte."],
+			&"crypt":     ["Tu allumes une bougie pour les morts — et une pour toi."],
+			&"coast":     ["Tu écris un mot sur le sable et laisses la vague le prendre."],
+		}
+	return pools.get(biome, [])
+
+static func tier_choices(tone: int) -> Array:
+	# Extra lines that only appear against ELITE+ creatures — the player should
+	# feel the danger in the phrasing itself.
+	match tone:
+		0: return [
+			"Tu sais que tu ne peux pas gagner. Tu frappes quand même.",
+			"Une seule ouverture. Une seule chance. Tu la prends."]
+		2: return [
+			"Devant une telle chose, fuir n'est pas une honte.",
+			"Tu pries pour qu'il ait déjà mangé, et tu recules."]
+		3: return [
+			"Tu graves chaque détail en mémoire. Si tu survis, ça vaudra cher."]
+		5: return [
+			"Tu invoques tout ce que tu sais à la fois. C'est le moment ou jamais."]
+	return []
+
+static func pick_choice(rng: DRNG, tone: int, family: int = -1, biome: StringName = &"", tier: int = -1, exclude: Array = []) -> String:
 	var arr: Array
 	match Lang.code:
-		"en": arr = PhrasePoolEN.choices_for(tone)
-		"id": arr = PhrasePoolID.choices_for(tone)
-		_:    arr = choices_for(tone)
-	return arr[rng.range_i(0, arr.size())]
+		"en": arr = PhrasePoolEN.choices_for(tone).duplicate()
+		"id": arr = PhrasePoolID.choices_for(tone).duplicate()
+		_:    arr = choices_for(tone).duplicate()
+	# Contextual variants (FR pools) — added twice so creature/biome-specific
+	# lines surface noticeably more often than the generic ones.
+	if Lang.code != "en" and Lang.code != "id":
+		var ctx: Array = []
+		ctx += family_choices(tone, family)
+		ctx += biome_choices(tone, biome)
+		if tier >= 3: ctx += tier_choices(tone)
+		for c in ctx:
+			arr.append(c)
+			arr.append(c)
+	var pick: String = arr[rng.range_i(0, arr.size())]
+	# Avoid texts already used by sibling buttons this encounter.
+	var guard := 0
+	while pick in exclude and guard < 12:
+		pick = arr[rng.range_i(0, arr.size())]
+		guard += 1
+	return pick
 
 static func pick_outcome(rng: DRNG, tone: int, outcome: int, creature_name: String) -> String:
 	var arr: Array
