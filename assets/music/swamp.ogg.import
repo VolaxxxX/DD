@@ -12,7 +12,7 @@ dest_files=["res://.godot/imported/swamp.ogg-ff53bdbe36c39e8ef1ddb96d510490c8.og
 
 [params]
 
-loop=false
+loop=true
 loop_offset=0
 bpm=0
 beat_count=0

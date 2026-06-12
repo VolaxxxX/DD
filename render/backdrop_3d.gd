@@ -63,6 +63,7 @@ func build(biome: StringName, corruption: float, sub_biome: int = 0) -> void:
 	_build_far_silhouettes(biome, corruption)
 	_build_vegetation_field(biome, corruption)
 	_build_water(biome)
+	_build_signature_props(biome, corruption)
 	_build_weather(biome, corruption)
 	_build_atmosphere(biome, corruption)
 	_build_ambient_critters(biome, DRNG.new(int(Time.get_ticks_msec())))
@@ -128,6 +129,263 @@ func _ambient_part(parent: Node3D, mesh: Mesh, pos: Vector3, color: Color, rot_d
 	mat.roughness = 0.85
 	mi.material_override = mat
 	parent.add_child(mi)
+
+# ---------- Signature props ----------
+# Big readable backdrop elements per biome — placed in the mid-ground (z<-10)
+# so they fill the frame behind the action without ever obscuring mobs or UI.
+func _build_signature_props(biome: StringName, corruption: float) -> void:
+	var rng := DRNG.new((int(biome.hash()) >> 5) ^ 0xBE110)
+	match String(biome):
+		"forest":     _sig_forest(rng, corruption)
+		"city":       _sig_city(rng)
+		"ruins":      _sig_ruins(rng)
+		"corrupted":  _sig_corrupted(rng)
+		"anomaly":    _sig_anomaly(rng)
+		"swamp":      _sig_swamp(rng)
+		"highland":   _sig_highland(rng)
+		"crypt":      _sig_crypt(rng)
+		"coast":      _sig_coast(rng)
+
+func _sig_part(parent: Node3D, mesh: Mesh, pos: Vector3, color: Color, rough: float = 0.85, emit: float = 0.0, sc: Vector3 = Vector3.ONE, rot_y: float = 0.0) -> MeshInstance3D:
+	var mi := MeshInstance3D.new()
+	mi.mesh = mesh
+	mi.position = pos
+	mi.scale = sc
+	mi.rotation.y = rot_y
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = color
+	mat.roughness = rough
+	if emit > 0.0:
+		mat.emission_enabled = true
+		mat.emission = color
+		mat.emission_energy_multiplier = emit
+	mi.material_override = mat
+	parent.add_child(mi)
+	return mi
+
+func _sig_root() -> Node3D:
+	var n := Node3D.new()
+	add_child(n)
+	return n
+
+func _sig_forest(rng: DRNG, corruption: float) -> void:
+	# Tall trees flanking the playspace, glowing mushrooms at the base.
+	var root := _sig_root()
+	var trunk_c := Color(0.20, 0.13, 0.08).lerp(Color(0.30, 0.05, 0.20), corruption * 0.5)
+	var leaf_c := Color(0.16, 0.34, 0.14).lerp(Color(0.40, 0.10, 0.30), corruption * 0.5)
+	for i in 8:
+		var side := -1 if i % 2 == 0 else 1
+		var x := float(side) * _frng_h(rng, 9.0, 16.0)
+		var z := _frng_h(rng, -16.0, -6.0)
+		var h := _frng_h(rng, 4.5, 7.5)
+		var trunk := CylinderMesh.new(); trunk.top_radius = 0.18; trunk.bottom_radius = 0.32; trunk.height = h
+		_sig_part(root, trunk, Vector3(x, h * 0.5, z), trunk_c, 0.95, 0.0, Vector3.ONE, _frng_h(rng, 0, TAU))
+		# Layered canopy
+		for j in 3:
+			var s := _frng_h(rng, 1.4, 2.0)
+			var canopy := SphereMesh.new(); canopy.radius = 1.0; canopy.height = 1.7
+			var tint := leaf_c.lerp(Color(0.05, 0.10, 0.05), float(j) * 0.15)
+			_sig_part(root, canopy, Vector3(x + _frng_h(rng, -0.4, 0.4), h + float(j) * 0.5, z + _frng_h(rng, -0.4, 0.4)), tint, 0.85, 0.0, Vector3(s, s * 0.85, s))
+	# Glowing mushrooms
+	for i in 14:
+		var x := _frng_h(rng, -14, 14)
+		var z := _frng_h(rng, -10, -3)
+		if absf(x) < 2.5 and z > -5: continue
+		var stem := CylinderMesh.new(); stem.top_radius = 0.07; stem.bottom_radius = 0.09; stem.height = _frng_h(rng, 0.3, 0.6)
+		_sig_part(root, stem, Vector3(x, stem.height * 0.5, z), Color(0.85, 0.80, 0.70))
+		var cap := SphereMesh.new(); cap.radius = 0.18; cap.height = 0.18
+		var glow_col := Color(0.55, 0.85, 1.0) if rng.range_i(0, 2) == 0 else Color(1.0, 0.65, 0.45)
+		_sig_part(root, cap, Vector3(x, stem.height + 0.05, z), glow_col, 0.4, 2.5)
+
+func _sig_city(rng: DRNG) -> void:
+	# Lamp posts with warm bulbs, low broken walls.
+	var root := _sig_root()
+	for i in 6:
+		var side := -1 if i % 2 == 0 else 1
+		var x := float(side) * _frng_h(rng, 6.0, 12.0)
+		var z := _frng_h(rng, -12, -4)
+		var post := CylinderMesh.new(); post.top_radius = 0.05; post.bottom_radius = 0.06; post.height = 3.0
+		_sig_part(root, post, Vector3(x, 1.5, z), Color(0.18, 0.18, 0.20), 0.6)
+		var arm := BoxMesh.new(); arm.size = Vector3(0.6, 0.04, 0.04)
+		_sig_part(root, arm, Vector3(x - 0.30 * sign(x), 3.0, z), Color(0.18, 0.18, 0.20))
+		var bulb := SphereMesh.new(); bulb.radius = 0.14; bulb.height = 0.28
+		var bulb_pos := Vector3(x - 0.55 * sign(x), 2.92, z)
+		_sig_part(root, bulb, bulb_pos, Color(1.0, 0.85, 0.55), 0.3, 4.0)
+		# Real point light from the bulb.
+		var ol := OmniLight3D.new()
+		ol.position = bulb_pos
+		ol.light_color = Color(1.0, 0.80, 0.50)
+		ol.light_energy = 1.2
+		ol.omni_range = 6.0
+		root.add_child(ol)
+	# Broken walls
+	for i in 5:
+		var wall := BoxMesh.new(); wall.size = Vector3(_frng_h(rng, 1.5, 3.0), _frng_h(rng, 1.0, 2.0), 0.25)
+		var wx := _frng_h(rng, -14, 14)
+		var wz := _frng_h(rng, -13, -7)
+		if absf(wx) < 4 and wz > -9: continue
+		_sig_part(root, wall, Vector3(wx, wall.size.y * 0.5, wz), Color(0.32, 0.28, 0.24), 0.9, 0.0, Vector3.ONE, _frng_h(rng, -0.4, 0.4))
+
+func _sig_ruins(rng: DRNG) -> void:
+	# Tall fluted columns + horizontal beams + carved capitals.
+	var root := _sig_root()
+	var stone := Color(0.55, 0.50, 0.40)
+	for i in 7:
+		var x := _frng_h(rng, -16, 16)
+		var z := _frng_h(rng, -16, -7)
+		if absf(x) < 3 and z > -10: continue
+		var h := _frng_h(rng, 3.5, 6.5)
+		var col := CylinderMesh.new(); col.top_radius = 0.32; col.bottom_radius = 0.40; col.height = h
+		_sig_part(root, col, Vector3(x, h * 0.5, z), stone, 0.92)
+		# Capital
+		var cap := BoxMesh.new(); cap.size = Vector3(1.0, 0.25, 1.0)
+		_sig_part(root, cap, Vector3(x, h + 0.13, z), stone.lightened(0.1))
+		# A few have a fallen beam
+		if rng.range_i(0, 2) == 0:
+			var beam := BoxMesh.new(); beam.size = Vector3(2.0, 0.35, 0.45)
+			_sig_part(root, beam, Vector3(x + 1.4, h - 0.6, z), stone.darkened(0.05), 0.9, 0.0, Vector3.ONE, _frng_h(rng, -0.3, 0.3))
+
+func _sig_corrupted(rng: DRNG) -> void:
+	# Pulsing crystal spires + drooping flesh-vines on the ground.
+	var root := _sig_root()
+	for i in 9:
+		var x := _frng_h(rng, -15, 15)
+		var z := _frng_h(rng, -14, -6)
+		if absf(x) < 2.5 and z > -7: continue
+		var spike := CylinderMesh.new(); spike.top_radius = 0.04; spike.bottom_radius = 0.35; spike.height = _frng_h(rng, 2.0, 5.5)
+		_sig_part(root, spike, Vector3(x, spike.height * 0.5, z), Color(0.45, 0.10, 0.55), 0.35, 1.8)
+	for i in 5:
+		var orb := SphereMesh.new(); orb.radius = _frng_h(rng, 0.25, 0.45); orb.height = orb.radius * 2.0
+		var x := _frng_h(rng, -10, 10)
+		var z := _frng_h(rng, -10, -5)
+		if absf(x) < 2 and z > -7: continue
+		var orb_pos := Vector3(x, _frng_h(rng, 0.6, 1.8), z)
+		var mi := _sig_part(root, orb, orb_pos, Color(1.0, 0.30, 0.85), 0.3, 3.0)
+		var t := mi.create_tween().set_loops()
+		t.tween_property(mi, "scale", Vector3.ONE * 1.25, 1.6).set_trans(Tween.TRANS_SINE)
+		t.tween_property(mi, "scale", Vector3.ONE, 1.6).set_trans(Tween.TRANS_SINE)
+
+func _sig_anomaly(rng: DRNG) -> void:
+	# Floating monoliths suspended off the ground, slowly drifting.
+	var root := _sig_root()
+	for i in 6:
+		var x := _frng_h(rng, -14, 14)
+		var z := _frng_h(rng, -14, -6)
+		if absf(x) < 3 and z > -8: continue
+		var y := _frng_h(rng, 1.5, 5.5)
+		var slab := BoxMesh.new(); slab.size = Vector3(_frng_h(rng, 0.8, 1.6), _frng_h(rng, 1.4, 3.0), _frng_h(rng, 0.3, 0.6))
+		var mi := _sig_part(root, slab, Vector3(x, y, z), Color(0.20, 0.30, 0.65), 0.5, 0.8, Vector3.ONE, _frng_h(rng, 0, TAU))
+		var t := mi.create_tween().set_loops()
+		t.tween_property(mi, "position:y", y + 0.6, 3.5).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		t.tween_property(mi, "position:y", y, 3.5).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		var rot := mi.create_tween().set_loops()
+		rot.tween_property(mi, "rotation:y", mi.rotation.y + TAU, 22.0)
+
+func _sig_swamp(rng: DRNG) -> void:
+	# Dead twisted trees rising from the water, hanging moss, will-o-wisp orbs.
+	var root := _sig_root()
+	for i in 9:
+		var x := _frng_h(rng, -14, 14)
+		var z := _frng_h(rng, -16, -5)
+		if absf(x) < 2.5 and z > -7: continue
+		var h := _frng_h(rng, 3.0, 5.5)
+		var trunk := CylinderMesh.new(); trunk.top_radius = 0.10; trunk.bottom_radius = 0.30; trunk.height = h
+		_sig_part(root, trunk, Vector3(x, h * 0.5, z), Color(0.13, 0.10, 0.08), 0.95, 0.0, Vector3.ONE, _frng_h(rng, -0.3, 0.3))
+		# 2-3 dead branches
+		for b in 3:
+			var branch := CylinderMesh.new(); branch.top_radius = 0.03; branch.bottom_radius = 0.07; branch.height = _frng_h(rng, 0.8, 1.6)
+			var bxp := Vector3(x + _frng_h(rng, -0.4, 0.4), h * _frng_h(rng, 0.55, 0.95), z + _frng_h(rng, -0.4, 0.4))
+			var mi := _sig_part(root, branch, bxp, Color(0.18, 0.13, 0.09), 0.95)
+			mi.rotation = Vector3(_frng_h(rng, -0.5, 0.5), _frng_h(rng, 0, TAU), _frng_h(rng, -0.4, 0.4) + sign(_frng_h(rng, -1, 1)) * 0.8)
+	# Floating wisps
+	for i in 6:
+		var x := _frng_h(rng, -10, 10)
+		var z := _frng_h(rng, -10, -3)
+		if absf(x) < 2 and z > -6: continue
+		var wisp := SphereMesh.new(); wisp.radius = 0.10; wisp.height = 0.20
+		var p := Vector3(x, _frng_h(rng, 0.5, 1.6), z)
+		var mi := _sig_part(root, wisp, p, Color(0.55, 1.0, 0.65), 0.3, 4.5)
+		var t := mi.create_tween().set_loops()
+		t.tween_property(mi, "position:y", p.y + 0.4, _frng_h(rng, 2.0, 3.0)).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		t.tween_property(mi, "position:y", p.y, _frng_h(rng, 2.0, 3.0)).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+
+func _sig_highland(rng: DRNG) -> void:
+	# Standing stones (menhirs), big boulders, gnarled wind-bent tree.
+	var root := _sig_root()
+	for i in 5:
+		var x := _frng_h(rng, -12, 12)
+		var z := _frng_h(rng, -14, -7)
+		if absf(x) < 3 and z > -10: continue
+		var h := _frng_h(rng, 2.0, 3.5)
+		var stone := BoxMesh.new(); stone.size = Vector3(0.7, h, 0.5)
+		_sig_part(root, stone, Vector3(x, h * 0.5, z), Color(0.42, 0.42, 0.40), 0.92, 0.0, Vector3.ONE, _frng_h(rng, 0, TAU))
+	for i in 6:
+		var rock := SphereMesh.new(); var r := _frng_h(rng, 0.8, 1.5)
+		rock.radius = r; rock.height = r * 1.4
+		var x := _frng_h(rng, -14, 14); var z := _frng_h(rng, -12, -4)
+		if absf(x) < 2.5 and z > -6: continue
+		_sig_part(root, rock, Vector3(x, r * 0.45, z), Color(0.38, 0.40, 0.36))
+	# A windswept tree
+	var trunk := CylinderMesh.new(); trunk.top_radius = 0.18; trunk.bottom_radius = 0.30; trunk.height = 2.8
+	_sig_part(root, trunk, Vector3(-4.2, 1.4, -8.5), Color(0.28, 0.20, 0.13))
+	var canopy := SphereMesh.new(); canopy.radius = 1.1; canopy.height = 1.2
+	_sig_part(root, canopy, Vector3(-3.8, 3.0, -8.5), Color(0.25, 0.32, 0.20), 0.85, 0.0, Vector3(1.6, 0.65, 1.1))
+
+func _sig_crypt(rng: DRNG) -> void:
+	# Sarcophagi, stone arch, candle clusters with real point lights.
+	var root := _sig_root()
+	for i in 4:
+		var sarco := BoxMesh.new(); sarco.size = Vector3(0.8, 0.7, 1.9)
+		var x := _frng_h(rng, -9, 9); var z := _frng_h(rng, -11, -5)
+		if absf(x) < 2.5 and z > -7: continue
+		_sig_part(root, sarco, Vector3(x, 0.35, z), Color(0.28, 0.26, 0.24), 0.9, 0.0, Vector3.ONE, _frng_h(rng, -0.2, 0.2))
+		var lid := BoxMesh.new(); lid.size = Vector3(0.85, 0.10, 2.0)
+		_sig_part(root, lid, Vector3(x, 0.72, z), Color(0.32, 0.30, 0.28))
+	# Stone arch
+	var arch_l := BoxMesh.new(); arch_l.size = Vector3(0.45, 3.5, 0.45)
+	_sig_part(root, arch_l, Vector3(-2.2, 1.75, -7), Color(0.22, 0.20, 0.20))
+	_sig_part(root, arch_l, Vector3(2.2, 1.75, -7), Color(0.22, 0.20, 0.20))
+	var arch_top := BoxMesh.new(); arch_top.size = Vector3(4.85, 0.5, 0.45)
+	_sig_part(root, arch_top, Vector3(0, 3.75, -7), Color(0.22, 0.20, 0.20))
+	# Candles with real flickering point lights
+	for i in 5:
+		var cx := _frng_h(rng, -7, 7); var cz := _frng_h(rng, -8, -3)
+		if absf(cx) < 1.5 and cz > -5: continue
+		var candle := CylinderMesh.new(); candle.top_radius = 0.05; candle.bottom_radius = 0.05; candle.height = 0.4
+		_sig_part(root, candle, Vector3(cx, 0.2, cz), Color(0.92, 0.86, 0.70))
+		var flame := SphereMesh.new(); flame.radius = 0.07; flame.height = 0.14
+		_sig_part(root, flame, Vector3(cx, 0.46, cz), Color(1.0, 0.6, 0.25), 0.3, 5.0)
+		var ol := OmniLight3D.new()
+		ol.position = Vector3(cx, 0.7, cz)
+		ol.light_color = Color(1.0, 0.65, 0.30)
+		ol.light_energy = 0.9
+		ol.omni_range = 3.5
+		root.add_child(ol)
+		# Flicker
+		var t := ol.create_tween().set_loops()
+		t.tween_property(ol, "light_energy", 0.65, _frng_h(rng, 0.12, 0.25))
+		t.tween_property(ol, "light_energy", 1.05, _frng_h(rng, 0.12, 0.25))
+		t.tween_property(ol, "light_energy", 0.85, _frng_h(rng, 0.12, 0.25))
+
+func _sig_coast(rng: DRNG) -> void:
+	# Wave-worn rocks at the water line + driftwood logs + a few seashells.
+	var root := _sig_root()
+	for i in 6:
+		var r := _frng_h(rng, 0.7, 1.5)
+		var rock := SphereMesh.new(); rock.radius = r; rock.height = r * 1.2
+		var x := _frng_h(rng, -14, 14); var z := _frng_h(rng, -10, -4)
+		if absf(x) < 2.5 and z > -6: continue
+		_sig_part(root, rock, Vector3(x, r * 0.35, z), Color(0.32, 0.32, 0.34), 0.85, 0.0, Vector3(1.2, 0.7, 1.0))
+	for i in 4:
+		var log := CylinderMesh.new(); log.top_radius = 0.12; log.bottom_radius = 0.14; log.height = _frng_h(rng, 1.4, 2.4)
+		var x := _frng_h(rng, -10, 10); var z := _frng_h(rng, -7, -3)
+		if absf(x) < 2 and z > -5: continue
+		_sig_part(root, log, Vector3(x, 0.12, z), Color(0.42, 0.30, 0.20), 0.95, 0.0, Vector3.ONE, _frng_h(rng, 0, TAU)).rotation.z = 1.57
+	for i in 7:
+		var shell := SphereMesh.new(); shell.radius = 0.08; shell.height = 0.10
+		var x := _frng_h(rng, -10, 10); var z := _frng_h(rng, -6, -3)
+		if absf(x) < 2 and z > -5: continue
+		_sig_part(root, shell, Vector3(x, 0.04, z), Color(0.95, 0.88, 0.78), 0.4)
 
 # ---------- Weather ----------
 # Per-biome weather particles layered over the whole stage. GPU particles,

@@ -112,11 +112,15 @@ static func find_animation_for(node: Node3D, keywords: PackedStringArray) -> Str
 # loop: true for idle/walk, false for one-shot actions.
 static func play_named_action(node: Node3D, action: StringName, loop: bool) -> void:
 	var ap := node.find_child("AnimationPlayer", true, false)
-	if not (ap is AnimationPlayer): return
+	if not (ap is AnimationPlayer):
+		# Rig has no AnimationPlayer (static GLB or stripped export). Add a
+		# procedural breath cycle so the model never freezes in T-pose.
+		if action == &"idle": _breathe_loop(node)
+		return
 	var anim_player: AnimationPlayer = ap
 	var keywords: PackedStringArray
 	match String(action):
-		"idle":   keywords = PackedStringArray(["idle", "stand", "wait", "breathe", "static"])
+		"idle":   keywords = PackedStringArray(["idle", "stand", "wait", "breathe", "static", "pose"])
 		"walk":   keywords = PackedStringArray(["walk", "run", "march", "move"])
 		"attack": keywords = PackedStringArray(["attack", "strike", "bite", "swing", "punch", "fire"])
 		"hit":    keywords = PackedStringArray(["hit", "hurt", "damage", "impact", "recoil"])
@@ -125,7 +129,14 @@ static func play_named_action(node: Node3D, action: StringName, loop: bool) -> v
 		"mutate": keywords = PackedStringArray(["mutate", "transform", "shake", "summon"])
 		_:        keywords = PackedStringArray([String(action)])
 	var anim_name := find_animation_for(node, keywords)
-	if anim_name == "": return
+	if anim_name == "":
+		# No matching anim — fall back to anything available so we don't show
+		# the T-pose. If even that is empty, graft a breath cycle.
+		var any_name := find_animation_for(node, PackedStringArray([""]))
+		if any_name == "":
+			if action == &"idle": _breathe_loop(node)
+			return
+		anim_name = any_name
 	var anim := anim_player.get_animation(anim_name)
 	if anim:
 		anim.loop_mode = Animation.LOOP_LINEAR if loop else Animation.LOOP_NONE
@@ -138,3 +149,17 @@ static func play_named_action(node: Node3D, action: StringName, loop: bool) -> v
 			if idle_anim:
 				idle_anim.loop_mode = Animation.LOOP_LINEAR
 			anim_player.queue(idle_name)
+
+# Procedural breath cycle for rigs that have no AnimationPlayer or whose anims
+# don't include any usable idle — beats showing a T-pose. Subtle Y scale + bob.
+static func _breathe_loop(node: Node3D, _loop: bool = true) -> void:
+	if node == null or not is_instance_valid(node): return
+	if node.has_meta("breathing"): return
+	node.set_meta("breathing", true)
+	var base_y := node.position.y
+	var base_scale := node.scale
+	var t := node.create_tween().set_loops()
+	t.tween_property(node, "scale", Vector3(base_scale.x, base_scale.y * 1.012, base_scale.z), 1.6).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	t.parallel().tween_property(node, "position:y", base_y + 0.018, 1.6).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	t.tween_property(node, "scale", base_scale, 1.6).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	t.parallel().tween_property(node, "position:y", base_y, 1.6).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)

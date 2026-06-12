@@ -56,12 +56,19 @@ func _add_contact_shadow() -> void:
 	add_child(mi)
 
 func _normalize_player_scale(loaded: Node3D) -> void:
-	var aabb := _aabb_of(loaded)
-	if aabb.size.y > 0.001:
-		var factor: float = 1.7 / aabb.size.y
-		loaded.scale = loaded.scale * clampf(factor, 0.05, 50.0)
-		var na := _aabb_of(loaded)
-		loaded.position.y = -na.position.y
+	# Use the robust shared helper so all imported avatars land scaled to 1.7m
+	# tall with feet at y=0. Re-anchor once more next frame in case the rig
+	# had stale local transforms at the moment of build().
+	AssetLoader.normalize_height(loaded, 1.7)
+	_reanchor_next_frame(loaded)
+
+func _reanchor_next_frame(loaded: Node3D) -> void:
+	# Some GLB rigs report an AABB minimum above y=0 at first frame (the skin
+	# only resolves once the animation has ticked). Snap feet back to y=0
+	# after the first process frame to fix the "character floats" case.
+	await get_tree().process_frame
+	if not is_instance_valid(loaded): return
+	AssetLoader.normalize_height(loaded, 1.7)
 
 func _aabb_of(node: Node) -> AABB:
 	var combined := AABB()

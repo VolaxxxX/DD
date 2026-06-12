@@ -12,7 +12,7 @@ dest_files=["res://.godot/imported/corrupted.ogg-fd8b2cbc3b6e955fcfae2b0669c2e5a
 
 [params]
 
-loop=false
+loop=true
 loop_offset=0
 bpm=0
 beat_count=0

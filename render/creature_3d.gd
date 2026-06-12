@@ -117,18 +117,16 @@ var _imported_root: Node3D = null
 
 func _normalize_imported_scale(loaded: Node3D) -> void:
 	# Many imported GLBs have wildly different export scales (1 unit = 1m or 1cm
-	# or 100x). We probe AABB once and shrink to ~1.8m tall target.
-	var aabb := _aabb_of(loaded)
-	var size_y: float = aabb.size.y
-	if size_y > 0.001:
-		var target := 1.7
-		var factor: float = target / size_y
-		# Clamp to a reasonable range so micro-jitter doesn't run wild.
-		factor = clampf(factor, 0.05, 50.0)
-		loaded.scale = loaded.scale * factor
-		# Snap to ground.
-		var new_aabb := _aabb_of(loaded)
-		loaded.position.y = -new_aabb.position.y
+	# or 100x). Use the shared helper + a re-anchor next frame so the rig sits
+	# with its feet on the ground even when the skin only settles after one
+	# animation tick.
+	AssetLoader.normalize_height(loaded, 1.7)
+	_reanchor_next_frame(loaded)
+
+func _reanchor_next_frame(loaded: Node3D) -> void:
+	await get_tree().process_frame
+	if not is_instance_valid(loaded): return
+	AssetLoader.normalize_height(loaded, 1.7)
 
 func _aabb_of(node: Node) -> AABB:
 	var combined := AABB()
