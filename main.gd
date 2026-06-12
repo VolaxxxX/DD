@@ -542,6 +542,12 @@ func _on_encounter(enc) -> void:
 		layer.add_child(overlay)
 		overlay.tree_exited.connect(func():
 			if is_instance_valid(layer): layer.queue_free())
+	# Multi-phase duel (world boss / finale dragon): the colossus visual is
+	# already on stage — do NOT clear it, spawn creatures or reset the camera.
+	# The phase title arrives separately via zone_intro.
+	if enc is DuelEncounter:
+		ui.present_encounter(enc)
+		return
 	_encounter_counter += 1
 	# Per-encounter ear refresh: small pitch nudge on the active music track.
 	Music.nudge_for_encounter(_encounter_counter)

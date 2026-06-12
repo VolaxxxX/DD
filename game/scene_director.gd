@@ -264,13 +264,16 @@ func _advance_zone() -> void:
 				break
 	var next_idx := world.active_zone_index + 1
 	if next_idx >= world.zones.size():
-		# Run finale: if a dragon manifested during this run, it descends to
-		# bar the way out — a 3-phase duel concludes the act. Otherwise the
-		# classic quiet extraction (so the finale stays an event, not a habit).
+		# Run finale: only an EVIL dragon seen during this run descends to bar
+		# the way out — good and beyond-aligned dragons let you leave in peace.
+		# No dragon (or a benevolent one) = the classic quiet extraction, so
+		# the finale stays an event, not a habit.
 		if _last_dragon_id != &"":
-			_awaiting_choice = false
-			_start_final_duel()
-			return
+			var dd: Dictionary = DragonRegistry.by_id(_last_dragon_id)
+			if not dd.is_empty() and int(dd.get("align", 1)) == DragonRegistry.Align.EVIL:
+				_awaiting_choice = false
+				_start_final_duel()
+				return
 		Save.clear()
 		run_over.emit(StringName(Lang.ui("extracted")))
 		return
@@ -399,7 +402,9 @@ func _finish_duel(duel: DuelEncounter, victory: bool) -> void:
 		Save.clear()
 		run_over.emit(StringName(Lang.ui("extracted")))
 		return
-	# Boss survived: the last zone now plays out normally.
+	# Boss survived: the last zone now plays out normally — and the biome
+	# theme returns in place of the battle music.
+	Music.play_biome(world.active_zone().biome)
 	_emit_zone_intro()
 	await _wait(2.0)
 	next_encounter()

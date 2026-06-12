@@ -82,7 +82,10 @@ func resolve(choice_idx: int, resolver: EventResolver, coop_mod: int) -> Diction
 	var choice: Dictionary = choices[choice_idx]
 	var tone: int = choice.tone
 	var difficulty: int = 13 + phase * 2 + int(zone.chaos * 3) + zone.route_diff_mod
-	if foe_kind == &"dragon": difficulty += 2
+	# Titans are the hardest fights in the game; the finale dragon is slightly
+	# kinder since it ends the run either way.
+	if foe_kind == &"boss": difficulty += 3
+	elif foe_kind == &"dragon": difficulty += 2
 	if Settings.story_mode: difficulty -= 2
 	var stat_key: StringName = PlayerClass.tone_stat(tone)
 	var actor_stat: int = player.roll_stat_for_tone(tone) + BiomeRules.stat_mod(zone.biome, stat_key)
@@ -113,9 +116,10 @@ func resolve(choice_idx: int, resolver: EventResolver, coop_mod: int) -> Diction
 	if phase >= PHASES:
 		result.duel_finished = true
 		result.duel_victory = phase_wins >= 2
-		# Total collapse (0 wins) risks death — unless story mode.
+		# Total collapse (0 wins) risks death — unless story mode. Titans are
+		# less forgiving than the finale dragon.
 		if phase_wins == 0 and not Settings.story_mode:
-			result.fatal = rng.chance(60, 100)
+			result.fatal = rng.chance(70 if foe_kind == &"boss" else 60, 100)
 	else:
 		choices = _build_choices()
 	return result
