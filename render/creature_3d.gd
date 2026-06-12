@@ -179,12 +179,6 @@ func build(_arch: Archetype) -> void:
 	_material = _make_material(col, 0.7, false)
 	_accent = _make_material(acc, 0.6, false)
 	body.scale = Vector3.ONE * (0.95 + float((seed_h >> 4) % 1000) / 10000.0)
-
-static func _shift_color(c: Color, dh: float, ds: float, dv: float) -> Color:
-	var h := c.h + dh
-	var s := clampf(c.s + ds, 0.0, 1.0)
-	var v := clampf(c.v + dv, 0.0, 1.0)
-	return Color.from_hsv(fposmod(h, 1.0), s, v, c.a)
 	match archetype.family:
 		Archetype.Family.HUMANOID:   _build_humanoid()
 		Archetype.Family.BEAST:      _build_beast()
@@ -201,6 +195,12 @@ static func _shift_color(c: Color, dh: float, ds: float, dv: float) -> Color:
 	add_child(_animator)
 	_animator.target = body
 	_animator.start_idle()
+
+static func _shift_color(c: Color, dh: float, ds: float, dv: float) -> Color:
+	var h := c.h + dh
+	var s := clampf(c.s + ds, 0.0, 1.0)
+	var v := clampf(c.v + dv, 0.0, 1.0)
+	return Color.from_hsv(fposmod(h, 1.0), s, v, c.a)
 
 func _apply_outline() -> void:
 	# Inverted-hull outline: clone every mesh, flip culling and slightly enlarge.

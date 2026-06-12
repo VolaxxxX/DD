@@ -40,7 +40,7 @@ func _ready() -> void:
 		var b := Button.new()
 		b.text = lc.to_upper()
 		b.custom_minimum_size = Vector2(64, 40)
-		var code := lc
+		var code: String = lc
 		b.pressed.connect(func():
 			Lang.code = code
 			Lang.save_pref()

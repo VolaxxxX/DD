@@ -467,7 +467,6 @@ func _on_run_over(cause: StringName) -> void:
 	var extracted := cause_s.contains("extrait") or cause_s.contains("extracted") or cause_s.contains("keluar")
 	_play_death_cinematic(extracted)
 	# Track stats and achievements.
-	var extracted := String(cause).contains("extrait") or String(cause).contains("extracted") or String(cause).contains("keluar")
 	var any_inj := false
 	var duo_both := players.size() >= 2
 	for p in players:
@@ -621,6 +620,5 @@ func _darken_environment(target_energy: float, duration: float) -> void:
 	for prop in ["sun", "fill"]:
 		var n = backdrop.get(prop)
 		if n and is_instance_valid(n) and n is DirectionalLight3D:
-			var orig: float = n.light_energy
-			var t := n.create_tween()
+			var t: Tween = n.create_tween()
 			t.tween_property(n, "light_energy", target_energy, duration).set_trans(Tween.TRANS_SINE)

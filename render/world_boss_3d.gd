@@ -250,13 +250,13 @@ func _drowning_god() -> void:
 	for i in 8:
 		var ang := i * TAU / 8.0 + 0.3
 		var tent := CylinderMesh.new(); tent.top_radius = 0.06; tent.bottom_radius = 0.18; tent.height = 2.2
-		_add(tent, Vector3(cos(ang) * 1.4, 4.4, 1.2 + sin(ang) * 0.8), Color(0.10, 0.18, 0.16), 0.0, Vector3.ONE, Vector3(_pseudo(i, 60, 110), rad_to_deg(ang), 0))
+		_add(tent, Vector3(cos(ang) * 1.4, 4.4, 1.2 + sin(ang) * 0.8), Color(0.10, 0.18, 0.16), 0.0, Vector3.ONE, Vector3(_frng(i, 60, 110), rad_to_deg(ang), 0))
 	# --- 8 great tentacles emerging from the base, sweeping outward ---
 	for i in 8:
 		var ang := i * TAU / 8.0
 		# Base segment (thick)
 		var base_seg := CylinderMesh.new(); base_seg.top_radius = 0.5; base_seg.bottom_radius = 0.9; base_seg.height = 3.5
-		_add(base_seg, Vector3(cos(ang) * 1.8, 1.5, sin(ang) * 1.8), Color(0.08, 0.15, 0.13), 0.0, Vector3.ONE, Vector3(_pseudo(i, 25, 50), rad_to_deg(ang), 0))
+		_add(base_seg, Vector3(cos(ang) * 1.8, 1.5, sin(ang) * 1.8), Color(0.08, 0.15, 0.13), 0.0, Vector3.ONE, Vector3(_frng(i, 25, 50), rad_to_deg(ang), 0))
 		# Mid segment (medium)
 		var mid := CylinderMesh.new(); mid.top_radius = 0.25; mid.bottom_radius = 0.5; mid.height = 3.0
 		var ux := cos(ang) * 4.0; var uz := sin(ang) * 4.0
@@ -264,7 +264,7 @@ func _drowning_god() -> void:
 		# Tip (thin, emerging from water)
 		var tip := CylinderMesh.new(); tip.top_radius = 0.05; tip.bottom_radius = 0.20; tip.height = 2.5
 		var tx := cos(ang) * 6.5; var tz := sin(ang) * 6.5
-		_add(tip, Vector3(tx, 1.5, tz), Color(0.15, 0.25, 0.22), 0.0, Vector3.ONE, Vector3(_pseudo(i + 31, -30, 30), rad_to_deg(ang), _pseudo(i + 13, -25, 25)))
+		_add(tip, Vector3(tx, 1.5, tz), Color(0.15, 0.25, 0.22), 0.0, Vector3.ONE, Vector3(_frng(i + 31, -30, 30), rad_to_deg(ang), _frng(i + 13, -25, 25)))
 		# Sucker glow at the tip
 		var sucker := SphereMesh.new(); sucker.radius = 0.12; sucker.height = 0.24
 		_add(sucker, Vector3(tx, 2.8, tz), Color(0.85, 0.95, 0.60), 4.0)
@@ -279,12 +279,12 @@ func _drowning_god() -> void:
 		var ang := i * TAU / 12.0
 		var sp := SphereMesh.new(); sp.radius = 0.12; sp.height = 0.24
 		_add(sp, Vector3(cos(ang) * 1.4, 7.8, sin(ang) * 1.4), Color(0.08, 0.15, 0.13))
-		var spike := PrismMesh.new(); spike.size = Vector3(0.10, _pseudo(i, 0.6, 1.4), 0.10)
+		var spike := PrismMesh.new(); spike.size = Vector3(0.10, _frng(i, 0.6, 1.4), 0.10)
 		_add(spike, Vector3(cos(ang) * 1.4, 8.2, sin(ang) * 1.4), Color(0.12, 0.22, 0.20))
 	# --- Many small glowing eyes scattered on torso ---
 	for i in 14:
 		var ang := i * TAU / 14.0
-		var y := _pseudo(i, 2.0, 5.0)
+		var y := _frng(i, 2.0, 5.0)
 		_add(_eye_glow(), Vector3(cos(ang) * 1.9, y, sin(ang) * 1.9), Color(0.90, 0.70, 0.30), 5.0)
 	# --- Ambient drowning particles (drifting bubbles + spume) ---
 	_add_ash_particles(Vector3(0, 4, 0), Color(0.45, 0.85, 0.70, 0.55), 80)

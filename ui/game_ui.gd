@@ -157,7 +157,7 @@ func update_stats(force: int, injuries: Array, relics: Array = []) -> void:
 	if prev != force:
 		var n := prev
 		var d := 1 if force > prev else -1
-		var step_count := abs(force - prev)
+		var step_count: int = absi(force - prev)
 		var t := create_tween()
 		for s in step_count:
 			n += d

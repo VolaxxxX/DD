@@ -89,7 +89,7 @@ func _check_visible_thumbs() -> void:
 	var scroll_rect := scroll.get_global_rect()
 	for child in list.get_children():
 		if not child.has_meta("thumb_pending"): continue
-		var r := child.get_global_rect()
+		var r: Rect2 = child.get_global_rect()
 		if r.intersects(scroll_rect.grow(120)):
 			_realize_thumb(child)
 
@@ -180,7 +180,7 @@ func _dragon_entry(t: Dictionary) -> Control:
 	var rarity_str := "%s — %s" % [Lang.ui("tag_dragon"), _dragon_rarity_word(weight)]
 	var color := _dragon_color(int(t.align))
 	var thumb := _placeholder_thumb()
-	var align_str := ["méchant", "bon", "au-delà"][int(t.align)]
+	var align_str: String = ["méchant", "bon", "au-delà"][int(t.align)]
 	var lines: Array[String] = []
 	lines.append("[i]%s — puissance %d[/i]" % [align_str, int(t.tier)])
 	lines.append("[color=#ffd57a]%s[/color]  %s" % [Lang.ui("effect"), _dragon_effect_text(String(t.zone_effect), int(t.value))])

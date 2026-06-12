@@ -24,7 +24,7 @@ var resolver: EventResolver
 var rng: DRNG
 var players: Array = []          # Array[PlayerState] — 1 (solo) or 2 (duo)
 var active_idx: int = 0
-var current: Encounter
+var current   # Encounter or SituationEncounter (duck-typed)
 var _encounters_in_zone: int = 0
 var _awaiting_choice: bool = false
 var _elite_kills_this_run: int = 0
@@ -187,8 +187,8 @@ func _apply(result: Dictionary) -> void:
 		current.creature.apply_mutation()
 	elif has_creature:
 		# If the player took an injury, the creature successfully attacked.
-		var inj_id: StringName = result.get("injury", &"")
-		if inj_id != &"":
+		var atk_inj: StringName = result.get("injury", &"")
+		if atk_inj != &"":
 			creature_reaction.emit(&"attack")
 		else:
 			creature_reaction.emit(&"hit")

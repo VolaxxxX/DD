@@ -105,7 +105,7 @@ static func all() -> Array:
 static func by_kind(kind: int) -> Dictionary:
 	for c in all():
 		if int(c.kind) == kind:
-			var d := c.duplicate(true)
+			var d: Dictionary = c.duplicate(true)
 			d["name"] = _localized_name(int(c.kind))
 			d["tagline"] = _localized_tagline(int(c.kind))
 			return d
