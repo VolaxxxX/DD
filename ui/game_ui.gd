@@ -91,15 +91,23 @@ func set_player(p: PlayerState) -> void:
 	name_label.text = "%s — %s" % [p.name, String(p.class_data.name)]
 	update_stats(p.effective_force(), p.injuries, p.relics)
 
+var _intro_tween: Tween
+
 func present_intro(text: String) -> void:
-	_hide_choices()
+	# Stays visible until the next narrative outcome (or a new intro replaces it),
+	# so the player can read it while choosing.
+	if _intro_tween and _intro_tween.is_valid(): _intro_tween.kill()
 	narrative.text = ""
 	intro_label.text = text
 	intro_label.modulate = Color(1, 1, 1, 0)
-	var t := create_tween()
-	t.tween_property(intro_label, "modulate:a", 1.0, 0.6)
-	t.tween_interval(1.6)
-	t.tween_property(intro_label, "modulate:a", 0.0, 0.8)
+	_intro_tween = create_tween()
+	_intro_tween.tween_property(intro_label, "modulate:a", 1.0, 0.5)
+
+func _dismiss_intro() -> void:
+	if intro_label.modulate.a <= 0.001: return
+	if _intro_tween and _intro_tween.is_valid(): _intro_tween.kill()
+	_intro_tween = create_tween()
+	_intro_tween.tween_property(intro_label, "modulate:a", 0.0, 0.5)
 
 const TONE_STAT_LABEL := {
 	0: "force", 1: "charisme", 2: "vivacite", 3: "instinct", 4: "charisme", 5: "esprit",
@@ -116,7 +124,7 @@ func present_encounter(enc) -> void:
 			# Format: "<glyph>  text\n— STAT" so the player sees which stat is rolled.
 			var stat_key: String = TONE_STAT_LABEL.get(c.tone, "force")
 			var stat_short: String = PlayerClass.stat_label(StringName(stat_key))
-			btn.text = "%s  %s\n[%s]" % [TONE_GLYPH.get(c.tone, ""), c.text, stat_short]
+			btn.text = "%s %s  ·  %s" % [TONE_GLYPH.get(c.tone, ""), c.text, stat_short]
 			btn.modulate = TONE_COLOR.get(c.tone, Color.WHITE)
 			btn.modulate.a = 0.0
 			btn.disabled = false
@@ -132,6 +140,7 @@ func present_encounter(enc) -> void:
 
 func show_narrative(text: String, _tone: int, outcome: int) -> void:
 	_hide_choices()
+	_dismiss_intro()
 	narrative.modulate = OUTCOME_TINT.get(outcome, Color.WHITE)
 	narrative.text = text
 	narrative.visible_characters = 0

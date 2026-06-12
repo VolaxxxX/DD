@@ -346,6 +346,7 @@ func _on_zone_intro(text: String, _biome: StringName) -> void:
 	ui.present_intro(text)
 
 var situation_node: Situation3D
+var _encounter_counter: int = 0
 
 func _on_encounter(enc) -> void:
 	# Show the tutorial overlay on the very first encounter ever played.
@@ -358,6 +359,11 @@ func _on_encounter(enc) -> void:
 		layer.add_child(overlay)
 		overlay.tree_exited.connect(func():
 			if is_instance_valid(layer): layer.queue_free())
+	_encounter_counter += 1
+	# Per-encounter ear refresh: small pitch nudge on the active music track.
+	Music.nudge_for_encounter(_encounter_counter)
+	# Per-encounter visual refresh: shift the sun a bit so the scene feels alive.
+	_nudge_environment(_encounter_counter)
 	if situation_node and is_instance_valid(situation_node):
 		situation_node.queue_free()
 		situation_node = null
@@ -578,6 +584,7 @@ func _avatar_world_pos(player_idx: int) -> Vector3:
 
 func _on_zone_changed(idx: int, _seed: int) -> void:
 	# Smooth fade-out, swap stage, fade-in — like Hollow Knight's room cuts.
+	_encounter_counter = 0
 	ui.update_zone(idx, orchestrator.world.zones[idx].biome)
 	var layer := CanvasLayer.new(); layer.layer = 70
 	add_child(layer)
@@ -612,6 +619,28 @@ func _on_world_boss(boss: Dictionary) -> void:
 	_world_boss_seen_this_run = true
 	_darken_environment(0.35, 1.5)
 	Cinematic.play_world_boss(StringName(boss.id), boss_node, camera, get_tree())
+
+func _nudge_environment(encounter_idx: int) -> void:
+	# Tiny per-encounter shift in sun rotation + warmth + fill intensity.  Keeps
+	# the backdrop from looking identical between sequential fights in the same
+	# zone, without rebuilding any geometry.
+	if backdrop == null: return
+	var sun = backdrop.get("sun")
+	if sun and is_instance_valid(sun) and sun is DirectionalLight3D:
+		var dl: DirectionalLight3D = sun
+		var base_rot := dl.rotation_degrees
+		var delta := Vector3(
+			sin(float(encounter_idx) * 0.7) * 6.0,
+			cos(float(encounter_idx) * 0.5) * 10.0,
+			sin(float(encounter_idx) * 0.3) * 4.0)
+		var t := dl.create_tween()
+		t.tween_property(dl, "rotation_degrees", base_rot + delta, 1.8).set_trans(Tween.TRANS_SINE)
+		# Quick warmth flicker so the scene feels recomposed.
+		var base_col := dl.light_color
+		var warm := Color(base_col.r * 1.08, base_col.g, base_col.b * 0.94)
+		var tc := dl.create_tween()
+		tc.tween_property(dl, "light_color", warm, 0.6)
+		tc.tween_property(dl, "light_color", base_col, 1.2)
 
 func _darken_environment(target_energy: float, duration: float) -> void:
 	# Drop directional + fill light energy on the active backdrop so the boss
