@@ -26,8 +26,9 @@ func _ready() -> void:
 	_show_main_menu()
 
 func _show_main_menu() -> void:
-	# Safety: ensure no leftover slow-motion if returning from a run.
+	# Safety: ensure no leftover slow-motion / camera lock if returning from a run.
 	Engine.time_scale = 1.0
+	_cam_hold = false
 	ui.visible = false
 	_clear_overlays()
 	_menu_root = preload("res://ui/main_menu.tscn").instantiate()
@@ -271,8 +272,10 @@ func _setup_camera() -> void:
 	camera.look_at(Vector3(0, 1.0, 0), Vector3.UP)
 
 var _breath_time: float = 0.0
+var _cam_hold: bool = false   # true while a cinematic owns the camera
+
 func _process(delta: float) -> void:
-	if camera == null or boss_node != null: return
+	if camera == null or boss_node != null or _cam_hold: return
 	_breath_time += delta
 	# Multi-frequency idle drift — closer to a hand-held cinematic camera,
 	# not a metronome.
@@ -444,8 +447,10 @@ func _on_encounter(enc) -> void:
 			creature_node = null
 		_reset_camera_if_boss()
 		situation_node = Situation3D.new()
+		situation_node.position = Vector3(0.4, 0, -0.5)
 		stage.add_child(situation_node)
 		situation_node.build(StringName(enc.template.id))
+		_focal_spotlight(situation_node.position + Vector3(0, 1.0, 0))
 		Cinematic.play_for_situation(StringName(enc.template.id), situation_node, camera, get_tree())
 		ui.present_intro(String(enc.template.title))
 		ui.present_encounter(enc)
@@ -563,6 +568,7 @@ func _on_run_over(cause: StringName) -> void:
 	get_tree().create_timer(4.5, true, false, true).timeout.connect(_show_run_summary.bind(String(cause)))
 
 func _play_death_cinematic(extracted: bool) -> void:
+	_cam_hold = true   # released on return to menu (_show_main_menu)
 	Engine.time_scale = 0.55
 	# Camera tween: pull back, slight rise for extraction, slight fall for death.
 	var target_pos := Vector3(0, 4.5, 9.0) if extracted else Vector3(0, 1.4, 7.5)

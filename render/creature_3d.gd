@@ -151,6 +151,7 @@ func build(_arch: Archetype) -> void:
 	archetype = _arch
 	body = Node3D.new()
 	add_child(body)
+	_add_contact_shadow()
 	# Try external GLB first.
 	var loaded: Node3D = AssetLoader.instance_for_creature(archetype.id, int(archetype.family))
 	if loaded != null:
@@ -195,6 +196,24 @@ func build(_arch: Archetype) -> void:
 	add_child(_animator)
 	_animator.target = body
 	_animator.start_idle()
+
+# Soft dark disc under the creature — grounds the silhouette visually even
+# when the directional shadow is washed out by fog or low sun.
+func _add_contact_shadow() -> void:
+	var disc := CylinderMesh.new()
+	disc.top_radius = 0.85
+	disc.bottom_radius = 0.85
+	disc.height = 0.01
+	var mi := MeshInstance3D.new()
+	mi.mesh = disc
+	mi.position = Vector3(0, 0.015, 0)
+	var m := StandardMaterial3D.new()
+	m.albedo_color = Color(0, 0, 0, 0.38)
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mi.material_override = m
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(mi)
 
 static func _shift_color(c: Color, dh: float, ds: float, dv: float) -> Color:
 	var h := c.h + dh
@@ -257,7 +276,30 @@ func _make_material(col: Color, rough: float, glow: bool) -> StandardMaterial3D:
 		if archetype.tier >= Archetype.Tier.ELITE:
 			m.emission_enabled = true
 			m.emission_energy_multiplier = max(m.emission_energy_multiplier, 0.0) + 0.9
+	# Micro-surface grain: shared noise normal map breaks the smooth-plastic
+	# primitive look (skin pores / fur clumps / stone pitting).
+	m.normal_enabled = true
+	m.normal_texture = _detail_normal()
+	m.normal_scale = 0.45
+	m.uv1_scale = Vector3(3, 3, 3)
 	return m
+
+static var _detail_normal_cache: NoiseTexture2D = null
+
+static func _detail_normal() -> NoiseTexture2D:
+	if _detail_normal_cache != null: return _detail_normal_cache
+	var n := FastNoiseLite.new()
+	n.seed = 777
+	n.frequency = 0.12
+	n.fractal_octaves = 4
+	var tex := NoiseTexture2D.new()
+	tex.noise = n
+	tex.width = 256; tex.height = 256
+	tex.seamless = true
+	tex.as_normal_map = true
+	tex.bump_strength = 4.0
+	_detail_normal_cache = tex
+	return tex
 
 func _add(mesh: Mesh, pos: Vector3, mat: StandardMaterial3D = null, scale_v: Vector3 = Vector3.ONE, rot_deg: Vector3 = Vector3.ZERO) -> MeshInstance3D:
 	var mi := MeshInstance3D.new()

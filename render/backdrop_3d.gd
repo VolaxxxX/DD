@@ -183,6 +183,36 @@ func _build_far_silhouettes(biome: StringName, corruption: float) -> void:
 			mat.shading_mode = BaseMaterial3D.SHADING_MODE_PER_VERTEX
 			mi.material_override = mat
 			par.add_child(mi)
+	# Mid-ground filler: a closer, smaller row at z≈-13 that bridges the gap
+	# between the playable decor (z≥-8) and the far silhouettes (z≤-22). Still
+	# fully behind the action so it never hides mobs or UI.
+	var mid_col := silhouette_col.lightened(0.12)
+	for i in 7:
+		var x := _frng_h(rng, -18, 18)
+		if absf(x) < 3.0: continue   # keep the center sightline to the horizon open
+		var z := -13.0 + _frng_h(rng, -2, 2)
+		var h := _frng_h(rng, 1.2, 3.2)
+		var w := _frng_h(rng, 0.6, 1.6)
+		var mesh: Mesh
+		match String(biome):
+			"city", "crypt":
+				var box := BoxMesh.new(); box.size = Vector3(w, h, w * 0.7); mesh = box
+			"ruins":
+				var cyl := CylinderMesh.new(); cyl.top_radius = w * 0.25; cyl.bottom_radius = w * 0.35; cyl.height = h; mesh = cyl
+			"coast":
+				var sph := SphereMesh.new(); sph.radius = w * 0.7; sph.height = h; mesh = sph
+			_:
+				var cone := CylinderMesh.new(); cone.top_radius = 0.05; cone.bottom_radius = w * 0.5; cone.height = h; mesh = cone
+		var mi := MeshInstance3D.new()
+		mi.mesh = mesh
+		mi.position = Vector3(x, h * 0.5, z)
+		mi.rotation.y = _frng_h(rng, 0, 6.28)
+		var mmat := StandardMaterial3D.new()
+		mmat.albedo_color = mid_col
+		mmat.roughness = 1.0
+		mmat.shading_mode = BaseMaterial3D.SHADING_MODE_PER_VERTEX
+		mi.material_override = mmat
+		par.add_child(mi)
 	# Soft cloud band along the horizon to break the sky color.
 	for i in 6:
 		var cloud := SphereMesh.new()
@@ -349,8 +379,8 @@ func _build_ground(biome: StringName, corruption: float) -> void:
 # Grid mesh with gentle rolling hills outside the flat play area, so the
 # terrain has real relief instead of an infinite billiard table.
 func _displaced_ground_mesh(biome: StringName) -> ArrayMesh:
-	var size := 60.0
-	var div := 48
+	var size := 90.0
+	var div := 56
 	var hn := FastNoiseLite.new()
 	hn.seed = (int(biome.hash()) >> 7) & 0x7FFFFFFF
 	hn.frequency = 0.06

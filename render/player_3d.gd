@@ -19,6 +19,7 @@ func build(cls: Dictionary, p_skin: Color = Color(0.92, 0.78, 0.65), p_hair: Col
 	for c in get_children(): c.queue_free()
 	_root = Node3D.new()
 	add_child(_root)
+	_add_contact_shadow()
 	# Try a per-class external GLB first.
 	var loaded: Node3D = AssetLoader.instance_for_player(int(cls.kind))
 	_glb = loaded
@@ -36,6 +37,23 @@ func build(cls: Dictionary, p_skin: Color = Color(0.92, 0.78, 0.65), p_hair: Col
 	_build_accessory()
 	_injury_overlays = Node3D.new()
 	add_child(_injury_overlays)
+
+# Soft dark disc under the avatar so it reads as standing on the ground.
+func _add_contact_shadow() -> void:
+	var disc := CylinderMesh.new()
+	disc.top_radius = 0.55
+	disc.bottom_radius = 0.55
+	disc.height = 0.01
+	var mi := MeshInstance3D.new()
+	mi.mesh = disc
+	mi.position = Vector3(0, 0.015, 0)
+	var m := StandardMaterial3D.new()
+	m.albedo_color = Color(0, 0, 0, 0.34)
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mi.material_override = m
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(mi)
 
 func _normalize_player_scale(loaded: Node3D) -> void:
 	var aabb := _aabb_of(loaded)

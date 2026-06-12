@@ -112,20 +112,20 @@ static func _family_arrival(family: int, target: Node3D, camera: Camera3D, tree:
 			var t := target.create_tween()
 			t.tween_property(target, "position", Vector3(0, 0, 0), 0.9).set_trans(Tween.TRANS_BOUNCE)
 			_shake_camera(camera, tree, 0.10, 0.4)
-		4:  # ELEMENTAL — implode in
-			target.scale = Vector3.ONE * 3.0; target.modulate = Color(1, 1, 1, 0)
-			var t := target.create_tween().set_parallel(true)
-			t.tween_property(target, "scale", Vector3.ONE, 0.8).set_trans(Tween.TRANS_BACK)
-			t.tween_property(target, "modulate", Color(1, 1, 1, 1), 0.8)
+		4:  # ELEMENTAL — implode in (Node3D has no modulate; pure scale collapse)
+			target.scale = Vector3.ONE * 3.0
+			var t := target.create_tween()
+			t.tween_property(target, "scale", Vector3.ONE, 0.8).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 		5:  # ABERRATION — wobbles in, FOV pulse
 			_pop(target)
 			var cam := camera.create_tween()
 			cam.tween_property(camera, "fov", 60.0, 0.5)
 			cam.tween_property(camera, "fov", 50.0, 0.5)
-		6:  # FEY — fade in from sparkle
-			target.scale = Vector3.ONE; target.modulate = Color(1, 1, 1, 0)
+		6:  # FEY — blooms in from a point, slight overshoot like a flower opening
+			target.scale = Vector3.ONE * 0.02
 			var t := target.create_tween()
-			t.tween_property(target, "modulate", Color(1, 1, 1, 1), 1.2)
+			t.tween_property(target, "scale", Vector3.ONE * 1.06, 0.9).set_trans(Tween.TRANS_SINE)
+			t.tween_property(target, "scale", Vector3.ONE, 0.3).set_trans(Tween.TRANS_SINE)
 		7:  # DRACONIC — earth shake, scale up
 			_shake_camera(camera, tree, 0.25, 1.0)
 			target.scale = Vector3.ZERO
@@ -138,11 +138,10 @@ static func _try_per_id_creature(creature_id: StringName, target: Node3D, camera
 	# APEX/MYTHIC: per-id signature move.
 	match String(creature_id):
 		"whisper_shade":
-			# Fade-in from black silhouette, no scale pop.
-			target.scale = Vector3.ONE
-			target.modulate = Color(0, 0, 0, 0)
+			# Rises out of the ground as a thin sliver, then fills out.
+			target.scale = Vector3(1, 0.02, 1)
 			var t := target.create_tween()
-			t.tween_property(target, "modulate", Color(1, 1, 1, 1), 1.4)
+			t.tween_property(target, "scale", Vector3.ONE, 1.4).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 		"nameless_pilgrim":
 			# Slow walk-up: camera dollies in.
 			target.scale = Vector3.ONE
@@ -202,28 +201,31 @@ static func _try_per_id_creature(creature_id: StringName, target: Node3D, camera
 
 # Tone feedback: a tiny camera nudge when the player picks a choice tone.
 static func nudge_for_tone(camera: Camera3D, tone: int) -> void:
+	# The main loop owns camera.position every frame, so positional nudges get
+	# stomped — punch the FOV instead, which reads as the same dolly feeling.
 	if camera == null: return
-	var base := camera.position
+	var base_fov := 50.0
 	var t := camera.create_tween()
 	match tone:
 		0:  # AGGRESSIVE - sharp push-in
-			t.tween_property(camera, "position", base + Vector3(0, 0, -0.4), 0.10).set_trans(Tween.TRANS_EXPO)
-			t.tween_property(camera, "position", base, 0.18)
-		1:  # DIPLOMATIC - slight pull-out
-			t.tween_property(camera, "position", base + Vector3(0, 0.05, 0.3), 0.25)
-			t.tween_property(camera, "position", base, 0.25)
-		2:  # CAUTIOUS - subtle drift left
-			t.tween_property(camera, "position", base + Vector3(-0.15, 0, 0), 0.20)
-			t.tween_property(camera, "position", base, 0.20)
-		3:  # CURIOUS - tilt up
-			t.tween_property(camera, "position", base + Vector3(0, 0.15, -0.2), 0.25)
-			t.tween_property(camera, "position", base, 0.25)
-		4:  # DECEPTIVE - smooth side-step
-			t.tween_property(camera, "position", base + Vector3(0.20, 0, 0.1), 0.30)
-			t.tween_property(camera, "position", base, 0.30)
-		5:  # MYSTICAL - slow zoom-in
-			t.tween_property(camera, "position", base + Vector3(0, 0.10, -0.5), 0.45).set_trans(Tween.TRANS_SINE)
-			t.tween_property(camera, "position", base, 0.30)
+			t.tween_property(camera, "fov", base_fov - 6.0, 0.10).set_trans(Tween.TRANS_EXPO)
+			t.tween_property(camera, "fov", base_fov, 0.22)
+		1:  # DIPLOMATIC - gentle pull-out
+			t.tween_property(camera, "fov", base_fov + 3.0, 0.25)
+			t.tween_property(camera, "fov", base_fov, 0.25)
+		2:  # CAUTIOUS - slight retreat
+			t.tween_property(camera, "fov", base_fov + 4.0, 0.20)
+			t.tween_property(camera, "fov", base_fov, 0.25)
+		3:  # CURIOUS - slow lean-in
+			t.tween_property(camera, "fov", base_fov - 3.0, 0.28)
+			t.tween_property(camera, "fov", base_fov, 0.25)
+		4:  # DECEPTIVE - quick in-out feint
+			t.tween_property(camera, "fov", base_fov - 2.0, 0.12)
+			t.tween_property(camera, "fov", base_fov + 2.0, 0.15)
+			t.tween_property(camera, "fov", base_fov, 0.18)
+		5:  # MYSTICAL - deep slow zoom
+			t.tween_property(camera, "fov", base_fov - 7.0, 0.45).set_trans(Tween.TRANS_SINE)
+			t.tween_property(camera, "fov", base_fov, 0.35)
 
 # Situation arrival: brief reveal cinematic per situation kind.
 static func play_for_situation(sit_id: StringName, target: Node3D, camera: Camera3D, tree: SceneTree) -> void:
