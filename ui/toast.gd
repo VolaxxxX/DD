@@ -52,3 +52,28 @@ func _find(id: StringName) -> Dictionary:
 	for a in Progress.ACHIEVEMENTS:
 		if a.id == id: return a
 	return {}
+
+# Generic info toast (no achievement framing): short slide-down message.
+func info(text: String) -> void:
+	var panel := PanelContainer.new()
+	panel.anchor_left = 0.5; panel.anchor_right = 0.5
+	panel.anchor_top = 0.0
+	panel.offset_left = -260
+	panel.offset_right = 260
+	panel.offset_top = -110
+	panel.offset_bottom = -30
+	add_child(panel)
+	var lbl := Label.new()
+	lbl.text = text
+	lbl.add_theme_font_size_override("font_size", 17)
+	lbl.add_theme_color_override("font_color", Color(1, 0.95, 0.85))
+	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	panel.add_child(lbl)
+	var t := panel.create_tween()
+	t.tween_property(panel, "offset_top", 20, 0.45).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	t.tween_property(panel, "offset_bottom", 100, 0.0)
+	t.tween_interval(3.2)
+	t.tween_property(panel, "offset_top", -110, 0.45).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
+	t.tween_callback(func():
+		if is_instance_valid(panel): panel.queue_free())

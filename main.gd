@@ -371,6 +371,29 @@ func _rebuild_player_avatars() -> void:
 		av.build(players[i].class_data)
 		av.apply_injuries(players[i].injuries)
 		avatar_nodes.append(av)
+	_rebuild_companion()
+
+var companion: Companion3D = null
+var _companion_introduced: bool = false
+
+func _rebuild_companion() -> void:
+	# The spirit-fox companion: hovers near player 1, reacts to every roll AND
+	# carries the "Flair" mechanic — it sniffs out the safest choice each
+	# encounter (the marker is computed from hidden margins in game_ui).
+	if companion and is_instance_valid(companion): companion.queue_free()
+	companion = Companion3D.new()
+	stage.add_child(companion)
+	var seed_v: int = (_rng.derive(0xC0A1).range_i(0, 9999)) if _rng != null else 7
+	companion.build(seed_v)
+	companion.set_home(Vector3(-3.4, 0, 2.4))
+	if not _companion_introduced:
+		_companion_introduced = true
+		Toast.info("%s %s — %s" % [
+			Lang.t({"fr": "✨ Compagnon :", "en": "✨ Companion:", "id": "✨ Teman:"}),
+			companion.companion_name,
+			Lang.t({"fr": "son flair 🐾 marque le choix le plus sûr",
+				"en": "its instinct 🐾 marks the safest choice",
+				"id": "nalurinya 🐾 menandai pilihan teraman"})])
 
 func _refresh_avatars_injuries() -> void:
 	for i in players.size():
@@ -493,6 +516,8 @@ func _on_narrative(text: String, tone: int, outcome: int) -> void:
 		ui.show_narrative(prefix + text, tone, outcome)
 	else:
 		ui.show_narrative(text, tone, outcome)
+	if companion and is_instance_valid(companion):
+		companion.react(outcome)
 	_play_outcome_vfx(tone, outcome)
 
 func _play_outcome_vfx(tone: int, outcome: int) -> void:
