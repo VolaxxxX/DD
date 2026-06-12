@@ -63,6 +63,7 @@ func build(biome: StringName, corruption: float, sub_biome: int = 0) -> void:
 	_build_far_silhouettes(biome, corruption)
 	_build_vegetation_field(biome, corruption)
 	_build_water(biome)
+	_build_weather(biome, corruption)
 	_build_atmosphere(biome, corruption)
 	_build_ambient_critters(biome, DRNG.new(int(Time.get_ticks_msec())))
 	_build_ground_fauna(biome, DRNG.new((int(biome.hash()) >> 4) ^ 0xFA0A))
@@ -127,6 +128,104 @@ func _ambient_part(parent: Node3D, mesh: Mesh, pos: Vector3, color: Color, rot_d
 	mat.roughness = 0.85
 	mi.material_override = mat
 	parent.add_child(mi)
+
+# ---------- Weather ----------
+# Per-biome weather particles layered over the whole stage. GPU particles,
+# unshaded materials — cheap on mobile.
+func _build_weather(biome: StringName, corruption: float) -> void:
+	match String(biome):
+		"swamp":
+			_weather_rain(420, Color(0.65, 0.75, 0.80, 0.55))
+		"highland":
+			_weather_snow(280)
+		"corrupted":
+			_weather_ash(220, corruption)
+		"coast":
+			_weather_rain(120, Color(0.80, 0.88, 0.92, 0.30))   # light sea drizzle
+		_:
+			pass
+
+func _weather_emitter(amount: int, lifetime: float) -> GPUParticles3D:
+	var p := GPUParticles3D.new()
+	p.amount = amount
+	p.lifetime = lifetime
+	p.fixed_fps = 30
+	p.position = Vector3(0, 9.0, -3)
+	add_child(p)
+	return p
+
+func _weather_rain(amount: int, tint: Color) -> void:
+	var p := _weather_emitter(amount, 1.1)
+	var pm := ParticleProcessMaterial.new()
+	pm.direction = Vector3(0.08, -1, 0)
+	pm.spread = 2.0
+	pm.gravity = Vector3(0, -14.0, 0)
+	pm.initial_velocity_min = 7.0
+	pm.initial_velocity_max = 9.0
+	pm.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
+	pm.emission_box_extents = Vector3(16, 0.5, 11)
+	p.process_material = pm
+	# Long thin streak so motion reads as rain, not dots.
+	var mesh := BoxMesh.new()
+	mesh.size = Vector3(0.012, 0.42, 0.012)
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = tint
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mesh.material = mat
+	p.draw_pass_1 = mesh
+
+func _weather_snow(amount: int) -> void:
+	var p := _weather_emitter(amount, 7.0)
+	var pm := ParticleProcessMaterial.new()
+	pm.direction = Vector3(0, -1, 0)
+	pm.spread = 12.0
+	pm.gravity = Vector3(0.25, -0.85, 0)
+	pm.initial_velocity_min = 0.3
+	pm.initial_velocity_max = 0.8
+	pm.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
+	pm.emission_box_extents = Vector3(16, 0.5, 11)
+	# Lateral drift wobble.
+	pm.turbulence_enabled = true
+	pm.turbulence_noise_strength = 0.35
+	pm.turbulence_noise_scale = 1.6
+	p.process_material = pm
+	var mesh := SphereMesh.new()
+	mesh.radius = 0.025
+	mesh.height = 0.05
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.95, 0.96, 1.0, 0.9)
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mesh.material = mat
+	p.draw_pass_1 = mesh
+
+func _weather_ash(amount: int, corruption: float) -> void:
+	var p := _weather_emitter(amount, 9.0)
+	var pm := ParticleProcessMaterial.new()
+	pm.direction = Vector3(0, -1, 0)
+	pm.spread = 20.0
+	pm.gravity = Vector3(-0.15, -0.35, 0)
+	pm.initial_velocity_min = 0.15
+	pm.initial_velocity_max = 0.5
+	pm.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
+	pm.emission_box_extents = Vector3(16, 0.5, 11)
+	pm.turbulence_enabled = true
+	pm.turbulence_noise_strength = 0.6
+	pm.turbulence_noise_scale = 1.2
+	p.process_material = pm
+	var mesh := BoxMesh.new()
+	mesh.size = Vector3(0.04, 0.04, 0.004)
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.22, 0.18, 0.20, 0.85)
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	# A fraction of flakes still glow as embers, scaled by corruption.
+	mat.emission_enabled = true
+	mat.emission = Color(1.0, 0.35, 0.15)
+	mat.emission_energy_multiplier = 0.35 + corruption * 0.5
+	mesh.material = mat
+	p.draw_pass_1 = mesh
 
 # ---------- Water ----------
 # Biome-appropriate water bodies with a scrolling noise normal so the surface
@@ -727,33 +826,47 @@ func _build_ground(biome: StringName, corruption: float) -> void:
 	ground.mesh = _displaced_ground_mesh(biome)
 	var mat := StandardMaterial3D.new()
 	var base: Color = BIOME_GROUND.get(biome, Color(0.2, 0.2, 0.2))
-	mat.albedo_color = base.lerp(Color(0.28, 0.05, 0.22), corruption * 0.4)
 	mat.roughness = 0.92
 	mat.metallic_specular = 0.05
-	# Real surface detail: noise albedo (mottling) + noise normal map (grain).
-	var n := FastNoiseLite.new()
-	n.seed = int(biome.hash()) & 0x7FFFFFFF
-	n.frequency = 0.012
-	n.fractal_octaves = 4
-	var albedo_tex := NoiseTexture2D.new()
-	albedo_tex.noise = n
-	albedo_tex.width = 512; albedo_tex.height = 512
-	albedo_tex.seamless = true
-	mat.albedo_texture = albedo_tex
-	mat.uv1_scale = Vector3(6, 6, 6)
-	var n2 := FastNoiseLite.new()
-	n2.seed = (int(biome.hash()) >> 3) & 0x7FFFFFFF
-	n2.frequency = 0.05
-	n2.fractal_octaves = 5
-	var normal_tex := NoiseTexture2D.new()
-	normal_tex.noise = n2
-	normal_tex.width = 512; normal_tex.height = 512
-	normal_tex.seamless = true
-	normal_tex.as_normal_map = true
-	normal_tex.bump_strength = 6.0
-	mat.normal_enabled = true
-	mat.normal_texture = normal_tex
-	mat.normal_scale = 0.7
+	# Photographic PBR ground (Polyhaven CC0): real diffuse + normal per biome.
+	var diff_path := "res://assets/textures/ground/%s_diff.jpg" % String(biome)
+	var nor_path := "res://assets/textures/ground/%s_nor.jpg" % String(biome)
+	if ResourceLoader.exists(diff_path):
+		mat.albedo_texture = load(diff_path)
+		# Light tint keeps the biome grade + corruption mood over the photo.
+		mat.albedo_color = Color(1, 1, 1).lerp(base.lightened(0.35), 0.35)
+		mat.albedo_color = mat.albedo_color.lerp(Color(0.55, 0.25, 0.50), corruption * 0.35)
+		mat.uv1_scale = Vector3(14, 14, 14)
+		if ResourceLoader.exists(nor_path):
+			mat.normal_enabled = true
+			mat.normal_texture = load(nor_path)
+			mat.normal_scale = 0.85
+	else:
+		# Fallback: procedural noise detail (albedo mottling + normal grain).
+		mat.albedo_color = base.lerp(Color(0.28, 0.05, 0.22), corruption * 0.4)
+		var n := FastNoiseLite.new()
+		n.seed = int(biome.hash()) & 0x7FFFFFFF
+		n.frequency = 0.012
+		n.fractal_octaves = 4
+		var albedo_tex := NoiseTexture2D.new()
+		albedo_tex.noise = n
+		albedo_tex.width = 512; albedo_tex.height = 512
+		albedo_tex.seamless = true
+		mat.albedo_texture = albedo_tex
+		mat.uv1_scale = Vector3(6, 6, 6)
+		var n2 := FastNoiseLite.new()
+		n2.seed = (int(biome.hash()) >> 3) & 0x7FFFFFFF
+		n2.frequency = 0.05
+		n2.fractal_octaves = 5
+		var normal_tex := NoiseTexture2D.new()
+		normal_tex.noise = n2
+		normal_tex.width = 512; normal_tex.height = 512
+		normal_tex.seamless = true
+		normal_tex.as_normal_map = true
+		normal_tex.bump_strength = 6.0
+		mat.normal_enabled = true
+		mat.normal_texture = normal_tex
+		mat.normal_scale = 0.7
 	ground.material_override = mat
 	ground.position = Vector3(0, 0, -2)
 	add_child(ground)
