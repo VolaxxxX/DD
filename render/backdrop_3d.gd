@@ -61,8 +61,11 @@ func build(biome: StringName, corruption: float, sub_biome: int = 0) -> void:
 	_build_lights(biome, corruption)
 	_apply_sub_tint(biome, sub_biome)
 	_build_far_silhouettes(biome, corruption)
+	_build_vegetation_field(biome, corruption)
+	_build_water(biome)
 	_build_atmosphere(biome, corruption)
 	_build_ambient_critters(biome, DRNG.new(int(Time.get_ticks_msec())))
+	_build_ground_fauna(biome, DRNG.new((int(biome.hash()) >> 4) ^ 0xFA0A))
 
 var _time_of_day: int = 0   # 0=noon, 1=dusk, 2=pre-dawn
 
@@ -124,6 +127,341 @@ func _ambient_part(parent: Node3D, mesh: Mesh, pos: Vector3, color: Color, rot_d
 	mat.roughness = 0.85
 	mi.material_override = mat
 	parent.add_child(mi)
+
+# ---------- Water ----------
+# Biome-appropriate water bodies with a scrolling noise normal so the surface
+# genuinely moves and catches the sky. Positions avoid the playspace.
+func _build_water(biome: StringName) -> void:
+	match String(biome):
+		"swamp":
+			_water_plane(Vector3(0, 0.035, -8), Vector2(60, 26), Color(0.08, 0.16, 0.12, 0.92), 0.45)
+		"coast":
+			_water_plane(Vector3(0, 0.03, -20), Vector2(90, 28), Color(0.10, 0.28, 0.38, 0.95), 0.25)
+		"forest":
+			_water_disc(Vector3(7.5, 0.03, -8.5), 3.6, Color(0.10, 0.22, 0.24, 0.92))
+		"highland":
+			_water_disc(Vector3(-8.5, 0.03, -10.0), 3.0, Color(0.12, 0.24, 0.34, 0.95))
+		"city":
+			_water_disc(Vector3(5.5, 0.02, -5.5), 1.1, Color(0.14, 0.16, 0.20, 0.85))
+			_water_disc(Vector3(-6.5, 0.02, -7.5), 0.8, Color(0.14, 0.16, 0.20, 0.85))
+		"ruins":
+			_water_disc(Vector3(-6.0, 0.02, -6.0), 1.4, Color(0.16, 0.18, 0.16, 0.85))
+		_:
+			pass
+
+func _water_material(tint: Color, rough: float = 0.10) -> StandardMaterial3D:
+	var m := StandardMaterial3D.new()
+	m.albedo_color = tint
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.metallic = 0.85
+	m.metallic_specular = 0.9
+	m.roughness = rough
+	var n := FastNoiseLite.new()
+	n.seed = 4242
+	n.frequency = 0.06
+	n.fractal_octaves = 4
+	var nt := NoiseTexture2D.new()
+	nt.noise = n
+	nt.width = 256; nt.height = 256
+	nt.seamless = true
+	nt.as_normal_map = true
+	nt.bump_strength = 3.0
+	m.normal_enabled = true
+	m.normal_texture = nt
+	m.normal_scale = 0.5
+	m.uv1_scale = Vector3(8, 8, 8)
+	return m
+
+func _animate_water(mat: StandardMaterial3D) -> void:
+	# Endless slow normal-map drift = living surface.
+	var t := create_tween().set_loops()
+	t.tween_property(mat, "uv1_offset", Vector3(1, 0.6, 0), 24.0).from(Vector3.ZERO)
+
+func _water_plane(pos: Vector3, size: Vector2, tint: Color, rough: float) -> void:
+	var mi := MeshInstance3D.new()
+	var p := PlaneMesh.new()
+	p.size = size
+	mi.mesh = p
+	mi.position = pos
+	var mat := _water_material(tint, rough)
+	mi.material_override = mat
+	add_child(mi)
+	_animate_water(mat)
+
+func _water_disc(pos: Vector3, radius: float, tint: Color) -> void:
+	var mi := MeshInstance3D.new()
+	var c := CylinderMesh.new()
+	c.top_radius = radius
+	c.bottom_radius = radius
+	c.height = 0.012
+	mi.mesh = c
+	mi.position = pos
+	var mat := _water_material(tint)
+	mi.material_override = mat
+	add_child(mi)
+	_animate_water(mat)
+
+# ---------- Ground fauna ----------
+# Tiny biome-appropriate animals living in the mid-ground. Pure primitives +
+# looping tweens; never enters the playspace.
+func _build_ground_fauna(biome: StringName, rng: DRNG) -> void:
+	match String(biome):
+		"forest":
+			_fauna_rabbit(Vector3(6.0, 0, -6.5))
+			_fauna_rabbit(Vector3(-7.5, 0, -8.0))
+			_fauna_deer(Vector3(-11.0, 0, -11.0))
+		"coast":
+			for i in 3:
+				_fauna_crab(Vector3(4.0 + float(i) * 2.6, 0, -5.0 - float(i) * 1.2))
+		"city", "crypt":
+			for i in 3:
+				_fauna_rat(Vector3(-5.0 - float(i) * 2.0, 0, -5.0 - float(i)))
+		"swamp":
+			_fauna_frog(Vector3(5.5, 0.06, -6.0))
+			_fauna_frog(Vector3(-6.0, 0.06, -7.5))
+			for i in 3:
+				_fauna_dragonfly(Vector3(_frng_h(rng, -8, 8), _frng_h(rng, 0.6, 1.4), _frng_h(rng, -9, -4)))
+		"highland":
+			_fauna_goat(Vector3(8.0, 0, -9.0))
+			_fauna_goat(Vector3(-9.5, 0, -10.5))
+		"ruins":
+			_fauna_lizard(Vector3(5.0, 0, -5.5))
+			_fauna_lizard(Vector3(-6.5, 0, -7.0))
+		"corrupted":
+			for i in 2:
+				_fauna_tendril_bug(Vector3(-5.0 + float(i) * 10.0, 0, -7.0))
+		"anomaly":
+			for i in 3:
+				_fauna_orbiting_shard(Vector3(_frng_h(rng, -9, 9), _frng_h(rng, 1.0, 2.4), _frng_h(rng, -10, -5)))
+
+func _fauna_body(pos: Vector3) -> Node3D:
+	var n := Node3D.new()
+	n.position = pos
+	add_child(n)
+	return n
+
+func _fauna_rabbit(pos: Vector3) -> void:
+	var r := _fauna_body(pos)
+	var fur := Color(0.55, 0.48, 0.40)
+	var body := SphereMesh.new(); body.radius = 0.10; body.height = 0.16
+	_ambient_part(r, body, Vector3(0, 0.10, 0), fur)
+	var head := SphereMesh.new(); head.radius = 0.06; head.height = 0.11
+	_ambient_part(r, head, Vector3(0.09, 0.17, 0), fur)
+	var ear := CapsuleMesh.new(); ear.radius = 0.012; ear.height = 0.10
+	_ambient_part(r, ear, Vector3(0.08, 0.26, 0.02), fur)
+	_ambient_part(r, ear, Vector3(0.08, 0.26, -0.02), fur)
+	# Hop loop: two quick hops, pause, turn.
+	var t := r.create_tween().set_loops()
+	for hop in 2:
+		t.tween_property(r, "position", r.position + Vector3(0.35, 0, 0).rotated(Vector3.UP, r.rotation.y), 0.28).set_trans(Tween.TRANS_SINE)
+		t.parallel().tween_property(r, "position:y", 0.16, 0.14).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+		t.tween_property(r, "position:y", pos.y, 0.14).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+	t.tween_interval(2.2)
+	t.tween_property(r, "rotation:y", PI, 0.4)
+	for hop in 2:
+		t.tween_property(r, "position", pos, 0.28).set_trans(Tween.TRANS_SINE)
+		t.parallel().tween_property(r, "position:y", 0.16, 0.14)
+		t.tween_property(r, "position:y", pos.y, 0.14)
+	t.tween_interval(2.8)
+	t.tween_property(r, "rotation:y", 0.0, 0.4)
+
+func _fauna_deer(pos: Vector3) -> void:
+	var d := _fauna_body(pos)
+	var coat := Color(0.42, 0.30, 0.20)
+	var body := CapsuleMesh.new(); body.radius = 0.16; body.height = 0.65
+	_ambient_part(d, body, Vector3(0, 0.55, 0), coat, Vector3(0, 0, 90))
+	var neck := CapsuleMesh.new(); neck.radius = 0.05; neck.height = 0.35
+	_ambient_part(d, neck, Vector3(0.30, 0.75, 0), coat, Vector3(0, 0, -30))
+	var head := BoxMesh.new(); head.size = Vector3(0.18, 0.08, 0.08)
+	_ambient_part(d, head, Vector3(0.42, 0.92, 0), coat)
+	for s in [-1, 1]:
+		var leg := CylinderMesh.new(); leg.top_radius = 0.025; leg.bottom_radius = 0.02; leg.height = 0.45
+		_ambient_part(d, leg, Vector3(0.18, 0.23, 0.08 * s), coat.darkened(0.2))
+		_ambient_part(d, leg, Vector3(-0.18, 0.23, 0.08 * s), coat.darkened(0.2))
+	# Graze loop: head dips, slow steps.
+	var t := d.create_tween().set_loops()
+	t.tween_property(d, "rotation:x", 0.12, 1.6).set_trans(Tween.TRANS_SINE)
+	t.tween_interval(2.0)
+	t.tween_property(d, "rotation:x", 0.0, 1.2).set_trans(Tween.TRANS_SINE)
+	t.tween_property(d, "position", pos + Vector3(0.8, 0, 0.5), 3.0).set_trans(Tween.TRANS_SINE)
+	t.tween_interval(1.5)
+	t.tween_property(d, "position", pos, 3.0).set_trans(Tween.TRANS_SINE)
+
+func _fauna_crab(pos: Vector3) -> void:
+	var c := _fauna_body(pos)
+	var shell := Color(0.75, 0.35, 0.25)
+	var body := SphereMesh.new(); body.radius = 0.08; body.height = 0.09
+	_ambient_part(c, body, Vector3(0, 0.05, 0), shell)
+	var claw := SphereMesh.new(); claw.radius = 0.03; claw.height = 0.05
+	_ambient_part(c, claw, Vector3(0.09, 0.04, 0.05), shell.lightened(0.1))
+	_ambient_part(c, claw, Vector3(0.09, 0.04, -0.05), shell.lightened(0.1))
+	# Sideways scuttle dash-pause.
+	var t := c.create_tween().set_loops()
+	t.tween_property(c, "position:z", pos.z + 0.9, 0.6).set_trans(Tween.TRANS_QUAD)
+	t.tween_interval(1.4)
+	t.tween_property(c, "position:z", pos.z, 0.6).set_trans(Tween.TRANS_QUAD)
+	t.tween_interval(2.0)
+
+func _fauna_rat(pos: Vector3) -> void:
+	var r := _fauna_body(pos)
+	var fur := Color(0.25, 0.23, 0.22)
+	var body := CapsuleMesh.new(); body.radius = 0.045; body.height = 0.16
+	_ambient_part(r, body, Vector3(0, 0.045, 0), fur, Vector3(0, 0, 90))
+	var tail := CylinderMesh.new(); tail.top_radius = 0.006; tail.bottom_radius = 0.012; tail.height = 0.14
+	_ambient_part(r, tail, Vector3(-0.12, 0.03, 0), fur.lightened(0.2), Vector3(0, 0, -80))
+	# Nervous dashes between two points.
+	var t := r.create_tween().set_loops()
+	t.tween_property(r, "position", pos + Vector3(1.4, 0, 0.6), 0.5).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
+	t.tween_interval(1.8)
+	t.tween_property(r, "position", pos, 0.5).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
+	t.tween_interval(2.6)
+
+func _fauna_frog(pos: Vector3) -> void:
+	var f := _fauna_body(pos)
+	var skin := Color(0.25, 0.45, 0.20)
+	var body := SphereMesh.new(); body.radius = 0.06; body.height = 0.08
+	_ambient_part(f, body, Vector3(0, 0.04, 0), skin)
+	var eye := SphereMesh.new(); eye.radius = 0.015; eye.height = 0.03
+	_ambient_part(f, eye, Vector3(0.04, 0.09, 0.025), Color(0.9, 0.9, 0.5))
+	_ambient_part(f, eye, Vector3(0.04, 0.09, -0.025), Color(0.9, 0.9, 0.5))
+	# Throat pulse + occasional hop.
+	var t := f.create_tween().set_loops()
+	t.tween_property(f, "scale", Vector3(1.06, 0.95, 1.06), 0.5).set_trans(Tween.TRANS_SINE)
+	t.tween_property(f, "scale", Vector3.ONE, 0.5).set_trans(Tween.TRANS_SINE)
+	t.tween_interval(1.2)
+	t.tween_property(f, "position", pos + Vector3(0.4, 0, 0.2), 0.3).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	t.tween_interval(2.4)
+	t.tween_property(f, "position", pos, 0.3).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	t.tween_interval(1.6)
+
+func _fauna_dragonfly(pos: Vector3) -> void:
+	var d := _fauna_body(pos)
+	var body := CapsuleMesh.new(); body.radius = 0.012; body.height = 0.10
+	_ambient_part(d, body, Vector3.ZERO, Color(0.20, 0.55, 0.65), Vector3(0, 0, 90))
+	var wing := BoxMesh.new(); wing.size = Vector3(0.06, 0.004, 0.025)
+	_ambient_part(d, wing, Vector3(0.01, 0.012, 0.03), Color(0.85, 0.92, 0.95, 0.7))
+	_ambient_part(d, wing, Vector3(0.01, 0.012, -0.03), Color(0.85, 0.92, 0.95, 0.7))
+	var t := d.create_tween().set_loops()
+	var p2 := pos + Vector3(randf_range(-1.5, 1.5), randf_range(-0.3, 0.4), randf_range(-1.0, 1.0))
+	t.tween_property(d, "position", p2, randf_range(1.2, 2.0)).set_trans(Tween.TRANS_SINE)
+	t.tween_property(d, "position", pos, randf_range(1.2, 2.0)).set_trans(Tween.TRANS_SINE)
+
+func _fauna_goat(pos: Vector3) -> void:
+	var g := _fauna_body(pos)
+	var coat := Color(0.80, 0.78, 0.72)
+	var body := CapsuleMesh.new(); body.radius = 0.12; body.height = 0.45
+	_ambient_part(g, body, Vector3(0, 0.38, 0), coat, Vector3(0, 0, 90))
+	var head := BoxMesh.new(); head.size = Vector3(0.14, 0.10, 0.08)
+	_ambient_part(g, head, Vector3(0.26, 0.50, 0), coat)
+	var horn := CylinderMesh.new(); horn.top_radius = 0.005; horn.bottom_radius = 0.015; horn.height = 0.08
+	_ambient_part(g, horn, Vector3(0.24, 0.58, 0.03), Color(0.45, 0.40, 0.32), Vector3(0, 0, -25))
+	_ambient_part(g, horn, Vector3(0.24, 0.58, -0.03), Color(0.45, 0.40, 0.32), Vector3(0, 0, -25))
+	for s in [-1, 1]:
+		var leg := CylinderMesh.new(); leg.top_radius = 0.02; leg.bottom_radius = 0.018; leg.height = 0.32
+		_ambient_part(g, leg, Vector3(0.12, 0.16, 0.06 * s), coat.darkened(0.15))
+		_ambient_part(g, leg, Vector3(-0.12, 0.16, 0.06 * s), coat.darkened(0.15))
+	var t := g.create_tween().set_loops()
+	t.tween_property(g, "rotation:x", 0.18, 1.4).set_trans(Tween.TRANS_SINE)
+	t.tween_interval(2.4)
+	t.tween_property(g, "rotation:x", 0.0, 1.0).set_trans(Tween.TRANS_SINE)
+	t.tween_interval(3.0)
+
+func _fauna_lizard(pos: Vector3) -> void:
+	var l := _fauna_body(pos)
+	var skin := Color(0.45, 0.42, 0.28)
+	var body := CapsuleMesh.new(); body.radius = 0.025; body.height = 0.14
+	_ambient_part(l, body, Vector3(0, 0.02, 0), skin, Vector3(0, 0, 90))
+	var tail := CylinderMesh.new(); tail.top_radius = 0.004; tail.bottom_radius = 0.012; tail.height = 0.10
+	_ambient_part(l, tail, Vector3(-0.10, 0.02, 0), skin, Vector3(0, 0, -90))
+	# Bask motionless, then dart.
+	var t := l.create_tween().set_loops()
+	t.tween_interval(3.2)
+	t.tween_property(l, "position", pos + Vector3(1.0, 0, -0.4), 0.35).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
+	t.tween_interval(2.4)
+	t.tween_property(l, "position", pos, 0.35).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
+
+func _fauna_tendril_bug(pos: Vector3) -> void:
+	var b := _fauna_body(pos)
+	for i in 4:
+		var seg := SphereMesh.new(); seg.radius = 0.05 - float(i) * 0.008; seg.height = seg.radius * 2.0
+		_ambient_part(b, seg, Vector3(-float(i) * 0.07, 0.05, 0), Color(0.45, 0.12, 0.40))
+	var t := b.create_tween().set_loops()
+	t.tween_property(b, "position", pos + Vector3(0.9, 0, 0.5), 2.6).set_trans(Tween.TRANS_SINE)
+	t.parallel().tween_property(b, "scale", Vector3(1.1, 0.9, 1.1), 1.3)
+	t.tween_property(b, "position", pos, 2.6).set_trans(Tween.TRANS_SINE)
+	t.parallel().tween_property(b, "scale", Vector3.ONE, 1.3)
+
+func _fauna_orbiting_shard(pos: Vector3) -> void:
+	var s := _fauna_body(pos)
+	var shard := PrismMesh.new(); shard.size = Vector3(0.10, 0.22, 0.06)
+	_ambient_part(s, shard, Vector3.ZERO, Color(0.55, 0.70, 1.0))
+	var t := s.create_tween().set_loops()
+	t.tween_property(s, "rotation:y", TAU, 7.0)
+	var bob := s.create_tween().set_loops()
+	bob.tween_property(s, "position:y", pos.y + 0.4, 2.8).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	bob.tween_property(s, "position:y", pos.y, 2.8).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+
+# Dense low-cost vegetation/debris field via MultiMesh — hundreds of small
+# blades/pebbles filling the ground plane so it never reads as an empty mat.
+# Kept low (<0.45m) and outside the central creature footprint, so it adds
+# life without hiding mobs or UI.
+func _build_vegetation_field(biome: StringName, corruption: float) -> void:
+	var rng := DRNG.new((int(biome.hash()) >> 2) ^ 0xF1E1D)
+	var count := 420
+	var base_col: Color
+	var tip_col: Color
+	var blade := true              # blade=true: thin box; false: pebble sphere
+	match String(biome):
+		"forest":    base_col = Color(0.16, 0.34, 0.12); tip_col = Color(0.38, 0.55, 0.20)
+		"highland":  base_col = Color(0.25, 0.36, 0.16); tip_col = Color(0.55, 0.55, 0.30)
+		"swamp":     base_col = Color(0.10, 0.26, 0.14); tip_col = Color(0.30, 0.45, 0.22); count = 320
+		"coast":     base_col = Color(0.55, 0.50, 0.32); tip_col = Color(0.72, 0.68, 0.45); count = 220
+		"corrupted": base_col = Color(0.28, 0.08, 0.26); tip_col = Color(0.65, 0.20, 0.55); count = 300
+		"city":      base_col = Color(0.24, 0.24, 0.26); tip_col = Color(0.38, 0.38, 0.40); blade = false; count = 260
+		"ruins":     base_col = Color(0.38, 0.34, 0.26); tip_col = Color(0.55, 0.50, 0.38); blade = false; count = 280
+		"crypt":     base_col = Color(0.14, 0.13, 0.15); tip_col = Color(0.26, 0.24, 0.28); blade = false; count = 220
+		"anomaly":   base_col = Color(0.12, 0.16, 0.38); tip_col = Color(0.35, 0.45, 0.95); count = 240
+		_:           base_col = Color(0.2, 0.3, 0.15); tip_col = Color(0.4, 0.5, 0.25)
+	base_col = base_col.lerp(Color(0.25, 0.06, 0.22), corruption * 0.35)
+	var mm := MultiMesh.new()
+	mm.transform_format = MultiMesh.TRANSFORM_3D
+	var mesh: Mesh
+	if blade:
+		var b := BoxMesh.new()
+		b.size = Vector3(0.05, 0.34, 0.05)
+		mesh = b
+	else:
+		var s := SphereMesh.new()
+		s.radius = 0.09; s.height = 0.13
+		mesh = s
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = base_col.lerp(tip_col, 0.45)
+	mat.roughness = 0.95
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_PER_VERTEX
+	mesh.surface_set_material(0, mat)
+	mm.mesh = mesh
+	mm.instance_count = count
+	var placed := 0
+	var guard := 0
+	while placed < count and guard < count * 4:
+		guard += 1
+		var x := _frng_h(rng, -22, 22)
+		var z := _frng_h(rng, -18, 4)
+		# Keep the creature footprint + avatar slots visually clean.
+		if absf(x) < 1.6 and z > -3.0: continue
+		var sc := _frng_h(rng, 0.6, 1.5)
+		var basis := Basis(Vector3.UP, _frng_h(rng, 0, TAU)).scaled(Vector3(sc, sc * _frng_h(rng, 0.7, 1.4), sc))
+		# Lean blades slightly for a wind-combed look.
+		if blade:
+			basis = basis.rotated(Vector3(1, 0, 0).normalized(), _frng_h(rng, -0.12, 0.12))
+		var y := 0.0 if blade else 0.04
+		mm.set_instance_transform(placed, Transform3D(basis, Vector3(x, y, z - 2.0)))
+		placed += 1
+	mm.instance_count = placed
+	var mmi := MultiMeshInstance3D.new()
+	mmi.multimesh = mm
+	mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(mmi)
 
 func _build_far_silhouettes(biome: StringName, corruption: float) -> void:
 	# A row of large dim shapes ~30 m behind the encounter, plus a second further
@@ -213,21 +551,41 @@ func _build_far_silhouettes(biome: StringName, corruption: float) -> void:
 		mmat.shading_mode = BaseMaterial3D.SHADING_MODE_PER_VERTEX
 		mi.material_override = mmat
 		par.add_child(mi)
-	# Soft cloud band along the horizon to break the sky color.
-	for i in 6:
-		var cloud := SphereMesh.new()
-		cloud.radius = 4.0
-		cloud.height = 2.0
-		var mi := MeshInstance3D.new()
-		mi.mesh = cloud
-		mi.position = Vector3(_frng_h(rng, -30, 30), _frng_h(rng, 8, 14), -36)
-		var cm := StandardMaterial3D.new()
-		cm.albedo_color = horizon.lerp(Color(1, 1, 1), 0.3)
-		cm.albedo_color.a = 0.35
-		cm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		cm.roughness = 1.0
-		mi.material_override = cm
-		par.add_child(mi)
+	# Distant bird flocks crossing the sky (skip underground/abyssal moods).
+	if not (String(biome) in ["crypt", "corrupted", "anomaly"]):
+		_spawn_bird_flock(par, rng)
+
+func _spawn_bird_flock(par: Node3D, rng: DRNG) -> void:
+	# 4-6 dark chevrons gliding across the far sky in a loose V, looping with
+	# a long pause so the sky feels alive without being busy.
+	var flock := Node3D.new()
+	par.add_child(flock)
+	var count := 4 + rng.range_i(0, 3)
+	for i in count:
+		var bird := MeshInstance3D.new()
+		var m := PrismMesh.new()
+		m.size = Vector3(0.55, 0.10, 0.22)
+		bird.mesh = m
+		var mat := StandardMaterial3D.new()
+		mat.albedo_color = Color(0.08, 0.08, 0.10)
+		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		bird.material_override = mat
+		# Loose V formation offsets.
+		var row := (i + 1) / 2
+		var side := 1 if i % 2 == 0 else -1
+		bird.position = Vector3(float(side * row) * 1.4, -absf(float(row)) * 0.35, float(row) * 0.8)
+		flock.add_child(bird)
+		# Wing-beat: tiny vertical bob per bird, phase-shifted.
+		var bob := bird.create_tween().set_loops()
+		bob.tween_property(bird, "position:y", bird.position.y + 0.18, 0.55 + float(i) * 0.04).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		bob.tween_property(bird, "position:y", bird.position.y, 0.55 + float(i) * 0.04).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	var fy := 10.0 + _frng_h(rng, 0, 4)
+	flock.position = Vector3(-34, fy, -26)
+	var travel := flock.create_tween().set_loops()
+	travel.tween_property(flock, "position", Vector3(34, fy + 2.0, -28), 26.0)
+	travel.tween_callback(func():
+		if is_instance_valid(flock): flock.position = Vector3(-34, fy, -26))
+	travel.tween_interval(14.0)
 
 func _frng_h(rng: DRNG, lo: float, hi: float) -> float:
 	var span := int((hi - lo) * 100.0)
@@ -286,13 +644,30 @@ func _build_environment(biome: StringName, corruption: float) -> void:
 	var e := Environment.new()
 	var sky_top: Color = BIOME_SKY_TOP.get(biome, Color(0.2, 0.2, 0.3)).lerp(Color(0.15, 0.02, 0.15), corruption * 0.4)
 	var sky_h: Color = BIOME_SKY_HORIZON.get(biome, Color(0.6, 0.6, 0.6)).lerp(Color(0.45, 0.10, 0.30), corruption * 0.4)
-	var sky_mat := ProceduralSkyMaterial.new()
-	sky_mat.sky_top_color = sky_top
-	sky_mat.sky_horizon_color = sky_h
-	sky_mat.ground_horizon_color = sky_h.darkened(0.3)
-	sky_mat.ground_bottom_color = sky_top.darkened(0.5)
-	sky_mat.sun_angle_max = 25.0
-	sky_mat.sun_curve = 0.2
+	# Custom shader sky: real gradient + sun halo + animated fbm clouds + stars.
+	var sky_mat := ShaderMaterial.new()
+	sky_mat.shader = preload("res://render/sky.gdshader")
+	sky_mat.set_shader_parameter("top_color", sky_top)
+	sky_mat.set_shader_parameter("horizon_color", sky_h)
+	sky_mat.set_shader_parameter("ground_color", sky_top.darkened(0.6))
+	# Time-of-day drives sun tint, cloud mood and stars.
+	var sun_tint := Color(1.0, 0.95, 0.85)
+	var coverage := 0.42
+	var stars := 0.0
+	match _time_of_day:
+		0: sun_tint = Color(1.0, 0.97, 0.88); coverage = 0.38
+		1: sun_tint = Color(1.0, 0.72, 0.45); coverage = 0.52        # dusk: golden, heavier clouds
+		2: sun_tint = Color(0.80, 0.85, 1.0); coverage = 0.30; stars = 0.7   # pre-dawn
+	match String(biome):
+		"swamp", "crypt": coverage += 0.18
+		"corrupted": coverage += 0.12; sun_tint = sun_tint.lerp(Color(0.9, 0.5, 0.8), 0.3)
+		"anomaly": coverage -= 0.10; stars = maxf(stars, 0.45)
+		"highland", "coast": coverage -= 0.06
+	sky_mat.set_shader_parameter("sun_tint", sun_tint)
+	sky_mat.set_shader_parameter("cloud_coverage", clampf(coverage + corruption * 0.15, 0.1, 0.85))
+	sky_mat.set_shader_parameter("cloud_color", Color(1, 1, 1).lerp(sky_h, 0.25))
+	sky_mat.set_shader_parameter("stars_amount", stars)
+	sky_mat.set_shader_parameter("haze", 0.22 + corruption * 0.2)
 	var sky := Sky.new()
 	sky.sky_material = sky_mat
 	e.background_mode = Environment.BG_SKY
