@@ -573,7 +573,8 @@ func _on_creature_killed_for_summary() -> void:
 func _on_player_injury(injury_id: StringName) -> void:
 	var pos := _avatar_world_pos(director.active_idx) + Vector3(0, 1.6, 0)
 	var inj: Dictionary = InjuryRegistry.by_id(injury_id)
-	var name: String = String(inj.get("name", "BLESSÉ")) if not inj.is_empty() else "BLESSÉ"
+	var fallback := Lang.t({"fr": "BLESSÉ", "en": "WOUNDED", "id": "TERLUKA"})
+	var name: String = String(inj.get("name", fallback)) if not inj.is_empty() else fallback
 	FloatingText.spawn(stage, pos, "− %s" % name, Color(1.0, 0.45, 0.35), 0.55)
 	_shake_camera(0.18, 0.3)
 	_flash_avatar(director.active_idx, Color(1.0, 0.30, 0.30))

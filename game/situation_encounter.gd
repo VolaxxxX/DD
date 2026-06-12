@@ -7,14 +7,14 @@ var rng: DRNG
 var player: PlayerState
 var template: Dictionary
 var choices: Array[Dictionary] = []
-var creature_name: String = "le lieu"        # for run-over message
+var creature_name: String = Lang.t({"fr": "le lieu", "en": "the place", "id": "tempat itu"})  # for run-over message
 var creature = null                          # nil — flags this as situation
 
 func _init(_zone: Zone, _rng: DRNG, _player: PlayerState, _template: Dictionary) -> void:
 	zone = _zone
 	rng = _rng
 	player = _player
-	template = _template
+	template = SituationRegistry.localize(_template)
 	choices = _build_choices()
 
 func _build_choices() -> Array[Dictionary]:

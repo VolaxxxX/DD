@@ -467,20 +467,28 @@ static func tier_choices(tone: int) -> Array:
 
 static func pick_choice(rng: DRNG, tone: int, family: int = -1, biome: StringName = &"", tier: int = -1, exclude: Array = []) -> String:
 	var arr: Array
+	var ctx: Array = []
 	match Lang.code:
-		"en": arr = PhrasePoolEN.choices_for(tone).duplicate()
-		"id": arr = PhrasePoolID.choices_for(tone).duplicate()
-		_:    arr = choices_for(tone).duplicate()
-	# Contextual variants (FR pools) — added twice so creature/biome-specific
-	# lines surface noticeably more often than the generic ones.
-	if Lang.code != "en" and Lang.code != "id":
-		var ctx: Array = []
-		ctx += family_choices(tone, family)
-		ctx += biome_choices(tone, biome)
-		if tier >= 3: ctx += tier_choices(tone)
-		for c in ctx:
-			arr.append(c)
-			arr.append(c)
+		"en":
+			arr = PhrasePoolEN.choices_for(tone).duplicate()
+			ctx += PhrasePoolEN.family_choices(tone, family)
+			ctx += PhrasePoolEN.biome_choices(tone, biome)
+			if tier >= 3: ctx += PhrasePoolEN.tier_choices(tone)
+		"id":
+			arr = PhrasePoolID.choices_for(tone).duplicate()
+			ctx += PhrasePoolID.family_choices(tone, family)
+			ctx += PhrasePoolID.biome_choices(tone, biome)
+			if tier >= 3: ctx += PhrasePoolID.tier_choices(tone)
+		_:
+			arr = choices_for(tone).duplicate()
+			ctx += family_choices(tone, family)
+			ctx += biome_choices(tone, biome)
+			if tier >= 3: ctx += tier_choices(tone)
+	# Contextual variants added twice so creature/biome-specific lines surface
+	# noticeably more often than the generic ones.
+	for c in ctx:
+		arr.append(c)
+		arr.append(c)
 	var pick: String = arr[rng.range_i(0, arr.size())]
 	# Avoid texts already used by sibling buttons this encounter.
 	var guard := 0

@@ -1110,3 +1110,28 @@ static func pick(rng: DRNG, biome: StringName) -> Dictionary:
 	var pool: Array = for_biome(biome)
 	if pool.is_empty(): pool = all()
 	return pool[rng.range_i(0, pool.size())]
+
+# Returns a deep copy of `template` with every surface string (title, choice
+# texts, outcome narrations) replaced by the active language pack. The French
+# templates above stay canonical; EN/ID live in situation_registry_en/id.gd.
+static func localize(template: Dictionary) -> Dictionary:
+	var pack: Dictionary
+	match Lang.code:
+		"en": pack = SituationRegistryEN.pack()
+		"id": pack = SituationRegistryID.pack()
+		_:    return template
+	var loc: Dictionary = pack.get(template.id, {})
+	if loc.is_empty(): return template
+	var t: Dictionary = template.duplicate(true)
+	t.title = loc.get("title", t.title)
+	var lc: Array = loc.get("choices", [])
+	for i in t.choices.size():
+		if i >= lc.size(): break
+		var c: Dictionary = t.choices[i]
+		var l: Dictionary = lc[i]
+		c.text = l.get("text", c.text)
+		if c.has("good"):
+			c.good.narr = l.get("good_narr", c.good.get("narr", ""))
+		if c.has("bad"):
+			c.bad.narr = l.get("bad_narr", c.bad.get("narr", ""))
+	return t

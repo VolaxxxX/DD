@@ -13,7 +13,7 @@ static func maybe_manifest(zone: Zone, rng: DRNG) -> void:
 	if not rng.chance(int(zone.chaos * 8), 100): return
 	var dragon: Dictionary = DragonRegistry.pick(rng, zone.chaos)
 	zone.dragon_id = StringName(dragon.id)
-	zone.dragon_intro = String(dragon.intro)
+	zone.dragon_intro = DragonRegistry.intro_of(dragon)
 	zone.dragon_effect = String(dragon.zone_effect)
 	zone.dragon_value = int(dragon.value)
 	_apply_manifest_effect(zone, rng)

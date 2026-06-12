@@ -23,7 +23,9 @@ func _init(_zone: Zone, _creature: Creature, _rng: DRNG, _player: PlayerState) -
 func _resolve_name() -> String:
 	if creature.archetype.id != &"":
 		var named := CreatureRegistry.name_for_id(creature.archetype.id)
-		if named != "l'entité": return named
+		# name_for_id falls back to a localized "the entity" sentinel when the
+		# id is unknown — treat any of the three as "no real name".
+		if not (named in ["l'entité", "the entity", "sang entitas"]): return named
 	return PhrasePool.family_descriptor(creature.archetype.family, creature.archetype.tier)
 
 func _build_choices() -> Array[Dictionary]:
@@ -141,9 +143,63 @@ func resolve(choice_idx: int, resolver: EventResolver, coop_mod: int) -> Diction
 			cons["has_followup"] = true
 	return cons
 
-func _build_followup_choices() -> Array[Dictionary]:
-	# Three short conversational openings the creature is now willing to discuss.
-	var pool := [
+func _followup_pool() -> Array:
+	match Lang.code:
+		"en": return [
+			{"text": "You ask for its name.",
+			 "narr_good": "%s gives it to you. It is not a human name. You will keep it.",
+			 "narr_bad":  "%s does not answer. The moment passes.",
+			 "stat": &"esprit"},
+			{"text": "You ask what it fears.",
+			 "narr_good": "%s tells you what it fears. It is useful. It is terrible.",
+			 "narr_bad":  "%s laughs. It fears nothing you could understand.",
+			 "stat": &"instinct"},
+			{"text": "You ask what lies beyond these lands.",
+			 "narr_good": "%s tells you the road. Now you know where not to go.",
+			 "narr_bad":  "%s tells you the truth. You would rather not have known.",
+			 "stat": &"esprit"},
+			{"text": "You ask what you are becoming.",
+			 "narr_good": "%s looks at you a long time. Then it tells you. You did not know.",
+			 "narr_bad":  "%s tells you. You would rather not have asked.",
+			 "stat": &"instinct"},
+			{"text": "You ask for a favor.",
+			 "narr_good": "%s accepts. Something in you mends. You will not forget.",
+			 "narr_bad":  "%s laughs softly. You have nothing left to offer in exchange.",
+			 "stat": &"charisme",
+			 "heal_chance": true},
+			{"text": "You ask the question you have carried since your first zone.",
+			 "narr_good": "%s answers. The world makes a little sense now.",
+			 "narr_bad":  "%s does not understand you. Or will not.",
+			 "stat": &"esprit"},
+		]
+		"id": return [
+			{"text": "Kau menanyakan namanya.",
+			 "narr_good": "%s memberikannya padamu. Itu bukan nama manusia. Kau akan menyimpannya.",
+			 "narr_bad":  "%s tak menjawab. Saat itu berlalu.",
+			 "stat": &"esprit"},
+			{"text": "Kau bertanya apa yang ia takuti.",
+			 "narr_good": "%s memberitahumu apa yang ia takuti. Itu berguna. Itu mengerikan.",
+			 "narr_bad":  "%s tertawa. Ia tak takut pada apa pun yang bisa kau pahami.",
+			 "stat": &"instinct"},
+			{"text": "Kau bertanya apa yang ada setelah tanah ini.",
+			 "narr_good": "%s menceritakan jalannya. Kini kau tahu ke mana tak boleh pergi.",
+			 "narr_bad":  "%s mengatakan yang sebenarnya. Kau lebih suka tak pernah tahu.",
+			 "stat": &"esprit"},
+			{"text": "Kau bertanya, kau ini sedang menjadi apa.",
+			 "narr_good": "%s menatapmu lama. Lalu ia memberitahumu. Kau tak pernah tahu.",
+			 "narr_bad":  "%s memberitahumu. Kau lebih suka tak pernah bertanya.",
+			 "stat": &"instinct"},
+			{"text": "Kau meminta satu kebaikan.",
+			 "narr_good": "%s menerima. Sesuatu dalam dirimu pulih. Kau takkan lupa.",
+			 "narr_bad":  "%s tertawa pelan. Kau tak punya apa-apa lagi untuk ditukar.",
+			 "stat": &"charisme",
+			 "heal_chance": true},
+			{"text": "Kau mengajukan pertanyaan yang kau bawa sejak zona pertamamu.",
+			 "narr_good": "%s menjawab. Dunia sedikit masuk akal sekarang.",
+			 "narr_bad":  "%s tak memahamimu. Atau tak mau.",
+			 "stat": &"esprit"},
+		]
+	return [
 		{"text": "Tu lui demandes son nom.",
 		 "narr_good": "%s te le donne. Ce n'est pas un nom humain. Tu le garderas.",
 		 "narr_bad":  "%s ne te répond pas. Le moment passe.",
@@ -170,6 +226,10 @@ func _build_followup_choices() -> Array[Dictionary]:
 		 "narr_bad":  "%s ne te comprend pas. Ou ne veut pas.",
 		 "stat": &"esprit"},
 	]
+
+func _build_followup_choices() -> Array[Dictionary]:
+	# Three short conversational openings the creature is now willing to discuss.
+	var pool: Array = _followup_pool()
 	# Pick 3 deterministically.
 	var out: Array[Dictionary] = []
 	var idxs := []

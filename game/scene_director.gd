@@ -209,7 +209,7 @@ func _advance_zone() -> void:
 	var next_idx := world.active_zone_index + 1
 	if next_idx >= world.zones.size():
 		Save.clear()
-		run_over.emit(&"extrait")
+		run_over.emit(StringName(Lang.ui("extracted")))
 		return
 	# Apply a queued blessing (from the village storyteller) on entry.
 	if Progress.next_zone_blessing != &"":
@@ -250,7 +250,7 @@ func _maybe_trigger_world_boss() -> void:
 	if boss.is_empty(): return
 	_world_boss_triggered = true
 	world_boss_spawned.emit(boss)
-	zone_intro.emit("[%s]\n%s" % [String(boss.title).to_upper(), String(boss.intro)], world.active_zone().biome)
+	zone_intro.emit("[%s]\n%s" % [WorldBossRegistry.title_of(boss).to_upper(), WorldBossRegistry.intro_of(boss)], world.active_zone().biome)
 
 func _wait(seconds: float) -> void:
 	await Engine.get_main_loop().create_timer(seconds).timeout

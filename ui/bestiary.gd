@@ -168,7 +168,7 @@ func _creature_entry(t: Dictionary) -> Control:
 	lines.append("[i]%s[/i]   INT %d   AGR %d   [color=#ffd57a]× %d[/color]" % [fam, int(t.intel), int(t.aggr), kills])
 	lines.append("[color=#a0c8ff]%s[/color]  %s" % [Lang.ui("biomes"), biome_list.strip_edges()])
 	lines.append("[color=#9fffa8]%s[/color]  %s" % [Lang.ui("weakness"), _approach_hint(t)])
-	var row := _row(thumb, String(t.name), tag, color, lines)
+	var row := _row(thumb, CreatureRegistry.display_name(t), tag, color, lines)
 	row.set_meta("thumb_pending", true)
 	row.set_meta("thumb_kind", "creature")
 	row.set_meta("thumb_data", t)
@@ -180,12 +180,16 @@ func _dragon_entry(t: Dictionary) -> Control:
 	var rarity_str := "%s — %s" % [Lang.ui("tag_dragon"), _dragon_rarity_word(weight)]
 	var color := _dragon_color(int(t.align))
 	var thumb := _placeholder_thumb()
-	var align_str: String = ["méchant", "bon", "au-delà"][int(t.align)]
+	var align_str: String = Lang.t([
+		{"fr": "méchant", "en": "evil", "id": "jahat"},
+		{"fr": "bon", "en": "good", "id": "baik"},
+		{"fr": "au-delà", "en": "beyond", "id": "di luar nalar"},
+	][int(t.align)])
 	var lines: Array[String] = []
-	lines.append("[i]%s — puissance %d[/i]" % [align_str, int(t.tier)])
+	lines.append("[i]%s — %s %d[/i]" % [align_str, Lang.t({"fr": "puissance", "en": "power", "id": "kekuatan"}), int(t.tier)])
 	lines.append("[color=#ffd57a]%s[/color]  %s" % [Lang.ui("effect"), _dragon_effect_text(String(t.zone_effect), int(t.value))])
-	lines.append("[color=#cccccc]%s[/color]" % String(t.intro))
-	var row := _row(thumb, String(t.name), rarity_str, color, lines)
+	lines.append("[color=#cccccc]%s[/color]" % DragonRegistry.intro_of(t))
+	var row := _row(thumb, DragonRegistry.name_of(t), rarity_str, color, lines)
 	row.set_meta("thumb_pending", true)
 	row.set_meta("thumb_kind", "dragon")
 	row.set_meta("thumb_data", t)
@@ -196,10 +200,10 @@ func _titan_entry(t: Dictionary) -> Control:
 	var color := Color(1, 0.5, 0.55)
 	var thumb := _placeholder_thumb()
 	var lines: Array[String] = []
-	lines.append("[i]%s[/i]" % String(t.title))
+	lines.append("[i]%s[/i]" % WorldBossRegistry.title_of(t))
 	lines.append("[color=#ffd57a]%s[/color]  %s" % [Lang.ui("effect"), _titan_effect_text(String(t.effect))])
-	lines.append("[color=#cccccc]%s[/color]" % String(t.intro))
-	var row := _row(thumb, String(t.name), Lang.ui("tag_wboss"), color, lines)
+	lines.append("[color=#cccccc]%s[/color]" % WorldBossRegistry.intro_of(t))
+	var row := _row(thumb, WorldBossRegistry.name_of(t), Lang.ui("tag_wboss"), color, lines)
 	row.set_meta("thumb_pending", true)
 	row.set_meta("thumb_kind", "titan")
 	row.set_meta("thumb_data", t)
@@ -286,30 +290,33 @@ func _tier_color(tier: int) -> Color:
 		_: return Color.WHITE
 
 func _family_name(fam: int) -> String:
-	match fam:
-		0: return "Humanoïde"
-		1: return "Bête"
-		2: return "Mort-vivant"
-		3: return "Construct"
-		4: return "Élémentaire"
-		5: return "Aberration"
-		6: return "Fée"
-		7: return "Draconide"
-		_: return "Entité"
+	var names := [
+		{"fr": "Humanoïde", "en": "Humanoid", "id": "Humanoid"},
+		{"fr": "Bête", "en": "Beast", "id": "Binatang"},
+		{"fr": "Mort-vivant", "en": "Undead", "id": "Mayat hidup"},
+		{"fr": "Construct", "en": "Construct", "id": "Konstruk"},
+		{"fr": "Élémentaire", "en": "Elemental", "id": "Elemental"},
+		{"fr": "Aberration", "en": "Aberration", "id": "Aberasi"},
+		{"fr": "Fée", "en": "Fey", "id": "Peri"},
+		{"fr": "Draconide", "en": "Dragonkin", "id": "Keturunan naga"},
+	]
+	if fam >= 0 and fam < names.size(): return Lang.t(names[fam])
+	return Lang.t({"fr": "Entité", "en": "Entity", "id": "Entitas"})
 
 func _approach_hint(t: Dictionary) -> String:
 	var intel: int = int(t.intel)
 	var aggr: int = int(t.aggr)
 	var fam: int = int(t.family)
 	var hints: Array[String] = []
-	if intel >= 70: hints.append("Diplomatie")
-	if intel >= 30 and intel < 70: hints.append("Tromperie")
-	if intel < 30: hints.append("Combat ou Discrétion")
-	if aggr >= 70 and intel < 50: hints.append("Fuir")
-	if fam == 2 or fam == 5: hints.append("Mystique")
-	if fam == 6: hints.append("Curieux ou Mystique")
-	if fam == 3: hints.append("Combat ou Mystique")
-	return ", ".join(hints) if hints.size() > 0 else "Toutes approches"
+	if intel >= 70: hints.append(Lang.t({"fr": "Diplomatie", "en": "Diplomacy", "id": "Diplomasi"}))
+	if intel >= 30 and intel < 70: hints.append(Lang.t({"fr": "Tromperie", "en": "Deception", "id": "Tipu daya"}))
+	if intel < 30: hints.append(Lang.t({"fr": "Combat ou Discrétion", "en": "Combat or Stealth", "id": "Bertarung atau Menyelinap"}))
+	if aggr >= 70 and intel < 50: hints.append(Lang.t({"fr": "Fuir", "en": "Flee", "id": "Kabur"}))
+	if fam == 2 or fam == 5: hints.append(Lang.t({"fr": "Mystique", "en": "Mystical", "id": "Mistis"}))
+	if fam == 6: hints.append(Lang.t({"fr": "Curieux ou Mystique", "en": "Curious or Mystical", "id": "Penasaran atau Mistis"}))
+	if fam == 3: hints.append(Lang.t({"fr": "Combat ou Mystique", "en": "Combat or Mystical", "id": "Bertarung atau Mistis"}))
+	if hints.size() > 0: return ", ".join(hints)
+	return Lang.t({"fr": "Toutes approches", "en": "Any approach", "id": "Semua pendekatan"})
 
 func _dragon_color(align: int) -> Color:
 	match align:
@@ -319,33 +326,38 @@ func _dragon_color(align: int) -> Color:
 		_: return Color.WHITE
 
 func _dragon_rarity_word(w: int) -> String:
-	if w <= 2: return "Quasi-mythique"
-	if w <= 5: return "Très rare"
-	if w <= 10: return "Rare"
-	if w <= 15: return "Peu commun"
-	return "Commun"
+	if w <= 2: return Lang.t({"fr": "Quasi-mythique", "en": "Near-mythic", "id": "Nyaris mitos"})
+	if w <= 5: return Lang.t({"fr": "Très rare", "en": "Very rare", "id": "Sangat langka"})
+	if w <= 10: return Lang.t({"fr": "Rare", "en": "Rare", "id": "Langka"})
+	if w <= 15: return Lang.t({"fr": "Peu commun", "en": "Uncommon", "id": "Tak umum"})
+	return Lang.t({"fr": "Commun", "en": "Common", "id": "Umum"})
 
 func _dragon_effect_text(effect: String, value: int) -> String:
-	match effect:
-		"aggression_boost":   return "Toutes les créatures gagnent +%d en agression" % value
-		"intel_boost":        return "Toutes les créatures gagnent +%d en intelligence" % value
-		"corruption_double":  return "La corruption de la zone est doublée"
-		"swingy_rolls":       return "Les succès deviennent critiques, les échecs deviennent déroutes (%d%%)" % value
-		"mixed_becomes_fail": return "Les résultats mitigés deviennent des échecs"
-		"slow_flight":        return "Fuir devient nettement plus difficile (+%d)" % value
-		"peace_truce":        return "Diplomatie facilitée (-%d à la difficulté)" % value
-		"deceptive_boost":    return "Tromperie facilitée (-%d à la difficulté)" % value
-		"guided_instinct":    return "+%d à toutes les actions guidées par l'INSTINCT" % value
-		"free_crit_cursed":   return "Ton premier échec critique est annulé contre une malédiction"
-		"delete_creature":    return "Une créature de la zone est effacée de l'existence"
-		_:                    return effect
+	var d := {
+		"aggression_boost":   {"fr": "Toutes les créatures gagnent +%d en agression", "en": "All creatures gain +%d aggression", "id": "Semua makhluk mendapat +%d agresi"},
+		"intel_boost":        {"fr": "Toutes les créatures gagnent +%d en intelligence", "en": "All creatures gain +%d intelligence", "id": "Semua makhluk mendapat +%d kecerdasan"},
+		"corruption_double":  {"fr": "La corruption de la zone est doublée", "en": "Zone corruption is doubled", "id": "Korupsi zona berlipat ganda"},
+		"swingy_rolls":       {"fr": "Les succès deviennent critiques, les échecs deviennent déroutes (%d%%)", "en": "Successes turn critical, failures turn catastrophic (%d%%)", "id": "Keberhasilan jadi kritis, kegagalan jadi bencana (%d%%)"},
+		"mixed_becomes_fail": {"fr": "Les résultats mitigés deviennent des échecs", "en": "Mixed results become failures", "id": "Hasil tanggung menjadi kegagalan"},
+		"slow_flight":        {"fr": "Fuir devient nettement plus difficile (+%d)", "en": "Fleeing becomes much harder (+%d)", "id": "Kabur jadi jauh lebih sulit (+%d)"},
+		"peace_truce":        {"fr": "Diplomatie facilitée (-%d à la difficulté)", "en": "Diplomacy made easier (-%d difficulty)", "id": "Diplomasi lebih mudah (-%d kesulitan)"},
+		"deceptive_boost":    {"fr": "Tromperie facilitée (-%d à la difficulté)", "en": "Deception made easier (-%d difficulty)", "id": "Tipu daya lebih mudah (-%d kesulitan)"},
+		"guided_instinct":    {"fr": "+%d à toutes les actions guidées par l'INSTINCT", "en": "+%d to all INSTINCT-guided actions", "id": "+%d untuk semua aksi berbasis INSTING"},
+		"free_crit_cursed":   {"fr": "Ton premier échec critique est annulé contre une malédiction", "en": "Your first critical failure is cancelled — for a curse", "id": "Kegagalan kritis pertamamu dibatalkan — ditukar kutukan"},
+		"delete_creature":    {"fr": "Une créature de la zone est effacée de l'existence", "en": "One creature in the zone is erased from existence", "id": "Satu makhluk di zona dihapus dari keberadaan"},
+	}
+	if not d.has(effect): return effect
+	var tpl: String = Lang.t(d[effect])
+	return (tpl % value) if tpl.contains("%d") else tpl
 
 func _titan_effect_text(effect: String) -> String:
-	match effect:
-		"all_tones_mixed":     return "Tous les tons sont teintés d'incertitude"
-		"strip_memory":        return "Il efface ce qui te définissait"
-		"flood_corruption":    return "La corruption envahit la zone"
-		"judge_every_choice":  return "Chaque choix est pesé"
-		"disable_dialogue":    return "Les mots ne servent plus à rien"
-		"invert_outcomes":     return "Le hasard se retourne contre toi"
-		_:                     return effect
+	var d := {
+		"all_tones_mixed":     {"fr": "Tous les tons sont teintés d'incertitude", "en": "Every tone is tinged with uncertainty", "id": "Semua nada diliputi keraguan"},
+		"strip_memory":        {"fr": "Il efface ce qui te définissait", "en": "It erases what defined you", "id": "Ia menghapus apa yang dulu mendefinisikanmu"},
+		"flood_corruption":    {"fr": "La corruption envahit la zone", "en": "Corruption floods the zone", "id": "Korupsi membanjiri zona"},
+		"judge_every_choice":  {"fr": "Chaque choix est pesé", "en": "Every choice is weighed", "id": "Setiap pilihan ditimbang"},
+		"disable_dialogue":    {"fr": "Les mots ne servent plus à rien", "en": "Words no longer serve any purpose", "id": "Kata-kata tak lagi berguna"},
+		"invert_outcomes":     {"fr": "Le hasard se retourne contre toi", "en": "Chance itself turns against you", "id": "Keberuntungan berbalik melawanmu"},
+	}
+	if not d.has(effect): return effect
+	return Lang.t(d[effect])
