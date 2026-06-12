@@ -2,9 +2,26 @@ class_name Decor3D extends Node3D
 # Biome-specific decor with stronger silhouettes and layered foliage.
 
 var _sub_biome: int = 0
+var _biome: StringName = &"forest"
+var _evolve_orbs: Array = []   # ambience nodes added by evolve(), pruned each step
+
+# Ambience orb colors per biome, used by evolve() — fireflies, embers, mist...
+const _AMBIENCE_COLOR := {
+	&"forest":    Color(0.85, 1.00, 0.45),   # fireflies
+	&"city":      Color(1.00, 0.80, 0.45),   # lantern motes
+	&"ruins":     Color(0.95, 0.90, 0.65),   # dust glints
+	&"corrupted": Color(1.00, 0.35, 0.85),   # corruption motes
+	&"anomaly":   Color(0.55, 0.75, 1.00),   # warp sparks
+	&"swamp":     Color(0.55, 0.85, 0.45),   # will-o-wisps
+	&"highland":  Color(0.95, 0.95, 1.00),   # wind glints
+	&"crypt":     Color(0.55, 0.85, 1.00),   # spirit motes
+	&"coast":     Color(0.75, 0.90, 1.00),   # sea spray
+}
 
 func build(biome: StringName, corruption: float, rng: DRNG, sub_biome: int = 0) -> void:
 	_sub_biome = sub_biome
+	_biome = biome
+	_evolve_orbs.clear()
 	_grass_tufts(biome, rng)
 	# Try Kenney prop layout first; on failure fall back to procedural.
 	if _try_kenney(biome, corruption, rng):
@@ -295,6 +312,86 @@ func _try_kenney(biome: StringName, corruption: float, rng: DRNG) -> bool:
 			n.set_meta("sway_amp", 0.05 + (randf() * 0.04))
 			n.set_meta("sway_phase", randf() * TAU)
 	return any > 0
+
+# ----------------------- Per-encounter evolution -----------------------
+
+# Called between encounters inside the SAME zone: the scene composition shifts
+# so each fight has its own framing without a full rebuild.
+#  - a few existing props slowly drift/turn to new spots
+#  - fresh ambience motes (biome-colored) spawn and float through the frame
+#  - previous evolve motes fade out, keeping node count bounded
+func evolve(step: int) -> void:
+	_drift_props(step)
+	_refresh_ambience(step)
+
+func _drift_props(step: int) -> void:
+	# Pick ~1/3 of the placed props deterministically from `step` and tween them
+	# to a nearby spot with a new heading.  Skip ambience orbs and huge meshes
+	# (water planes, mountains) so the ground doesn't slide around.
+	var props: Array = []
+	for child in get_children():
+		if not (child is Node3D): continue
+		if child in _evolve_orbs: continue
+		var n3: Node3D = child
+		# Big set-pieces stay put: anything wider than ~6 m.
+		if n3 is MeshInstance3D:
+			var sz: Vector3 = (n3 as MeshInstance3D).get_aabb().size * n3.scale
+			if sz.x > 6.0 or sz.z > 6.0: continue
+		props.append(n3)
+	if props.is_empty(): return
+	for i in props.size():
+		if (i + step) % 3 != 0: continue
+		var p: Node3D = props[i]
+		var seed_f := float(i * 13 + step * 7)
+		var dx := sin(seed_f * 1.7) * 1.6
+		var dz := cos(seed_f * 2.3) * 1.2
+		var target := p.position + Vector3(dx, 0, dz)
+		target.x = clampf(target.x, -9.5, 9.5)
+		target.z = clampf(target.z, -8.5, -0.5)
+		var t := p.create_tween()
+		t.tween_property(p, "position:x", target.x, 2.5).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		t.parallel().tween_property(p, "position:z", target.z, 2.5).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		t.parallel().tween_property(p, "rotation:y", p.rotation.y + sin(seed_f) * 0.8, 2.5)
+
+func _refresh_ambience(step: int) -> void:
+	# Fade out the previous batch of motes.
+	for orb in _evolve_orbs:
+		if is_instance_valid(orb):
+			var o: Node3D = orb
+			var t := o.create_tween()
+			t.tween_property(o, "scale", Vector3.ONE * 0.01, 1.2)
+			t.tween_callback(func():
+				if is_instance_valid(o): o.queue_free())
+	_evolve_orbs.clear()
+	# Spawn a fresh batch, drifting slowly upward/forward.
+	var col: Color = _AMBIENCE_COLOR.get(_biome, Color(0.9, 0.9, 0.8))
+	var count := 5 + (step % 3)
+	for i in count:
+		var seed_f := float(i * 31 + step * 11)
+		var orb := SphereMesh.new()
+		var r := 0.05 + fposmod(seed_f * 0.137, 0.07)
+		orb.radius = r; orb.height = r * 2.0
+		var mi := MeshInstance3D.new()
+		mi.mesh = orb
+		var mat := StandardMaterial3D.new()
+		mat.albedo_color = col
+		mat.emission_enabled = true
+		mat.emission = col
+		mat.emission_energy_multiplier = 3.0
+		mi.material_override = mat
+		mi.position = Vector3(
+			sin(seed_f * 0.91) * 7.0,
+			0.4 + fposmod(seed_f * 0.27, 1.8),
+			-1.0 - fposmod(seed_f * 0.53, 6.0))
+		mi.scale = Vector3.ONE * 0.01
+		add_child(mi)
+		_evolve_orbs.append(mi)
+		# Pop in, then drift in a slow loop.
+		var t := mi.create_tween()
+		t.tween_property(mi, "scale", Vector3.ONE, 0.8).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		var drift := mi.create_tween().set_loops()
+		drift.tween_property(mi, "position:y", mi.position.y + 0.5, 2.0 + fposmod(seed_f, 1.5)).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		drift.tween_property(mi, "position:y", mi.position.y, 2.0 + fposmod(seed_f, 1.5)).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
 func _tint_children(node: Node, tint: Color) -> void:
 	for c in node.get_children():

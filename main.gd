@@ -364,6 +364,9 @@ func _on_encounter(enc) -> void:
 	Music.nudge_for_encounter(_encounter_counter)
 	# Per-encounter visual refresh: shift the sun a bit so the scene feels alive.
 	_nudge_environment(_encounter_counter)
+	# Decor evolution inside the same zone: props drift, fresh ambience motes.
+	if _encounter_counter > 1 and decor and is_instance_valid(decor):
+		decor.evolve(_encounter_counter)
 	if situation_node and is_instance_valid(situation_node):
 		situation_node.queue_free()
 		situation_node = null
@@ -460,10 +463,14 @@ func _on_stats(force: int, injuries: Array, relics: Array = []) -> void:
 	_refresh_avatars_injuries()
 
 func _on_choice(idx: int) -> void:
-	# Nudge the camera according to the picked tone, for tactile feedback.
+	# Nudge the camera according to the picked tone, for tactile feedback,
+	# and play a matching body action on the acting player's avatar.
 	if director.current != null and idx < director.current.choices.size():
 		var tone: int = int(director.current.choices[idx].tone)
 		Cinematic.nudge_for_tone(camera, tone)
+		var act_idx: int = director.active_idx
+		if act_idx >= 0 and act_idx < avatar_nodes.size() and is_instance_valid(avatar_nodes[act_idx]):
+			avatar_nodes[act_idx].act_tone(tone)
 	director.choose(idx)
 
 func _on_run_over(cause: StringName) -> void:

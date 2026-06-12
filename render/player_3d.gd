@@ -9,6 +9,8 @@ var _body_mi: MeshInstance3D
 var _root: Node3D
 var _injury_overlays: Node3D                 # everything added by injuries
 var _tremor_tween: Tween
+var _glb: Node3D                             # imported model, null if procedural
+var _act_tween: Tween
 
 func build(cls: Dictionary, p_skin: Color = Color(0.92, 0.78, 0.65), p_hair: Color = Color(0.30, 0.20, 0.15)) -> void:
 	class_data = cls
@@ -19,6 +21,7 @@ func build(cls: Dictionary, p_skin: Color = Color(0.92, 0.78, 0.65), p_hair: Col
 	add_child(_root)
 	# Try a per-class external GLB first.
 	var loaded: Node3D = AssetLoader.instance_for_player(int(cls.kind))
+	_glb = loaded
 	if loaded != null:
 		_root.add_child(loaded)
 		_normalize_player_scale(loaded)
@@ -145,6 +148,58 @@ func _add_part(mesh: Mesh, pos: Vector3, color: Color, rough: float = 0.7, scale
 	mi.material_override = mat
 	_root.add_child(mi)
 	return mi
+
+# ----------------------- Choice-tone actions -----------------------
+
+# Plays a short body action matching the tone of the choice the player picked.
+# GLB models also trigger a matching skeletal animation; procedural bodies use
+# root tweens only. Tones: 0 AGGRESSIVE, 1 DIPLOMATIC, 2 CAUTIOUS, 3 CURIOUS,
+# 4 DECEPTIVE, 5 MYSTICAL.
+func act_tone(tone: int) -> void:
+	if _root == null or not is_instance_valid(_root): return
+	if _act_tween and _act_tween.is_valid(): _act_tween.kill()
+	var base_pos := Vector3.ZERO
+	var base_rot := Vector3.ZERO
+	# Keep the exhaustion slump if present.
+	if _root.rotation_degrees.x > 4.0:
+		base_rot.x = _root.rotation_degrees.x
+		base_pos.y = _root.position.y
+	_act_tween = create_tween()
+	match tone:
+		0:  # AGGRESSIVE — lunge toward the creature, snap back.
+			if _glb: AssetLoader.play_named_action(_glb, &"attack", false)
+			_act_tween.tween_property(_root, "position", base_pos + Vector3(0, 0, -0.55), 0.16).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+			_act_tween.parallel().tween_property(_root, "rotation_degrees:x", base_rot.x + 10.0, 0.16)
+			_act_tween.tween_property(_root, "position", base_pos, 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+			_act_tween.parallel().tween_property(_root, "rotation_degrees:x", base_rot.x, 0.35)
+		1:  # DIPLOMATIC — small open step forward, slight bow.
+			if _glb: AssetLoader.play_named_action(_glb, &"walk", false)
+			_act_tween.tween_property(_root, "position", base_pos + Vector3(0, 0, -0.20), 0.35).set_trans(Tween.TRANS_SINE)
+			_act_tween.parallel().tween_property(_root, "rotation_degrees:x", base_rot.x + 6.0, 0.35)
+			_act_tween.tween_interval(0.25)
+			_act_tween.tween_property(_root, "position", base_pos, 0.45).set_trans(Tween.TRANS_SINE)
+			_act_tween.parallel().tween_property(_root, "rotation_degrees:x", base_rot.x, 0.45)
+		2:  # CAUTIOUS — crouch and shift back.
+			_act_tween.tween_property(_root, "position", base_pos + Vector3(0, -0.12, 0.30), 0.30).set_trans(Tween.TRANS_SINE)
+			_act_tween.tween_interval(0.35)
+			_act_tween.tween_property(_root, "position", base_pos, 0.45).set_trans(Tween.TRANS_SINE)
+		3:  # CURIOUS — lean in, head-first tilt.
+			_act_tween.tween_property(_root, "rotation_degrees:x", base_rot.x + 9.0, 0.30).set_trans(Tween.TRANS_SINE)
+			_act_tween.parallel().tween_property(_root, "position", base_pos + Vector3(0, 0, -0.15), 0.30)
+			_act_tween.tween_interval(0.30)
+			_act_tween.tween_property(_root, "rotation_degrees:x", base_rot.x, 0.40)
+			_act_tween.parallel().tween_property(_root, "position", base_pos, 0.40)
+		4:  # DECEPTIVE — quick sidestep with a low profile.
+			_act_tween.tween_property(_root, "position", base_pos + Vector3(0.35, -0.08, 0), 0.22).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+			_act_tween.tween_interval(0.25)
+			_act_tween.tween_property(_root, "position", base_pos, 0.40).set_trans(Tween.TRANS_SINE)
+		5:  # MYSTICAL — rise slightly, slow spin, glow pulse.
+			if _glb: AssetLoader.play_named_action(_glb, &"mutate", false)
+			_act_tween.tween_property(_root, "position", base_pos + Vector3(0, 0.18, 0), 0.45).set_trans(Tween.TRANS_SINE)
+			_act_tween.parallel().tween_property(_root, "rotation_degrees:y", 25.0, 0.45)
+			_act_tween.tween_property(_root, "position", base_pos, 0.55).set_trans(Tween.TRANS_SINE)
+			_act_tween.parallel().tween_property(_root, "rotation_degrees:y", 0.0, 0.55)
+			flash(Color(0.65, 0.55, 1.0), 0.5)
 
 # ----------------------- Injury reactions -----------------------
 
