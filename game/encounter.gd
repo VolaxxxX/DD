@@ -92,6 +92,11 @@ func resolve(choice_idx: int, resolver: EventResolver, coop_mod: int) -> Diction
 	var difficulty: int = 10 + creature.archetype.aggression / 10 + int(zone.chaos * 5)
 	var world_mod: int = -int(zone.corruption * 3)
 	difficulty += BiomeRules.tone_difficulty_mod(zone.biome, tone)
+	# Route taken into this zone (safe door eases rolls, risky door hardens).
+	difficulty += zone.route_diff_mod
+	# Story mode: globally gentler rolls for relaxed sessions.
+	if Settings.story_mode:
+		difficulty -= 2
 	# Onboarding: first zone is gentler so the player can learn the system.
 	if zone.index == 0:
 		difficulty -= 3
@@ -315,6 +320,9 @@ func _consequences(tone: int, outcome: int) -> Dictionary:
 	return c
 
 func _roll_fatal(tone: int) -> bool:
+	# Story mode: no permadeath from regular encounters — the run only ends
+	# by extraction (injuries still stack and hurt).
+	if Settings.story_mode: return false
 	# Death chance on CRIT_FAIL — scales with creature tier, tone risk, current injuries, corruption.
 	var base := 5
 	match int(creature.archetype.tier):

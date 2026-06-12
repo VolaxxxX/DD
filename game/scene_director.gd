@@ -15,6 +15,7 @@ signal healed(injury_id: StringName, player_idx: int)
 signal world_boss_spawned(boss: Dictionary)
 signal village_offered(player: PlayerState)
 signal relic_acquired(relic_id: StringName, player_idx: int)
+signal path_offered(options: Array)
 signal run_over(cause: StringName)
 
 const ENCOUNTERS_PER_ZONE := 4
@@ -227,17 +228,52 @@ func _advance_zone() -> void:
 		_awaiting_choice = false
 		village_offered.emit(players[active_idx])
 		return
-	world.advance_zone()
-	Save.save_run(players, world)
-	_maybe_trigger_world_boss()
-	_emit_zone_intro()
-	await _wait(2.0)
-	next_encounter()
+	_offer_path()
 
 func resume_after_village() -> void:
 	# Called by main.gd when the village panel is closed.
+	_offer_path()
+
+# ---- Path choice: two doors into the next zone ----
+# Safe route: the zone as generated, gentler rolls, fewer fragments.
+# Risky route: an alternate biome, harder rolls, far richer fragments.
+var _path_options: Array = []
+
+func _offer_path() -> void:
+	var next_idx := world.active_zone_index + 1
+	if next_idx >= world.zones.size():
+		_enter_next_zone()
+		return
+	var nz: Zone = world.zones[next_idx]
+	var prng := rng.derive(0x9A7B + next_idx)
+	var alt_biome: StringName = nz.biome
+	var guard := 0
+	while alt_biome == nz.biome and guard < 8:
+		alt_biome = Zone.BIOMES[prng.range_i(0, Zone.BIOMES.size())]
+		guard += 1
+	_path_options = [
+		{"biome": nz.biome, "kind": "safe", "diff": -1, "frag": 0.75},
+		{"biome": alt_biome, "kind": "risky", "diff": 2, "frag": 1.6},
+	]
+	_awaiting_choice = false
+	path_offered.emit(_path_options)
+
+func choose_path(idx: int) -> void:
+	if _path_options.is_empty(): return
+	var opt: Dictionary = _path_options[clampi(idx, 0, _path_options.size() - 1)]
+	_path_options = []
+	var next_idx := world.active_zone_index + 1
+	if next_idx < world.zones.size():
+		var nz: Zone = world.zones[next_idx]
+		nz.regenerate_as(StringName(opt.biome))
+		nz.route_diff_mod = int(opt.diff)
+		nz.route_fragment_scale = float(opt.frag)
+	_enter_next_zone()
+
+func _enter_next_zone() -> void:
 	world.advance_zone()
 	Save.save_run(players, world)
+	Progress.fragment_scale = world.active_zone().route_fragment_scale if world.active_zone_index < world.zones.size() else 1.0
 	_maybe_trigger_world_boss()
 	_emit_zone_intro()
 	await _wait(2.0)

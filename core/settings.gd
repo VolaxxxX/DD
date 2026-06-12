@@ -9,6 +9,7 @@ var music_db: float = -4.0
 var sfx_db: float = -4.0
 var quality: int = 1               # 0=low, 1=mid, 2=high
 var grain_amount: float = 0.06
+var story_mode: bool = false       # gentler rolls, no permadeath outside bosses
 
 const BUS_MUSIC := "Music"
 const BUS_SFX := "SFX"
@@ -37,6 +38,7 @@ func _load() -> void:
 	if sfx_db < -10.0: sfx_db = -4.0
 	quality = int(cfg.get_value("graphics", "quality", quality))
 	grain_amount = float(cfg.get_value("graphics", "grain", grain_amount))
+	story_mode = bool(cfg.get_value("gameplay", "story_mode", story_mode))
 
 func save() -> void:
 	var cfg := ConfigFile.new()
@@ -44,7 +46,11 @@ func save() -> void:
 	cfg.set_value("audio", "sfx_db", sfx_db)
 	cfg.set_value("graphics", "quality", quality)
 	cfg.set_value("graphics", "grain", grain_amount)
+	cfg.set_value("gameplay", "story_mode", story_mode)
 	cfg.save(PATH)
+
+func set_story_mode(v: bool) -> void:
+	story_mode = v; save()
 
 func apply() -> void:
 	AudioServer.set_bus_volume_db(AudioServer.get_bus_index(BUS_MUSIC), music_db)

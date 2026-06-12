@@ -133,11 +133,41 @@ const TONE_STAT_LABEL := {
 	0: "force", 1: "charisme", 2: "vivacite", 3: "instinct", 4: "charisme", 5: "esprit",
 }
 
+# Companion "Flair": estimates each choice's hidden margin (player stat for
+# the tone vs the encounter's difficulty mods) and returns the safest index.
+# The numbers never surface — just a paw mark from a fox that knows.
+func _flair_index(enc) -> int:
+	if _player == null: return -1
+	var best := -1
+	var best_margin := -INF
+	for i in enc.choices.size():
+		var tone: int = int(enc.choices[i].tone)
+		var stat_key: StringName = PlayerClass.tone_stat(tone)
+		var s: float = float(_player.effective_stat(stat_key) + _player.tone_modifier(tone) + BiomeRules.stat_mod(enc.zone.biome, stat_key))
+		var d: float = 10.0 + enc.zone.chaos * 5.0 + float(BiomeRules.tone_difficulty_mod(enc.zone.biome, tone))
+		if enc.creature != null:
+			d += float(enc.creature.archetype.aggression) / 10.0
+		match enc.zone.dragon_effect:
+			"slow_flight":
+				if tone == 2: d += enc.zone.dragon_value
+			"peace_truce":
+				if tone == 1: d -= enc.zone.dragon_value
+			"deceptive_boost":
+				if tone == 4: d -= enc.zone.dragon_value
+			"guided_instinct":
+				if stat_key == &"instinct": s += enc.zone.dragon_value
+		var margin := s - d
+		if margin > best_margin:
+			best_margin = margin
+			best = i
+	return best
+
 func present_encounter(enc) -> void:
 	# Keep the intro visible in the narrative box if one was just set, so the
 	# player reads "the fey with red eyes" while picking a choice.
 	if not _intro_active: narrative.text = ""
 	_show_choices()
+	var flair := _flair_index(enc)
 	for i in choice_buttons.size():
 		var btn := choice_buttons[i]
 		if i < enc.choices.size():
@@ -148,7 +178,9 @@ func present_encounter(enc) -> void:
 			var stat_short: String = PlayerClass.stat_label(StringName(stat_key))
 			# Star the choice that rolls the player's strongest stat.
 			var star := "  ★" if stat_key == _best_stat_key() else ""
-			btn.text = "%s %s  ·  %s%s" % [TONE_GLYPH.get(c.tone, ""), c.text, stat_short, star]
+			# Companion's paw on the statistically safest path.
+			var paw := "🐾 " if i == flair else ""
+			btn.text = "%s%s %s  ·  %s%s" % [paw, TONE_GLYPH.get(c.tone, ""), c.text, stat_short, star]
 			btn.modulate = TONE_COLOR.get(c.tone, Color.WHITE)
 			btn.modulate.a = 0.0
 			btn.disabled = false

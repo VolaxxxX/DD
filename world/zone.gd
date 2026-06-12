@@ -17,6 +17,9 @@ var dragon_intro: String = ""
 var dragon_effect: String = ""
 var dragon_value: int = 0
 var dragon_gift_used: bool = false   # for free_crit_cursed
+# Path-choice route taken to enter this zone (set by SceneDirector).
+var route_diff_mod: int = 0          # +N harder / -N gentler rolls here
+var route_fragment_scale: float = 1.0
 
 func _init(_rng: DRNG, _mem: WorldMemory, _idx: int) -> void:
 	rng = _rng
@@ -37,3 +40,15 @@ func generate() -> void:
 	if chaos > 0.7:
 		DragonSystem.maybe_manifest(self, rng.derive(0xD4A6))
 	print("[ZONE %d] biome=%s chaos=%.2f corruption=%.2f" % [index, biome, chaos, corruption])
+
+# Rebuild this zone as a different biome (path-choice doors). The ecosystem is
+# repopulated so creatures stay coherent with the new terrain.
+func regenerate_as(new_biome: StringName) -> void:
+	if new_biome == biome: return
+	biome = new_biome
+	sub_biome = rng.range_i(0, int(PropLoader.SUB_COUNT.get(biome, 1)))
+	if ecosystem and is_instance_valid(ecosystem):
+		ecosystem.queue_free()
+	ecosystem = Ecosystem.new(rng.derive(0xEC06), self)
+	add_child(ecosystem)
+	ecosystem.populate()

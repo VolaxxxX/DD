@@ -43,6 +43,9 @@ func resolve(choice_idx: int, _resolver: EventResolver, _coop_mod: int) -> Dicti
 	var stat_key: StringName = PlayerClass.tone_stat(tone)
 	var actor_stat: int = player.effective_stat(stat_key) + player.tone_modifier(tone) + BiomeRules.stat_mod(zone.biome, stat_key)
 	var difficulty: int = 10 + int(zone.chaos * 6) + BiomeRules.tone_difficulty_mod(zone.biome, tone)
+	difficulty += zone.route_diff_mod
+	if Settings.story_mode:
+		difficulty -= 2
 	var roll := rng.range_i(1, 21) + actor_stat - difficulty
 	var success: bool = roll >= 0
 	var section: Dictionary = template_choice.good if success else template_choice.bad

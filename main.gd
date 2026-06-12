@@ -104,6 +104,7 @@ func _start_game_with_saved_seed(seed: int, zone_index: int) -> void:
 	director.encounter_progress.connect(func(c: int, t: int): ui.update_encounter_progress(c, t))
 	director.village_offered.connect(_on_village_offered)
 	director.relic_acquired.connect(_on_relic_acquired)
+	director.path_offered.connect(_on_path_offered)
 	ui.choice_selected.connect(_on_choice)
 	Bus.zone_changed.connect(_on_zone_changed)
 	director.begin()
@@ -181,6 +182,7 @@ func _start_game() -> void:
 	director.encounter_progress.connect(func(c: int, t: int): ui.update_encounter_progress(c, t))
 	director.village_offered.connect(_on_village_offered)
 	director.relic_acquired.connect(_on_relic_acquired)
+	director.path_offered.connect(_on_path_offered)
 	ui.choice_selected.connect(_on_choice)
 	if not ui.pause_requested.is_connected(_open_pause_menu):
 		ui.pause_requested.connect(_open_pause_menu)
@@ -253,6 +255,49 @@ func _apply_orbit_delta(rel: Vector2) -> void:
 	_orbit_pitch = clampf(_orbit_pitch - rel.y * 0.004, -0.6, 0.9)
 	# Wrap yaw so it never explodes.
 	_orbit_yaw = wrapf(_orbit_yaw, -PI, PI)
+
+# Path choice between zones: two doors with visible biome + stakes.
+func _on_path_offered(options: Array) -> void:
+	var layer := CanvasLayer.new(); layer.layer = 85
+	add_child(layer)
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	layer.add_child(center)
+	var panel := PanelContainer.new()
+	center.add_child(panel)
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 14)
+	v.custom_minimum_size = Vector2(560, 0)
+	panel.add_child(v)
+	var title := Label.new()
+	title.text = Lang.t({"fr": "Deux chemins s'ouvrent devant toi.",
+		"en": "Two paths open before you.",
+		"id": "Dua jalan terbuka di depanmu."})
+	title.add_theme_font_size_override("font_size", 22)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	v.add_child(title)
+	for i in options.size():
+		var opt: Dictionary = options[i]
+		var biome_name: String = String(opt.biome).to_upper()
+		var desc: String
+		if String(opt.kind) == "safe":
+			desc = Lang.t({"fr": "Voie sûre — épreuves plus douces, fragments réduits",
+				"en": "Safe route — gentler trials, fewer fragments",
+				"id": "Jalur aman — ujian lebih ringan, fragmen berkurang"})
+		else:
+			desc = Lang.t({"fr": "Voie périlleuse — épreuves rudes, fragments x1.6",
+				"en": "Perilous route — harsh trials, fragments x1.6",
+				"id": "Jalur berbahaya — ujian berat, fragmen x1.6"})
+		var btn := Button.new()
+		btn.text = "🚪  %s\n%s" % [biome_name, desc]
+		btn.custom_minimum_size = Vector2(0, 72)
+		btn.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		var idx := i
+		btn.pressed.connect(func():
+			Audio.play(&"click")
+			if is_instance_valid(layer): layer.queue_free()
+			director.choose_path(idx))
+		v.add_child(btn)
 
 func _on_village_offered(player: PlayerState) -> void:
 	Progress.record_village_visit()
@@ -487,7 +532,24 @@ func _on_encounter(enc) -> void:
 		ui.present_encounter(enc)
 	else:
 		_spawn_creature(enc.creature.archetype)
+		# Tactical mood line: derived from the creature's REAL stats, so she
+		# can read at a glance whether talking, tricking or fleeing has a shot.
+		ui.present_intro("%s\n%s" % [enc.creature_name, _mood_line(enc.creature.archetype)])
 		ui.present_encounter(enc)
+
+func _mood_line(a: Archetype) -> String:
+	var tags: Array[String] = []
+	if a.aggression >= 70:
+		tags.append(Lang.t({"fr": "⚔ agressif", "en": "⚔ aggressive", "id": "⚔ agresif"}))
+	elif a.aggression <= 30:
+		tags.append(Lang.t({"fr": "🕊 placide", "en": "🕊 placid", "id": "🕊 tenang"}))
+	if a.intelligence >= 70:
+		tags.append(Lang.t({"fr": "🧠 rusé — la parole peut porter", "en": "🧠 cunning — words may land", "id": "🧠 cerdik — kata-kata bisa berhasil"}))
+	elif a.intelligence < 30:
+		tags.append(Lang.t({"fr": "🐾 bestial — inutile de parler", "en": "🐾 feral — talking is useless", "id": "🐾 buas — bicara sia-sia"}))
+	if int(a.tier) >= 3:
+		tags.append(Lang.t({"fr": "☠ redoutable", "en": "☠ fearsome", "id": "☠ menakutkan"}))
+	return " · ".join(tags)
 
 func _reset_camera_if_boss() -> void:
 	if boss_node and is_instance_valid(boss_node):

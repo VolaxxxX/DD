@@ -48,6 +48,20 @@ func _ready() -> void:
 	q_opt.select(Settings.quality)
 	q_opt.item_selected.connect(func(idx: int): Settings.set_quality(idx))
 	q_row.add_child(q_opt)
+	# Story mode toggle: gentle rolls + no permadeath outside bosses.
+	var s_row := HBoxContainer.new()
+	s_row.add_theme_constant_override("separation", 14)
+	v.add_child(s_row)
+	var s_chk := CheckButton.new()
+	s_chk.text = Lang.t({
+		"fr": "Mode histoire (doux, sans mort)",
+		"en": "Story mode (gentle, no death)",
+		"id": "Mode cerita (santai, tanpa mati)"})
+	s_chk.button_pressed = Settings.story_mode
+	s_chk.toggled.connect(func(on: bool):
+		Audio.play(&"click")
+		Settings.set_story_mode(on))
+	s_row.add_child(s_chk)
 	# Close
 	var close := Button.new()
 	close.text = Lang.ui("back")

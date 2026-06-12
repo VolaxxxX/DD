@@ -53,6 +53,7 @@ var _langs_played: Array = []         # for polyglot tracking
 var second_chance_used_this_run: bool = false
 var run_start_msec: int = 0
 var fragments: int = 0                # village currency, persists across runs
+var fragment_scale: float = 1.0       # route multiplier (set per zone, not saved)
 var next_zone_blessing: StringName = &""   # buff applied at next zone start
 
 const KILL_REWARD := 1
@@ -99,29 +100,29 @@ func save() -> void:
 func record_kill(creature_id: StringName) -> void:
 	var k := String(creature_id)
 	kills[k] = int(kills.get(k, 0)) + 1
-	fragments += KILL_REWARD
+	fragments += int(round(KILL_REWARD * fragment_scale))
 	_maybe_unlock(&"first_blood")
 	if _total_kills() >= 100:
 		_maybe_unlock(&"hundred_dead")
 	save()
 
 func record_elite_kill() -> void:
-	fragments += ELITE_REWARD
+	fragments += int(round(ELITE_REWARD * fragment_scale))
 	save()
 
 func record_dragon(dragon_id: StringName) -> void:
 	if String(dragon_id) not in dragons_seen:
 		dragons_seen.append(String(dragon_id))
-	fragments += DRAGON_REWARD
+	fragments += int(round(DRAGON_REWARD * fragment_scale))
 	_maybe_unlock(&"dragon_witness")
 	save()
 
 func record_zone_cleared() -> void:
-	fragments += ZONE_REWARD
+	fragments += int(round(ZONE_REWARD * fragment_scale))
 	save()
 
 func record_titan_survived() -> void:
-	fragments += TITAN_REWARD
+	fragments += int(round(TITAN_REWARD * fragment_scale))
 	_maybe_unlock(&"titan_breaker")
 	save()
 
