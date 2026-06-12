@@ -202,24 +202,10 @@ func _build_environment(biome: StringName, corruption: float) -> void:
 	e.glow_bloom = 0.25
 	e.glow_hdr_threshold = 0.9
 	e.adjustment_enabled = true
-	# Depth-of-field — focus crisp on the encounter, soften far props.
-	# Mobile renderer supports DOF Bokeh box mode at low cost.
-	e.dof_blur_far_enabled = true
-	e.dof_blur_far_distance = 10.0
-	e.dof_blur_far_transition = 6.0
-	e.dof_blur_amount = 0.10
-	# Stronger SSR-less sense of contrast via SSAO substitute (mobile-safe).
-	e.sdfgi_enabled = false  # not supported on mobile renderer
 	e.fog_aerial_perspective = 0.55
-	# Real volumetric fog (mobile renderer supports it as of Godot 4.3).
-	e.volumetric_fog_enabled = true
-	e.volumetric_fog_density = 0.012 + corruption * 0.022
-	e.volumetric_fog_albedo = sky_h
-	e.volumetric_fog_emission = sky_top * 0.3
-	e.volumetric_fog_emission_energy = 0.5 + corruption * 1.2
-	e.volumetric_fog_anisotropy = 0.3
-	e.volumetric_fog_length = 64.0
-	e.volumetric_fog_detail_spread = 4.0
+	# Volumetric fog requires Forward+ — not available on the mobile renderer.
+	# Depth fog + height fog below give the atmosphere instead.
+	e.fog_density = (0.012 + corruption * 0.025) * 1.4
 	# Height-based base fog gives ground mist in low areas.
 	e.fog_height_density = 0.04
 	e.fog_height = 1.5
@@ -236,6 +222,13 @@ func _build_environment(biome: StringName, corruption: float) -> void:
 		"coast":     e.adjustment_saturation = 1.20; e.adjustment_contrast = 1.10; e.adjustment_brightness = 1.10
 		_:           e.adjustment_saturation = 1.10; e.adjustment_contrast = 1.10
 	env.environment = e
+	# Depth-of-field lives on CameraAttributes in Godot 4 (not Environment).
+	var attrs := CameraAttributesPractical.new()
+	attrs.dof_blur_far_enabled = true
+	attrs.dof_blur_far_distance = 10.0
+	attrs.dof_blur_far_transition = 6.0
+	attrs.dof_blur_amount = 0.08
+	env.camera_attributes = attrs
 	add_child(env)
 
 func _build_ground(biome: StringName, corruption: float) -> void:
