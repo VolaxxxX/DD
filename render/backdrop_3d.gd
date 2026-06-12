@@ -677,13 +677,16 @@ func _build_environment(biome: StringName, corruption: float) -> void:
 	e.fog_enabled = true
 	e.fog_light_color = sky_h
 	e.fog_sun_scatter = 0.25
-	e.tonemap_mode = Environment.TONE_MAPPER_FILMIC
-	e.tonemap_exposure = 1.0
+	# AgX: filmic response that keeps saturated emissives (eyes, runes, fires)
+	# from clipping to neon — the single biggest "pro look" switch available
+	# on the Mobile renderer.
+	e.tonemap_mode = Environment.TONE_MAPPER_AGX
+	e.tonemap_exposure = 1.25
 	e.glow_enabled = true
-	e.glow_intensity = 0.9
-	e.glow_strength = 1.10
-	e.glow_bloom = 0.25
-	e.glow_hdr_threshold = 0.9
+	e.glow_intensity = 0.8
+	e.glow_strength = 1.05
+	e.glow_bloom = 0.18
+	e.glow_hdr_threshold = 1.0
 	e.adjustment_enabled = true
 	e.fog_aerial_perspective = 0.30
 	# Volumetric fog requires Forward+ — not available on the mobile renderer.
@@ -705,13 +708,17 @@ func _build_environment(biome: StringName, corruption: float) -> void:
 		"crypt":     e.adjustment_saturation = 0.45; e.adjustment_contrast = 1.45; e.adjustment_brightness = 0.78
 		"coast":     e.adjustment_saturation = 1.20; e.adjustment_contrast = 1.10; e.adjustment_brightness = 1.10
 		_:           e.adjustment_saturation = 1.10; e.adjustment_contrast = 1.10
+	# AgX response is slightly flatter than Filmic — give the grade back a
+	# touch of saturation so each biome keeps its color identity.
+	e.adjustment_saturation += 0.10
+	e.ambient_light_energy = 0.9
 	env.environment = e
 	# Depth-of-field lives on CameraAttributes in Godot 4 (not Environment).
 	var attrs := CameraAttributesPractical.new()
 	attrs.dof_blur_far_enabled = true
-	attrs.dof_blur_far_distance = 10.0
-	attrs.dof_blur_far_transition = 6.0
-	attrs.dof_blur_amount = 0.08
+	attrs.dof_blur_far_distance = 16.0
+	attrs.dof_blur_far_transition = 14.0
+	attrs.dof_blur_amount = 0.055
 	env.camera_attributes = attrs
 	add_child(env)
 
@@ -824,8 +831,11 @@ func _build_lights(biome: StringName, corruption: float) -> void:
 	sun.light_energy = (1.1 - corruption * 0.3) * sun_energy_mul
 	sun.light_color = tint * warmth_mul
 	sun.shadow_enabled = true
-	sun.directional_shadow_max_distance = 30.0
+	sun.directional_shadow_max_distance = 40.0
 	sun.light_angular_distance = 1.5
+	# Soft penumbra: with the 4096 atlas + soft filter the edges melt naturally.
+	sun.shadow_blur = 1.6
+	sun.shadow_opacity = 0.88
 	add_child(sun)
 
 	fill = DirectionalLight3D.new()
