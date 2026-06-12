@@ -215,6 +215,7 @@ func _new_viewport(cam_pos: Vector3, cam_look: Vector3 = Vector3.ZERO) -> SubVie
 	var vp := SubViewport.new()
 	vp.size = THUMB_SIZE
 	vp.transparent_bg = false
+	vp.own_world_3d = true   # CRITICAL: isolate each thumbnail's 3D world
 	cont.add_child(vp)
 	var cam := Camera3D.new()
 	cam.position = cam_pos
