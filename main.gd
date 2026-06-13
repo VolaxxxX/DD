@@ -511,9 +511,9 @@ func _spawn_creature(arch: Archetype) -> void:
 	if creature_node and is_instance_valid(creature_node):
 		creature_node.queue_free()
 	creature_node = Creature3D.new()
-	# Sit slightly to the right of dead center and forward of the decor zone so
-	# the silhouette reads clearly against the backdrop.
-	creature_node.position = Vector3(0.6, 0.0, -0.5)
+	# Sit slightly right of center and clearly FORWARD of the decor exclusion
+	# zone (z=-2) so the creature never overlaps props/silhouettes.
+	creature_node.position = Vector3(0.6, 0.0, 0.4)
 	stage.add_child(creature_node)
 	creature_node.build(arch)
 	_focal_spotlight(creature_node.position + Vector3(0, 1.0, 0))
