@@ -20,7 +20,8 @@ var _reacting: bool = false
 
 func build(seed_v: int) -> void:
 	for c in get_children(): c.queue_free()
-	companion_name = NAMES[seed_v % NAMES.size()]
+	# Persistent player-chosen name wins; otherwise random.
+	companion_name = Progress.flair_name if Progress.flair_name != "" else NAMES[seed_v % NAMES.size()]
 	var pal: Dictionary = PALETTES[(seed_v / 7) % PALETTES.size()]
 	_root = Node3D.new()
 	add_child(_root)

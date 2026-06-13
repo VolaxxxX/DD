@@ -4,6 +4,7 @@ extends Node3D
 signal characters_ready(player_defs: Array)  # [{name, kind, stats}] — 1 (solo) ou 2 (duo)
 
 @onready var name_edit: LineEdit = $UI/Root/Panel/V/NameRow/NameEdit
+var _flair_edit: LineEdit
 @onready var class_label: Label = $UI/Root/Panel/V/ClassName
 @onready var tagline_label: Label = $UI/Root/Panel/V/Tagline
 @onready var stats_grid: GridContainer = $UI/Root/Panel/V/StatsGrid
@@ -59,6 +60,26 @@ func _ready() -> void:
 	v.add_child(_duo_btn)
 	v.move_child(_duo_btn, 1)
 	_build_stat_rows()
+	# Flair (companion) name row — only meaningful in solo. Pre-fill with the
+	# previous Flair name if there is one (persists across runs).
+	var flair_row := HBoxContainer.new()
+	flair_row.add_theme_constant_override("separation", 8)
+	var flair_lbl := Label.new()
+	flair_lbl.text = Lang.t({"fr": "🦊 Nom de Flair", "en": "🦊 Flair's name", "id": "🦊 Nama Flair"})
+	flair_lbl.add_theme_font_size_override("font_size", 15)
+	flair_lbl.custom_minimum_size = Vector2(160, 0)
+	flair_row.add_child(flair_lbl)
+	_flair_edit = LineEdit.new()
+	_flair_edit.placeholder_text = Lang.t({"fr": "Pip", "en": "Pip", "id": "Pip"})
+	_flair_edit.max_length = 24
+	if Progress.flair_name != "": _flair_edit.text = Progress.flair_name
+	_flair_edit.custom_minimum_size = Vector2(200, 0)
+	flair_row.add_child(_flair_edit)
+	v.add_child(flair_row)
+	v.move_child(flair_row, 2)
+	# Pre-fill the Voyageur name with the persistent one if any.
+	if Progress.voyageur_name != "":
+		name_edit.text = Progress.voyageur_name
 	_load_class(_idx)
 	_update_play_label()
 	_spin_avatar()
@@ -161,6 +182,13 @@ func _next() -> void:
 func _confirm() -> void:
 	var n := name_edit.text.strip_edges()
 	if n == "": n = "Voyageur" if _collected.is_empty() else "Compagnon"
+	# Persist the player-1 Voyageur name + Flair name so they carry across runs
+	# and are addressable everywhere via Progress.voyageur_name / flair_name.
+	if _collected.is_empty():
+		Progress.set_voyageur_name(n)
+		if _flair_edit != null:
+			var fn := _flair_edit.text.strip_edges()
+			if fn != "": Progress.set_flair_name(fn)
 	_collected.append({"name": n, "kind": int(_classes[_idx].kind), "stats": _stats.duplicate()})
 	if _duo and _collected.size() < 2:
 		# Reset the form for player 2.
