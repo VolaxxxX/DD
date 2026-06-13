@@ -195,6 +195,9 @@ func build(_arch: Archetype) -> void:
 			var t := loaded.create_tween().set_loops()
 			t.tween_property(loaded, "position:y", loaded.position.y + 0.25, 1.6).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 			t.tween_property(loaded, "position:y", loaded.position.y, 1.6).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		# DRACONIC: a drake — bulk it up so it reads as a big reptilian threat.
+		elif int(archetype.family) == Archetype.Family.DRACONIC:
+			loaded.scale *= 1.6
 		_apply_tier_scale()
 		_animator = Animator.new()
 		add_child(_animator)

@@ -67,6 +67,16 @@ static func instance_for(family: int, id: StringName) -> Node3D:
 			pool = FEY
 			tint = Color(0.8, 0.9, 1.0)
 			emissive = true
+		5:  # ABERRATION — weird animal tinted eldritch violet + glow
+			pool = ["beast_crab", "beast_caterpillar", "beast_bee"]
+			tint = Color(0.7, 0.35, 0.85)
+			emissive = true
+		7:  # DRACONIC — large beast tinted dark crimson (a drake)
+			pool = ["beast_lion", "beast_tiger", "beast_hog"]
+			tint = Color(0.85, 0.45, 0.4)
+		3:  # CONSTRUCT — character tinted cold stone-grey (a golem)
+			pool = CHARS
+			tint = Color(0.6, 0.62, 0.66)
 		_:
 			return null
 	if pool.is_empty(): return null

@@ -1162,9 +1162,11 @@ func _build_far_silhouettes(biome: StringName, corruption: float) -> void:
 			"anomaly":   count = 8;  y_scale_range = Vector2(4.0, 9.0)
 		# Distant relief reads as DIM shapes: a dark, desaturated, slightly
 		# horizon-tinted silhouette — never bright blocks. Far row dimmer still.
-		var base_dark := Color(0.18, 0.19, 0.24).lerp(horizon, 0.22)
-		var silhouette_col: Color = base_dark.darkened(0.15 + float(row) * 0.18)
-		silhouette_col = silhouette_col.lerp(Color(0.16, 0.04, 0.18), corruption * 0.4)
+		# Cool dark blue-grey only — never tinted toward the (often brown/tan)
+		# horizon, so distant relief reads as shadowed hills, not brown blobs.
+		var base_dark := Color(0.13, 0.15, 0.20)
+		var silhouette_col: Color = base_dark.darkened(0.1 + float(row) * 0.2)
+		silhouette_col = silhouette_col.lerp(Color(0.14, 0.04, 0.16), corruption * 0.4)
 		for i in count:
 			var x := _frng_h(rng, -34, 34)
 			var z := z_base + _frng_h(rng, -4, 4)
@@ -1206,7 +1208,7 @@ func _build_far_silhouettes(biome: StringName, corruption: float) -> void:
 	# Mid-ground filler: a closer, smaller row at z≈-13 that bridges the gap
 	# between the playable decor (z≥-8) and the far silhouettes (z≤-22). Still
 	# fully behind the action so it never hides mobs or UI.
-	var mid_col: Color = Color(0.20, 0.21, 0.26).lerp(horizon, 0.18).lerp(Color(0.16, 0.04, 0.18), corruption * 0.3)
+	var mid_col: Color = Color(0.16, 0.18, 0.23).lerp(Color(0.14, 0.04, 0.16), corruption * 0.3)
 	for i in 7:
 		var x := _frng_h(rng, -18, 18)
 		if absf(x) < 3.0: continue   # keep the center sightline to the horizon open

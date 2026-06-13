@@ -231,6 +231,7 @@ var _orbit_yaw: float = 0.0       # radians
 var _orbit_pitch: float = 0.0     # radians
 var _orbit_radius: float = 6.4
 var _cam_focal_y: float = 1.0     # focal height — raised for tall subjects
+var _cam_focal: Vector3 = Vector3(0, 1.0, 0)   # 3D point the camera orbits/looks at
 var _cam_radius_base: float = 6.4 # auto-framed distance for the current subject
 var _orbit_return_tween: Tween
 
@@ -367,10 +368,9 @@ func _process(delta: float) -> void:
 	# not a metronome.
 	var off_y := sin(_breath_time * 0.55) * 0.035 + sin(_breath_time * 1.7) * 0.012
 	var off_x := sin(_breath_time * 0.37) * 0.028 + sin(_breath_time * 1.3 + 1.7) * 0.014
-	# Orbital component: rotate around the focal point at radius _orbit_radius.
-	# Focal height and radius are auto-framed to the current subject so even a
-	# towering creature/boss stays fully in shot. Yaw 0 / pitch 0 = rest pose.
-	var focal := Vector3(0, _cam_focal_y, 0)
+	# Orbit around the subject's CENTRE point (x/z too, not just height) so the
+	# monster is always centred and in frame, whatever its size or offset.
+	var focal := _cam_focal
 	var yaw := _orbit_yaw + _scene_yaw   # per-encounter base angle + drag
 	var cy := cos(_orbit_pitch)
 	var orbit_offset := Vector3(
@@ -378,7 +378,7 @@ func _process(delta: float) -> void:
 		sin(_orbit_pitch),
 		cos(yaw) * cy
 	) * _orbit_radius
-	var rest_pos := focal + Vector3(0, _cam_focal_y * 0.4, 0) + orbit_offset
+	var rest_pos := focal + Vector3(0, focal.y * 0.35, 0) + orbit_offset
 	var pos := rest_pos + Vector3(off_x + _shake_offset.x, off_y + _shake_offset.y, _shake_offset.z)
 	camera.position = pos
 	camera.look_at(focal, Vector3.UP)
@@ -567,27 +567,29 @@ func _ground_and_frame(subject: Node3D, headroom: float) -> void:
 
 func _do_ground_and_frame(subject: Node3D, headroom: float) -> void:
 	var aabb := _world_aabb(subject)
-	if aabb.size == Vector3.ZERO: return
+	if aabb.size == Vector3.ZERO:
+		# Bounds not resolved yet — use a safe default framing so the creature
+		# is never lost off-screen (rather than keeping stale boss values).
+		_cam_focal = Vector3(subject.position.x, 1.0, subject.position.z)
+		_orbit_radius = 6.0
+		return
 	# Drop feet to y=0 (keep its x/z offset).
-	var feet_y := aabb.position.y
-	subject.position.y -= feet_y
+	subject.position.y -= aabb.position.y
 	# Recompute after grounding.
 	aabb = _world_aabb(subject)
 	var h: float = maxf(aabb.size.y, 1.0)
 	var w: float = maxf(aabb.size.x, aabb.size.z)
-	# Focal at the subject's vertical centre.
-	_cam_focal_y = aabb.position.y + h * 0.5
-	# Distance needed so height (with headroom) fits the vertical FOV, and width
-	# fits the horizontal FOV. Take the larger.
+	var centre := aabb.position + aabb.size * 0.5
+	# Camera orbits/looks at the creature's true centre (x/z included) so it's
+	# always framed dead-centre, clamped so the hero stays in view too.
+	_cam_focal = Vector3(centre.x * 0.5, minf(centre.y, 2.6), centre.z * 0.5)
 	var vfov := deg_to_rad(camera.fov)
 	var aspect: float = float(get_viewport().size.x) / float(maxi(1, get_viewport().size.y))
 	var hfov := 2.0 * atan(tan(vfov * 0.5) * aspect)
 	var dist_v := (h * (1.0 + headroom) * 0.5) / tan(vfov * 0.5)
 	var dist_h := (w * 0.6) / tan(hfov * 0.5)
-	# Cap kept tight so big monsters fill the frame instead of shrinking into an
-	# empty wide shot. Focal also kept low so the hero stays in view.
-	_cam_radius_base = clampf(maxf(dist_v, dist_h), 5.0, 15.0)
-	_cam_focal_y = minf(_cam_focal_y, 2.6)
+	# Tight cap so big monsters fill the frame instead of a huge empty wide shot.
+	_cam_radius_base = clampf(maxf(dist_v, dist_h), 5.0, 14.0)
 	_orbit_radius = _cam_radius_base
 
 func _on_zone_intro(text: String, _biome: StringName) -> void:
@@ -728,6 +730,7 @@ func _reset_camera_if_boss() -> void:
 	_cam_hold = false   # release any set-piece camera lock
 	# Reset auto-frame to the default human-scale framing.
 	_cam_focal_y = 1.0
+	_cam_focal = Vector3(0, 1.0, 0)
 	_orbit_radius = 6.4
 	_cam_radius_base = 6.4
 	if camera.position != Vector3(0, 2.2, 6.0) or camera.fov != 50.0:
