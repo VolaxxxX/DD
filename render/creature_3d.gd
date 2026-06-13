@@ -154,23 +154,18 @@ func build(_arch: Archetype) -> void:
 	# family GLB fallback looked like a placeholder for these two, and the
 	# remodelled procedural versions (vortex column / ethereal hovering sprite)
 	# have far stronger, more readable silhouettes.
-	# Only the ELEMENTAL keeps the bespoke procedural build (its vortex column
-	# reads well). FEY now uses a small animated luminous flyer via FaunaLib —
-	# the procedural prism fairy looked like a placeholder.
-	var force_procedural := int(archetype.family) == Archetype.Family.ELEMENTAL
-	# Priority for the model:
+	# Every family now resolves to a REAL animated model — no procedural
+	# placeholder creatures. Priority:
 	#  1. id-specific GLB (a bespoke creature model, if one exists)
-	#  2. animated FaunaLib model for BEAST/HUMANOID/UNDEAD/FEY (real anims,
-	#     beasts matched to their name, fey = glowing flyer)
+	#  2. animated FaunaLib model (all 8 families covered: beasts matched to
+	#     their name, fey/elemental = glowing, construct=golem, drake=bulked)
 	#  3. static family GLB fallback (posed out of T-pose)
-	#  4. procedural primitives
-	var loaded: Node3D = null
-	if not force_procedural:
-		loaded = AssetLoader.instance_for_creature_id_only(archetype.id)
-		if loaded == null:
-			loaded = FaunaLib.instance_for(int(archetype.family), archetype.id)
-		if loaded == null:
-			loaded = AssetLoader.instance_for_creature(archetype.id, int(archetype.family))
+	#  4. procedural primitives (only if every asset above is missing)
+	var loaded: Node3D = AssetLoader.instance_for_creature_id_only(archetype.id)
+	if loaded == null:
+		loaded = FaunaLib.instance_for(int(archetype.family), archetype.id)
+	if loaded == null:
+		loaded = AssetLoader.instance_for_creature(archetype.id, int(archetype.family))
 	if loaded != null:
 		body.add_child(loaded)
 		_imported_root = loaded
@@ -198,6 +193,16 @@ func build(_arch: Archetype) -> void:
 		# DRACONIC: a drake — bulk it up so it reads as a big reptilian threat.
 		elif int(archetype.family) == Archetype.Family.DRACONIC:
 			loaded.scale *= 1.6
+		# ELEMENTAL: a blazing energy-being — float it + add a coloured glow.
+		elif int(archetype.family) == Archetype.Family.ELEMENTAL:
+			loaded.position.y += 0.4
+			set_meta("hovers", true)
+			var egl := OmniLight3D.new()
+			egl.light_color = FaunaLib._elemental_tint(archetype.id)
+			egl.light_energy = 3.0
+			egl.omni_range = 5.0
+			egl.position = Vector3(0, 1.2, 0)
+			body.add_child(egl)
 		_apply_tier_scale()
 		_animator = Animator.new()
 		add_child(_animator)

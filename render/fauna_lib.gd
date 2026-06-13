@@ -10,7 +10,8 @@ static var _cache: Dictionary = {}
 
 const BEASTS := ["beast_fox", "beast_lion", "beast_tiger", "beast_hog", "beast_deer",
 	"beast_crab", "beast_bee", "beast_caterpillar", "beast_monkey", "beast_beaver",
-	"beast_panda", "beast_polar", "beast_cow"]
+	"beast_panda", "beast_polar", "beast_cow", "beast_dog", "beast_cat",
+	"beast_elephant", "beast_koala", "beast_bunny", "beast_pig", "beast_giraffe"]
 const CHARS := ["char_a", "char_b", "char_c", "char_d", "char_e", "char_f",
 	"char_g", "char_h", "char_i", "char_j", "char_k", "char_l"]
 # Small animated flyers for the FEY family — tinted luminous + hovering they
@@ -32,6 +33,9 @@ const BEAST_KEYWORDS := [
 	["ape", "beast_monkey"], ["monkey", "beast_monkey"], ["simian", "beast_monkey"], ["singe", "beast_monkey"],
 	["ox", "beast_cow"], ["bull", "beast_cow"], ["cow", "beast_cow"], ["bison", "beast_cow"], ["beef", "beast_cow"], ["buffle", "beast_cow"],
 	["beaver", "beast_beaver"], ["rodent", "beast_beaver"], ["rat", "beast_beaver"],
+	["hound", "beast_dog"], ["dog", "beast_dog"], ["mastiff", "beast_dog"], ["cur", "beast_dog"],
+	["mammoth", "beast_elephant"], ["elephant", "beast_elephant"], ["tusker", "beast_elephant"], ["behemoth", "beast_elephant"],
+	["hare", "beast_bunny"], ["rabbit", "beast_bunny"], ["lapin", "beast_bunny"],
 ]
 
 static func _load(name: String) -> PackedScene:
@@ -77,11 +81,24 @@ static func instance_for(family: int, id: StringName) -> Node3D:
 		3:  # CONSTRUCT — character tinted cold stone-grey (a golem)
 			pool = CHARS
 			tint = Color(0.6, 0.62, 0.66)
+		4:  # ELEMENTAL — character as a blazing energy-being (strong glow).
+			pool = CHARS
+			tint = _elemental_tint(id)
+			emissive = true
 		_:
 			return null
 	if pool.is_empty(): return null
 	var h: int = abs(int(String(id).hash()))
 	return _make(pool[h % pool.size()], tint, emissive)
+
+# Elemental colour by name keyword: fire / frost / storm / earth, else amber.
+static func _elemental_tint(id: StringName) -> Color:
+	var s := String(id).to_lower()
+	if "fire" in s or "ember" in s or "flame" in s or "cinder" in s or "feu" in s or "ash" in s: return Color(1.0, 0.5, 0.18)
+	if "frost" in s or "ice" in s or "glace" in s or "winter" in s or "snow" in s: return Color(0.55, 0.85, 1.0)
+	if "storm" in s or "thunder" in s or "spark" in s or "orage" in s or "shock" in s: return Color(0.85, 0.85, 1.0)
+	if "stone" in s or "earth" in s or "rock" in s or "terre" in s or "mud" in s: return Color(0.7, 0.55, 0.35)
+	return Color(1.0, 0.7, 0.3)
 
 static func _beast_for_name(id: StringName) -> String:
 	var s := String(id).to_lower()
