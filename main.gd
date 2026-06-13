@@ -524,8 +524,9 @@ func _walk_in_avatars() -> void:
 # the camera (we walked forward) and the backdrop props sweep past, then settle.
 func _advance_world() -> void:
 	# Ground scroll (photo-texture biomes only; the energy shader is world-mapped).
-	if ground and is_instance_valid(ground) and ground.material_override is StandardMaterial3D:
-		var m: StandardMaterial3D = ground.material_override
+	var gnd: MeshInstance3D = backdrop.ground if backdrop and is_instance_valid(backdrop) else null
+	if gnd and is_instance_valid(gnd) and gnd.material_override is StandardMaterial3D:
+		var m: StandardMaterial3D = gnd.material_override
 		var from_off := m.uv1_offset
 		var t := create_tween()
 		t.tween_method(func(o: Vector3): m.uv1_offset = o,

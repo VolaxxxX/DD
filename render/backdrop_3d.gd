@@ -177,32 +177,35 @@ func _build_nature_props(biome: StringName, corruption: float, rng: DRNG) -> boo
 	add_child(root)
 	_nature_root = root
 	var placed := 0
-	# --- Hero landmarks: 10 large props in an arc behind & beside the action.
+	# --- Hero landmarks (24): big silhouettes framing the action, concentrated
+	# in the on-screen band, sometimes in tight clumps (groves/rock piles) for
+	# a natural, un-scattered look.
 	var hero: Array = pool.get("hero", [])
-	for i in 14:
+	for i in 24:
 		if hero.is_empty(): break
 		var name: String = hero[rng.range_i(0, hero.size())]
-		var n := NatureLib.instance(name, tint)
-		if n == null: continue
-		var xz := _nature_xz(rng, 6.0, 24.0, -26.0, -3.0)
+		var xz := _nature_xz(rng, 5.0, 19.0, -22.0, -3.0)
 		if xz == Vector2.INF: continue
-		root.add_child(n)
-		var target_h := _frng_h(rng, 3.0, 6.5)
-		AssetLoader.normalize_height(n, target_h)
-		n.position = Vector3(xz.x, n.position.y, xz.y)
-		n.rotation.y = _frng_h(rng, 0, TAU)
-		var s := _frng_h(rng, 0.85, 1.2)
-		n.scale *= Vector3(s, _frng_h(rng, 0.9, 1.25), s)
-		_mark_sway_if_foliage(n, name)
-		placed += 1
-	# --- Scatter: 16 mid-props (rocks/stumps/bushes/mushrooms) closer in.
+		var clump := rng.range_i(1, 4) if rng.range_i(0, 100) < 45 else 1   # groves
+		for k in clump:
+			var n := NatureLib.instance(name, tint)
+			if n == null: continue
+			root.add_child(n)
+			AssetLoader.normalize_height(n, _frng_h(rng, 3.0, 6.5))
+			n.position = Vector3(xz.x + _frng_h(rng, -1.6, 1.6), n.position.y, xz.y + _frng_h(rng, -1.6, 1.6))
+			n.rotation.y = _frng_h(rng, 0, TAU)
+			var s := _frng_h(rng, 0.85, 1.2)
+			n.scale *= Vector3(s, _frng_h(rng, 0.9, 1.25), s)
+			_mark_sway_if_foliage(n, name)
+			placed += 1
+	# --- Scatter (46): mid props densely filling the visible field.
 	var scatter: Array = pool.get("scatter", [])
-	for i in 22:
+	for i in 46:
 		if scatter.is_empty(): break
 		var name: String = scatter[rng.range_i(0, scatter.size())]
 		var n := NatureLib.instance(name, tint)
 		if n == null: continue
-		var xz := _nature_xz(rng, 2.8, 18.0, -18.0, -2.0)
+		var xz := _nature_xz(rng, 2.8, 16.0, -16.0, -1.0)
 		if xz == Vector2.INF: continue
 		root.add_child(n)
 		AssetLoader.normalize_height(n, _frng_h(rng, 0.6, 1.6))
@@ -210,17 +213,17 @@ func _build_nature_props(biome: StringName, corruption: float, rng: DRNG) -> boo
 		n.rotation.y = _frng_h(rng, 0, TAU)
 		_mark_sway_if_foliage(n, name)
 		placed += 1
-	# --- Ground detail: 22 tiny props (grass/flowers) carpeting the field.
-	var ground: Array = pool.get("ground", [])
-	for i in 30:
-		if ground.is_empty(): break
-		var name: String = ground[rng.range_i(0, ground.size())]
+	# --- Ground detail (70): grass/flowers/pebbles carpeting the field.
+	var ground_pool: Array = pool.get("ground", [])
+	for i in 70:
+		if ground_pool.is_empty(): break
+		var name: String = ground_pool[rng.range_i(0, ground_pool.size())]
 		var n := NatureLib.instance(name, tint)
 		if n == null: continue
-		var xz := _nature_xz(rng, 1.8, 16.0, -14.0, 1.0)
+		var xz := _nature_xz(rng, 1.8, 15.0, -13.0, 2.0)
 		if xz == Vector2.INF: continue
 		root.add_child(n)
-		AssetLoader.normalize_height(n, _frng_h(rng, 0.25, 0.55))
+		AssetLoader.normalize_height(n, _frng_h(rng, 0.25, 0.6))
 		n.position = Vector3(xz.x, n.position.y, xz.y)
 		n.rotation.y = _frng_h(rng, 0, TAU)
 		_mark_sway_if_foliage(n, name)
