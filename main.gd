@@ -385,6 +385,9 @@ func _process(delta: float) -> void:
 	# orbit radius (further back = higher) for a stable, slightly cinematic tilt.
 	var rest_pos := focal + Vector3(0, (1.4 + radius * 0.32) * Settings.cam_height, 0) + orbit_offset
 	var pos := rest_pos + Vector3(off_x + _shake_offset.x, off_y + _shake_offset.y, _shake_offset.z)
+	# Hard floor: the camera can never drop near/under the ground, whatever the
+	# height setting or drag pitch — so you never see under the floor.
+	pos.y = maxf(pos.y, 1.6)
 	camera.position = pos
 	camera.look_at(focal, Vector3.UP)
 	if _shake_t > 0.0:

@@ -179,7 +179,7 @@ func build(_arch: Archetype) -> void:
 		# FEY: small, hovering, glowing — a sprite, not a grounded animal.
 		if int(archetype.family) == Archetype.Family.FEY:
 			loaded.scale *= 0.55
-			loaded.position.y += 1.1
+			loaded.position.y += 0.8   # low hover — a sprite, not flying off
 			set_meta("hovers", true)
 			var gl := OmniLight3D.new()
 			gl.light_color = Color(0.75, 0.9, 1.0)

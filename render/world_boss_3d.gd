@@ -227,12 +227,16 @@ func _drowning_god() -> void:
 	# Cthulhu-esque ancient deity: massive humanoid silhouette with cephalopod
 	# head, central glowing third eye, 12 huge tentacles, fan wings, and a
 	# black-water reflection plane beneath.
-	# --- Black water plane (the world's surface) ---
+	# --- Dark water plane (the world's surface). NOT a metallic mirror —
+	# that renders black on the Mobile renderer. Dark translucent + faint glow.
 	var water := PlaneMesh.new(); water.size = Vector2(40, 40)
 	var wmat := StandardMaterial3D.new()
-	wmat.albedo_color = Color(0.02, 0.03, 0.07)
-	wmat.roughness = 0.05; wmat.metallic = 0.8
-	wmat.metallic_specular = 0.9
+	wmat.albedo_color = Color(0.04, 0.06, 0.11, 0.9)
+	wmat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	wmat.roughness = 0.4; wmat.metallic = 0.0
+	wmat.emission_enabled = true; wmat.emission = Color(0.05, 0.09, 0.16)
+	wmat.emission_energy_multiplier = 0.15
+	wmat.rim_enabled = true; wmat.rim = 0.5
 	var wmi := MeshInstance3D.new(); wmi.mesh = water; wmi.position = Vector3(0, 0.0, 0); wmi.material_override = wmat
 	add_child(wmi)
 	# --- Massive torso (cephalopod body) ---

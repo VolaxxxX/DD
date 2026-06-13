@@ -1523,13 +1523,13 @@ func _displaced_ground_mesh(biome: StringName) -> ArrayMesh:
 # outside. Stage centre is local (0, -2).
 func _ground_h(x: float, z: float, amp: float) -> float:
 	var d := Vector2(x, z + 2.0).length()
-	var outer := clampf((d - 6.5) / 9.0, 0.0, 1.0)
+	# Play disc (radius 7) is DEAD FLAT at y=0 so creatures never float or sink;
+	# relief only rises beyond it.
+	var outer := clampf((d - 7.0) / 9.0, 0.0, 1.0)
 	outer = outer * outer * (3.0 - 2.0 * outer)        # smoothstep mask
 	var big: float = _hn_big.get_noise_2d(x, z) * amp
 	var fine: float = _hn_fine.get_noise_2d(x, z) * (amp * 0.18)
-	# Keep a faint ripple even on the play disc, but flat enough to stand on.
-	var inner := (1.0 - outer) * fine * 0.4
-	return big * outer + fine * outer + inner
+	return (big + fine) * outer
 
 func _build_lights(biome: StringName, corruption: float) -> void:
 	var tint: Color = BIOME_LIGHT_TINT.get(biome, Color.WHITE)
