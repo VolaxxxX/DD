@@ -66,6 +66,43 @@ func _ready() -> void:
 	_lang_btn.pressed.connect(_cycle_lang)
 	$Root.add_child(_lang_btn)
 	setup_pause_button()
+	# Responsive: pick up orientation changes (portrait toggle) and re-layout
+	# the bottom UI band to fit the new aspect ratio.
+	get_viewport().size_changed.connect(_relayout_for_screen)
+	_relayout_for_screen()
+
+func _relayout_for_screen() -> void:
+	# Bottom-anchored values are the same; we just give the box more height
+	# and the choices more room in portrait (where vertical space is huge).
+	var portrait := DisplayServer.window_get_size().y > DisplayServer.window_get_size().x
+	if portrait:
+		narrative_box.offset_top = -440.0
+		narrative_box.offset_bottom = -310.0
+		narrative_box.offset_left = 24.0
+		narrative_box.offset_right = -24.0
+		choices_box.offset_top = -300.0
+		choices_box.offset_bottom = -24.0
+		choices_box.offset_left = 24.0
+		choices_box.offset_right = -24.0
+		choices_box.add_theme_constant_override("separation", 10)
+		for b in choice_buttons:
+			b.custom_minimum_size = Vector2(0, 62)
+			b.add_theme_font_size_override("font_size", 17)
+	else:
+		narrative_box.offset_top = -274.0
+		narrative_box.offset_bottom = -206.0
+		narrative_box.offset_left = 90.0
+		narrative_box.offset_right = -90.0
+		choices_box.offset_top = -196.0
+		choices_box.offset_bottom = -10.0
+		choices_box.offset_left = 90.0
+		choices_box.offset_right = -90.0
+		choices_box.add_theme_constant_override("separation", 5)
+		for b in choice_buttons:
+			b.custom_minimum_size = Vector2(0, 42)
+			b.add_theme_font_size_override("font_size", 13)
+
+@onready var choices_box: VBoxContainer = $Root/ChoicesBox
 
 var _lang_btn: Button
 var _last_force: int = 0

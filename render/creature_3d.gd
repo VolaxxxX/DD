@@ -162,6 +162,8 @@ func build(_arch: Archetype) -> void:
 			AssetLoader.play_named_action(loaded, &"idle", true)
 		else:
 			AssetLoader.pose_rest(loaded)
+			# Subtle continuous breath/sway/head-bob so the mob feels alive.
+			AssetLoader.idle_life(loaded)
 		_apply_tier_scale()
 		_animator = Animator.new()
 		add_child(_animator)

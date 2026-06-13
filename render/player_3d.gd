@@ -30,6 +30,9 @@ func build(cls: Dictionary, p_skin: Color = Color(0.92, 0.78, 0.65), p_hair: Col
 		_normalize_player_scale(loaded)
 		if not AssetLoader.has_animations(loaded):
 			AssetLoader.pose_rest(loaded)
+			# Idle life: a subtle continuous animation so the static rig
+			# doesn't feel frozen. Breathing + sway + tiny head bob.
+			AssetLoader.idle_life(loaded)
 		else:
 			AssetLoader.play_named_action(loaded, &"idle", true)
 		_injury_overlays = Node3D.new()

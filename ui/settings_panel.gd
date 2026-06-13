@@ -62,6 +62,20 @@ func _ready() -> void:
 		Audio.play(&"click")
 		Settings.set_story_mode(on))
 	s_row.add_child(s_chk)
+	# Portrait orientation toggle (default landscape).
+	var o_row := HBoxContainer.new()
+	o_row.add_theme_constant_override("separation", 14)
+	v.add_child(o_row)
+	var o_chk := CheckButton.new()
+	o_chk.text = Lang.t({
+		"fr": "Mode portrait (téléphone debout)",
+		"en": "Portrait mode (phone upright)",
+		"id": "Mode potret (HP berdiri)"})
+	o_chk.button_pressed = Settings.portrait
+	o_chk.toggled.connect(func(on: bool):
+		Audio.play(&"click")
+		Settings.set_portrait(on))
+	o_row.add_child(o_chk)
 	# Close
 	var close := Button.new()
 	close.text = Lang.ui("back")

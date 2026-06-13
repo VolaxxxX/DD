@@ -124,6 +124,78 @@ static func _local_rotate(sk: Skeleton3D, idx: int, axis: Vector3, ang: float) -
 	var r := sk.get_bone_pose_rotation(idx)
 	sk.set_bone_pose_rotation(idx, r * Quaternion(axis.normalized(), ang))
 
+# Continuous idle: gentle Y bob on the root + tiny chest sway + head bob via
+# an internal BoneIdleLife node ticking each frame. Idempotent (safe to call
+# again after a pose_rest reset).
+static func idle_life(node: Node3D) -> void:
+	if node == null or not is_instance_valid(node): return
+	if node.has_meta("idle_life"): return
+	node.set_meta("idle_life", true)
+	var helper := _BoneIdleLife.new()
+	helper.target = node
+	helper.base_y = node.position.y
+	helper.phase = (float(node.get_instance_id() % 10000) / 10000.0) * TAU
+	node.add_child(helper)
+
+# Tiny inner class — a Node that ticks each frame to drive the breath cycle.
+class _BoneIdleLife extends Node:
+	var target: Node3D
+	var base_y: float
+	var phase: float = 0.0
+	var t: float = 0.0
+	var _sk: Skeleton3D = null
+	var _chest := -1
+	var _head := -1
+	var _chest_rest := Quaternion.IDENTITY
+	var _head_rest := Quaternion.IDENTITY
+
+	func _ready() -> void:
+		_sk = _find_skel(target)
+		if _sk != null:
+			_chest = _find_like(_sk, ["chest", "spine", "torso"])
+			_head = _find_like(_sk, ["head", "neck"])
+			if _chest != -1: _chest_rest = _sk.get_bone_pose_rotation(_chest)
+			if _head != -1: _head_rest = _sk.get_bone_pose_rotation(_head)
+
+	func _process(delta: float) -> void:
+		if not is_instance_valid(target): return
+		t += delta
+		var p := t + phase
+		# Root vertical bob, very subtle — under 1.5 cm.
+		target.position.y = base_y + sin(p * 1.8) * 0.012
+		# Tiny side-to-side sway.
+		target.rotation.z = sin(p * 0.7) * 0.012
+		if _sk == null: return
+		# Chest breathes: small forward tilt on the inhale.
+		if _chest != -1:
+			var breath := (sin(p * 1.5) + 1.0) * 0.5   # 0..1
+			var q := _chest_rest * Quaternion(Vector3(1, 0, 0), breath * 0.025)
+			_sk.set_bone_pose_rotation(_chest, q)
+		# Head bob, phase-shifted from chest, plus a slow yaw look-around.
+		if _head != -1:
+			var nod := sin(p * 1.5 + 1.2) * 0.020
+			var look := sin(p * 0.4) * 0.08
+			var q := _head_rest * Quaternion(Vector3(1, 0, 0), nod) * Quaternion(Vector3(0, 1, 0), look)
+			_sk.set_bone_pose_rotation(_head, q)
+
+	static func _find_skel(n: Node) -> Skeleton3D:
+		if n is Skeleton3D: return n
+		for c in n.get_children():
+			var r := _find_skel(c)
+			if r != null: return r
+		return null
+
+	static func _find_like(sk: Skeleton3D, patterns: Array) -> int:
+		for i in sk.get_bone_count():
+			var nm := sk.get_bone_name(i).to_lower()
+			for p in patterns:
+				if nm == String(p).to_lower(): return i
+		for i in sk.get_bone_count():
+			var nm2 := sk.get_bone_name(i).to_lower()
+			for p in patterns:
+				if nm2.contains(String(p).to_lower()): return i
+		return -1
+
 static func _find_skeleton(n: Node) -> Skeleton3D:
 	if n is Skeleton3D: return n
 	for c in n.get_children():

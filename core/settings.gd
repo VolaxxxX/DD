@@ -10,6 +10,7 @@ var sfx_db: float = -4.0
 var quality: int = 1               # 0=low, 1=mid, 2=high
 var grain_amount: float = 0.06
 var story_mode: bool = false       # gentler rolls, no permadeath outside bosses
+var portrait: bool = false         # phone portrait orientation (default landscape)
 
 const BUS_MUSIC := "Music"
 const BUS_SFX := "SFX"
@@ -18,6 +19,7 @@ func _ready() -> void:
 	_ensure_buses()
 	_load()
 	apply()
+	apply_orientation()
 
 func _ensure_buses() -> void:
 	if AudioServer.get_bus_index(BUS_MUSIC) == -1:
@@ -39,6 +41,7 @@ func _load() -> void:
 	quality = int(cfg.get_value("graphics", "quality", quality))
 	grain_amount = float(cfg.get_value("graphics", "grain", grain_amount))
 	story_mode = bool(cfg.get_value("gameplay", "story_mode", story_mode))
+	portrait = bool(cfg.get_value("display", "portrait", portrait))
 
 func save() -> void:
 	var cfg := ConfigFile.new()
@@ -47,10 +50,29 @@ func save() -> void:
 	cfg.set_value("graphics", "quality", quality)
 	cfg.set_value("graphics", "grain", grain_amount)
 	cfg.set_value("gameplay", "story_mode", story_mode)
+	cfg.set_value("display", "portrait", portrait)
 	cfg.save(PATH)
 
 func set_story_mode(v: bool) -> void:
 	story_mode = v; save()
+
+# Phone portrait vs landscape. Default is landscape — only flipped if the user
+# turns it on. Applied at runtime: window is swapped on desktop, screen
+# orientation is locked on Android.
+func set_portrait(v: bool) -> void:
+	portrait = v; save(); apply_orientation()
+
+func apply_orientation() -> void:
+	if OS.has_feature("mobile"):
+		DisplayServer.screen_set_orientation(
+			DisplayServer.SCREEN_PORTRAIT if portrait else DisplayServer.SCREEN_LANDSCAPE)
+	else:
+		# Desktop: swap the window dimensions so the editor / PC build
+		# previews the chosen orientation.
+		var w := 720 if portrait else 1280
+		var h := 1280 if portrait else 720
+		if DisplayServer.window_get_size() != Vector2i(w, h):
+			DisplayServer.window_set_size(Vector2i(w, h))
 
 func apply() -> void:
 	AudioServer.set_bus_volume_db(AudioServer.get_bus_index(BUS_MUSIC), music_db)
