@@ -58,6 +58,7 @@ func build(biome: StringName, corruption: float, sub_biome: int = 0) -> void:
 	_time_of_day = (Time.get_ticks_msec() / 1000) % 3
 	_build_environment(biome, corruption)
 	_build_ground(biome, corruption)
+	_build_path(biome)
 	_build_lights(biome, corruption)
 	_apply_sub_tint(biome, sub_biome)
 	_build_far_silhouettes(biome, corruption)
@@ -178,12 +179,12 @@ func _build_nature_props(biome: StringName, corruption: float, rng: DRNG) -> boo
 	var placed := 0
 	# --- Hero landmarks: 10 large props in an arc behind & beside the action.
 	var hero: Array = pool.get("hero", [])
-	for i in 10:
+	for i in 14:
 		if hero.is_empty(): break
 		var name: String = hero[rng.range_i(0, hero.size())]
 		var n := NatureLib.instance(name, tint)
 		if n == null: continue
-		var xz := _nature_xz(rng, 5.0, 16.0, -16.0, -3.0)
+		var xz := _nature_xz(rng, 6.0, 24.0, -26.0, -3.0)
 		if xz == Vector2.INF: continue
 		root.add_child(n)
 		var target_h := _frng_h(rng, 3.0, 6.5)
@@ -196,12 +197,12 @@ func _build_nature_props(biome: StringName, corruption: float, rng: DRNG) -> boo
 		placed += 1
 	# --- Scatter: 16 mid-props (rocks/stumps/bushes/mushrooms) closer in.
 	var scatter: Array = pool.get("scatter", [])
-	for i in 16:
+	for i in 22:
 		if scatter.is_empty(): break
 		var name: String = scatter[rng.range_i(0, scatter.size())]
 		var n := NatureLib.instance(name, tint)
 		if n == null: continue
-		var xz := _nature_xz(rng, 2.6, 13.0, -12.0, -2.0)
+		var xz := _nature_xz(rng, 2.8, 18.0, -18.0, -2.0)
 		if xz == Vector2.INF: continue
 		root.add_child(n)
 		AssetLoader.normalize_height(n, _frng_h(rng, 0.6, 1.6))
@@ -211,12 +212,12 @@ func _build_nature_props(biome: StringName, corruption: float, rng: DRNG) -> boo
 		placed += 1
 	# --- Ground detail: 22 tiny props (grass/flowers) carpeting the field.
 	var ground: Array = pool.get("ground", [])
-	for i in 22:
+	for i in 30:
 		if ground.is_empty(): break
 		var name: String = ground[rng.range_i(0, ground.size())]
 		var n := NatureLib.instance(name, tint)
 		if n == null: continue
-		var xz := _nature_xz(rng, 1.8, 12.0, -10.0, 1.0)
+		var xz := _nature_xz(rng, 1.8, 16.0, -14.0, 1.0)
 		if xz == Vector2.INF: continue
 		root.add_child(n)
 		AssetLoader.normalize_height(n, _frng_h(rng, 0.25, 0.55))
@@ -1405,6 +1406,32 @@ func _build_environment(biome: StringName, corruption: float) -> void:
 	attrs.dof_blur_amount = 0.055
 	env.camera_attributes = attrs
 	add_child(env)
+
+# A worn dirt path running forward through the scene — gives the player a clear
+# route to travel along (reinforced by the per-encounter ground scroll).
+func _build_path(biome: StringName) -> void:
+	if biome == &"coast" or biome == &"anomaly": return   # no path on sea/void
+	var diff := "res://assets/textures/ground/path_diff.jpg"
+	if not ResourceLoader.exists(diff): return
+	var mesh := PlaneMesh.new()
+	mesh.size = Vector2(3.2, 70.0)        # a long strip into the distance
+	var mi := MeshInstance3D.new()
+	mi.mesh = mesh
+	mi.position = Vector3(0.4, 0.03, -16.0)   # slightly above ground, centred
+	var m := StandardMaterial3D.new()
+	m.albedo_texture = load(diff)
+	m.albedo_color = Color(0.85, 0.8, 0.72)
+	if ResourceLoader.exists("res://assets/textures/ground/path_nor.jpg"):
+		m.normal_enabled = true
+		m.normal_texture = load("res://assets/textures/ground/path_nor.jpg")
+	m.uv1_scale = Vector3(1, 16, 1)
+	m.roughness = 0.95
+	# Soft edges so it blends into the ground instead of a hard rectangle.
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.distance_fade_mode = BaseMaterial3D.DISTANCE_FADE_PIXEL_ALPHA
+	mi.material_override = m
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(mi)
 
 func _build_ground(biome: StringName, corruption: float) -> void:
 	ground = MeshInstance3D.new()

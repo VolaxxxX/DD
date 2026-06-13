@@ -258,20 +258,26 @@ func _start_orbit(screen_pos: Vector2) -> void:
 	_orbit_active = true
 
 func _end_orbit() -> void:
-	if not _orbit_active: return
+	# Free rotation: the view STAYS where you leave it (no forced snap-back —
+	# that felt like the camera was blocked). It only re-centres when the next
+	# encounter is presented, via _reset_orbit().
 	_orbit_active = false
-	# Glide back to the rest pose so the encounter framing stays consistent.
+
+func _reset_orbit() -> void:
+	# Smoothly glide back to the framed rest pose for a fresh encounter.
 	if _orbit_return_tween and _orbit_return_tween.is_valid():
 		_orbit_return_tween.kill()
 	_orbit_return_tween = create_tween().set_parallel(true)
-	_orbit_return_tween.tween_property(self, "_orbit_yaw", 0.0, 0.8).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-	_orbit_return_tween.tween_property(self, "_orbit_pitch", 0.0, 0.8).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	_orbit_return_tween.tween_property(self, "_orbit_yaw", 0.0, 0.6).set_trans(Tween.TRANS_SINE)
+	_orbit_return_tween.tween_property(self, "_orbit_pitch", 0.0, 0.6).set_trans(Tween.TRANS_SINE)
 
 func _apply_orbit_delta(rel: Vector2) -> void:
 	if not _orbit_active: return
-	_orbit_yaw -= rel.x * 0.006
-	_orbit_pitch = clampf(_orbit_pitch - rel.y * 0.004, -0.6, 0.9)
-	# Wrap yaw so it never explodes.
+	if _orbit_return_tween and _orbit_return_tween.is_valid():
+		_orbit_return_tween.kill()
+	# Full free 360° yaw, generous pitch — never blocks.
+	_orbit_yaw -= rel.x * 0.007
+	_orbit_pitch = clampf(_orbit_pitch - rel.y * 0.005, -0.5, 1.1)
 	_orbit_yaw = wrapf(_orbit_yaw, -PI, PI)
 
 # Run finale: the dragon that haunted this run lands to bar the way out.
@@ -514,6 +520,25 @@ func _walk_in_avatars() -> void:
 		if a.has_method("act_tone"):
 			a.act_tone(1)   # gentle stride animation
 
+# Sells forward travel between encounters: the ground texture scrolls toward
+# the camera (we walked forward) and the backdrop props sweep past, then settle.
+func _advance_world() -> void:
+	# Ground scroll (photo-texture biomes only; the energy shader is world-mapped).
+	if ground and is_instance_valid(ground) and ground.material_override is StandardMaterial3D:
+		var m: StandardMaterial3D = ground.material_override
+		var from_off := m.uv1_offset
+		var t := create_tween()
+		t.tween_method(func(o: Vector3): m.uv1_offset = o,
+			from_off, from_off + Vector3(0, -0.6, 0), 1.0).set_trans(Tween.TRANS_SINE)
+	# Backdrop props sweep toward the camera a touch then ease back — parallax
+	# of walking through the area.
+	if backdrop and is_instance_valid(backdrop):
+		var np = backdrop.get_node_or_null("NatureProps")
+		if np:
+			var t2 := np.create_tween()
+			t2.tween_property(np, "position:z", 1.2, 0.7).set_trans(Tween.TRANS_SINE)
+			t2.tween_property(np, "position:z", 0.0, 1.2).set_trans(Tween.TRANS_SINE)
+
 func _refresh_avatars_injuries() -> void:
 	for i in players.size():
 		if i < avatar_nodes.size() and is_instance_valid(avatar_nodes[i]):
@@ -679,18 +704,20 @@ func _on_encounter(enc) -> void:
 		ui.present_encounter(enc)
 		return
 	_encounter_counter += 1
+	_reset_orbit()   # re-centre any free camera rotation for the new framing
 	# Per-encounter ear refresh: small pitch nudge on the active music track.
 	Music.nudge_for_encounter(_encounter_counter)
 	# Per-encounter visual refresh: shift the sun a bit so the scene feels alive.
 	_nudge_environment(_encounter_counter)
 	# Sense of TRAVEL: each new spot in the same zone is viewed from a fresh
-	# angle, the decor drifts to a new layout, and the avatars do a short
-	# walk-in so it feels like the party moved on to a new clearing.
+	# angle, the decor drifts to a new layout, the ground scrolls past and the
+	# avatars stride in — so it feels like the party moved on through the land.
 	if _encounter_counter > 1:
 		_scene_yaw = sin(float(_encounter_counter) * 1.7) * 0.45   # alternating viewpoint
 		if decor and is_instance_valid(decor):
 			decor.evolve(_encounter_counter)
 		_walk_in_avatars()
+		_advance_world()
 	if situation_node and is_instance_valid(situation_node):
 		situation_node.queue_free()
 		situation_node = null
