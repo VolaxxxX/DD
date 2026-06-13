@@ -576,7 +576,10 @@ func _on_encounter(enc) -> void:
 		_spawn_creature(enc.creature.archetype)
 		# Tactical mood line: derived from the creature's REAL stats, so she
 		# can read at a glance whether talking, tricking or fleeing has a shot.
-		ui.present_intro("%s\n%s" % [enc.creature_name, _mood_line(enc.creature.archetype)])
+		# Scene description (what's happening) + name + tactical mood, all in
+		# the dark narrative box so she reads the situation before choosing.
+		var opening := PhrasePool.encounter_opening(_rng.derive(_encounter_counter), int(enc.creature.archetype.family), enc.zone.biome)
+		ui.present_intro("%s\n%s\n%s" % [enc.creature_name, opening, _mood_line(enc.creature.archetype)])
 		ui.present_encounter(enc)
 
 func _mood_line(a: Archetype) -> String:

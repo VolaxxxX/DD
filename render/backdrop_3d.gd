@@ -935,30 +935,35 @@ func _build_far_silhouettes(biome: StringName, corruption: float) -> void:
 	# the sky / fog.
 	var rng := DRNG.new(int(biome.hash()) ^ 0x5EED)
 	var horizon: Color = BIOME_SKY_HORIZON.get(biome, Color(0.6, 0.6, 0.6))
-	var silhouette_col: Color = horizon.darkened(0.55).lerp(Color(0.10, 0.02, 0.15), corruption * 0.5)
 	var par := Node3D.new()
 	par.name = "FarSilhouettes"
 	add_child(par)
-	# Two depth rows so they layer.
+	# Two depth rows so they layer. Far shapes are tinted TOWARD the horizon
+	# (aerial perspective) instead of harsh black, and pushed well back, so
+	# they recede into the sky rather than stamping ugly cut-outs onto it.
 	for row in 2:
-		var z_base := -22.0 - float(row) * 12.0
+		var z_base := -32.0 - float(row) * 16.0
 		var count := 9
 		var y_scale_range := Vector2(4.0, 9.0)
 		match String(biome):
-			"highland":  count = 11; y_scale_range = Vector2(6.0, 14.0)
-			"coast":     count = 7;  y_scale_range = Vector2(0.8, 2.5)   # rocky islets
-			"swamp":     count = 10; y_scale_range = Vector2(3.0, 6.0)   # dead trees + cypress
-			"forest":    count = 11; y_scale_range = Vector2(4.0, 8.0)
-			"city":      count = 8;  y_scale_range = Vector2(5.0, 12.0)  # towers
-			"ruins":     count = 8;  y_scale_range = Vector2(3.0, 8.0)   # broken columns
-			"crypt":     count = 7;  y_scale_range = Vector2(4.0, 7.0)   # tombstones / mausolea
-			"corrupted": count = 9;  y_scale_range = Vector2(3.0, 7.0)
-			"anomaly":   count = 8;  y_scale_range = Vector2(3.0, 8.0)
+			"highland":  count = 11; y_scale_range = Vector2(7.0, 16.0)
+			"coast":     count = 7;  y_scale_range = Vector2(1.2, 3.0)   # rocky islets
+			"swamp":     count = 10; y_scale_range = Vector2(4.0, 8.0)   # dead trees + cypress
+			"forest":    count = 12; y_scale_range = Vector2(5.0, 10.0)
+			"city":      count = 8;  y_scale_range = Vector2(6.0, 14.0)  # towers
+			"ruins":     count = 8;  y_scale_range = Vector2(4.0, 9.0)   # broken columns
+			"crypt":     count = 7;  y_scale_range = Vector2(5.0, 9.0)
+			"corrupted": count = 9;  y_scale_range = Vector2(4.0, 9.0)
+			"anomaly":   count = 8;  y_scale_range = Vector2(4.0, 9.0)
+		# Aerial-perspective tint: blend horizon color in, more for the far row.
+		var recede := 0.55 + float(row) * 0.22
+		var silhouette_col: Color = horizon.darkened(0.35).lerp(horizon, recede)
+		silhouette_col = silhouette_col.lerp(Color(0.20, 0.05, 0.22), corruption * 0.35)
 		for i in count:
-			var x := _frng_h(rng, -28, 28)
-			var z := z_base + _frng_h(rng, -3, 3)
+			var x := _frng_h(rng, -34, 34)
+			var z := z_base + _frng_h(rng, -4, 4)
 			var h := _frng_h(rng, y_scale_range.x, y_scale_range.y)
-			var w := _frng_h(rng, 1.5, 4.0)
+			var w := _frng_h(rng, 2.0, 4.5)
 			var mesh: Mesh
 			match String(biome):
 				"city":
@@ -967,29 +972,35 @@ func _build_far_silhouettes(biome: StringName, corruption: float) -> void:
 					var box := BoxMesh.new(); box.size = Vector3(w * 0.7, h, w * 0.4); mesh = box
 				"ruins":
 					var cyl := CylinderMesh.new(); cyl.top_radius = w * 0.3; cyl.bottom_radius = w * 0.4; cyl.height = h; mesh = cyl
-				"swamp":
-					var cyl := CylinderMesh.new(); cyl.top_radius = 0.08; cyl.bottom_radius = w * 0.18; cyl.height = h; mesh = cyl
-				"coast":
-					var sph := SphereMesh.new(); sph.radius = w * 0.6; sph.height = h * 1.2; mesh = sph
+				"swamp", "forest":
+					# Conifer-ish: tall narrow cone — soft, not jagged.
+					var cyl := CylinderMesh.new(); cyl.top_radius = 0.05; cyl.bottom_radius = w * 0.55; cyl.height = h; mesh = cyl
 				_:
-					var pri := PrismMesh.new(); pri.size = Vector3(w * 2.5, h, w * 1.2); mesh = pri
+					# Rolling hills: a wide flattened dome reads as distant relief
+					# instead of a sharp black triangle.
+					var dome := SphereMesh.new()
+					dome.radius = w * 1.6
+					dome.height = h * 1.4
+					mesh = dome
 			var mi := MeshInstance3D.new()
 			mi.mesh = mesh
-			mi.position = Vector3(x, h * 0.5, z)
+			var y_pos := h * 0.5
+			if mesh is SphereMesh:
+				y_pos = 0.0   # dome sunk so only the top rises over the horizon
+			mi.position = Vector3(x, y_pos, z)
 			mi.rotation.y = _frng_h(rng, 0, 6.28)
 			var mat := StandardMaterial3D.new()
-			# Dimmer for the second row so layering reads.
-			var fade := 1.0 - float(row) * 0.25
-			mat.albedo_color = silhouette_col.darkened(0.2 * (1.0 - fade))
+			mat.albedo_color = silhouette_col
 			mat.roughness = 1.0
 			mat.metallic_specular = 0.0
 			mat.shading_mode = BaseMaterial3D.SHADING_MODE_PER_VERTEX
 			mi.material_override = mat
+			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 			par.add_child(mi)
 	# Mid-ground filler: a closer, smaller row at z≈-13 that bridges the gap
 	# between the playable decor (z≥-8) and the far silhouettes (z≤-22). Still
 	# fully behind the action so it never hides mobs or UI.
-	var mid_col := silhouette_col.lightened(0.12)
+	var mid_col: Color = horizon.darkened(0.4).lerp(Color(0.20, 0.05, 0.22), corruption * 0.3)
 	for i in 7:
 		var x := _frng_h(rng, -18, 18)
 		if absf(x) < 3.0: continue   # keep the center sightline to the horizon open

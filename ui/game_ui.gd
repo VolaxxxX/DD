@@ -4,6 +4,7 @@ extends CanvasLayer
 signal choice_selected(index: int)
 
 @onready var narrative: RichTextLabel = $Root/NarrativeBox/Narrative
+@onready var narrative_box: PanelContainer = $Root/NarrativeBox
 @onready var intro_label: Label = $Root/IntroLabel
 @onready var choice0: Button = $Root/ChoicesBox/Choice0
 @onready var choice1: Button = $Root/ChoicesBox/Choice1
@@ -49,6 +50,7 @@ func _ready() -> void:
 		choice_buttons[i].pressed.connect(func(): _on_choice_pressed(idx))
 	_hide_choices()
 	narrative.text = ""
+	narrative_box.visible = false
 	intro_label.text = ""
 	fade.modulate.a = 0.0
 	# In-game language switch — cycles FR -> EN -> ID at any moment.
@@ -112,14 +114,22 @@ var _intro_active: bool = false
 
 func present_intro(text: String) -> void:
 	# Render in the narrative box (the dark bar above the choices) so the player
-	# can read the title while the choices are visible. Stays until the next
-	# narrative outcome (or a new intro replaces it).
+	# can read what's happening while the choices are visible. Stays until the
+	# next narrative outcome (or a new intro replaces it).
 	if _intro_tween and _intro_tween.is_valid(): _intro_tween.kill()
 	intro_label.text = ""
 	intro_label.modulate.a = 0.0
 	_intro_active = true
-	narrative.modulate = Color(1, 0.95, 0.78)
-	narrative.text = "[center][b]%s[/b][/center]" % text
+	narrative_box.visible = true
+	narrative.modulate = Color(1, 0.96, 0.85)
+	# First line = title (bold gold), the rest = scene description in soft white.
+	var parts := text.split("\n", false)
+	var body := ""
+	if parts.size() > 0:
+		body = "[center][b][color=#ffd98a]%s[/color][/b][/center]" % parts[0]
+	for i in range(1, parts.size()):
+		body += "\n[center]%s[/center]" % parts[i]
+	narrative.text = body
 	narrative.visible_characters = -1
 	narrative.modulate.a = 0.0
 	_intro_tween = create_tween()
@@ -197,11 +207,13 @@ func present_encounter(enc) -> void:
 func show_narrative(text: String, _tone: int, outcome: int) -> void:
 	_hide_choices()
 	_dismiss_intro()
+	narrative_box.visible = true
 	narrative.modulate = OUTCOME_TINT.get(outcome, Color.WHITE)
-	narrative.text = text
+	narrative.text = "[center]%s[/center]" % text
+	var raw_len := text.length()
 	narrative.visible_characters = 0
 	var tw := create_tween()
-	tw.tween_property(narrative, "visible_characters", text.length(), maxf(0.6, text.length() * 0.02))
+	tw.tween_property(narrative, "visible_characters", raw_len, maxf(0.6, raw_len * 0.02))
 	_flash_fade(OUTCOME_TINT.get(outcome, Color.WHITE), 0.25 if outcome == 2 else 0.5)
 	match outcome:
 		0: Audio.play(&"crit_fail")
@@ -281,6 +293,7 @@ func update_encounter_progress(current: int, total: int) -> void:
 
 func show_run_over(cause: StringName) -> void:
 	_hide_choices()
+	narrative_box.visible = true
 	narrative.modulate = Color(1, 0.4, 0.4)
 	narrative.text = "\n\n[center][b]%s[/b]\n%s[/center]" % [Lang.ui("run_over"), cause]
 	fade.color = Color(0, 0, 0)

@@ -532,6 +532,71 @@ static func family_descriptor(family: int, tier: int) -> String:
 				elif base.begins_with("l'"):  base = "le grand "  + base.substr(2)
 	return base
 
+# A short atmospheric sentence describing a creature appearing, by family.
+# Shown in the narrative box above the choices so the player knows what's
+# happening before deciding. Trilingual.
+static func encounter_opening(rng: DRNG, family: int, biome: StringName) -> String:
+	var fr := {
+		0: ["Une silhouette se détache des ombres et te barre la route.",
+			"Quelqu'un t'attendait. Sa main n'est jamais loin de son arme."],
+		1: ["Un grognement bas monte des fourrés. La bête t'a senti la première.",
+			"Des yeux luisent dans la pénombre. Quelque chose chasse — peut-être toi."],
+		2: ["Une forme décharnée se redresse là où rien n'aurait dû bouger.",
+			"L'air se refroidit. Ce qui s'avance vers toi a déjà connu la mort."],
+		3: ["Un colosse de pierre et de rouille s'anime dans un grincement.",
+			"Quelque chose de bâti, pas né, tourne lentement vers toi sa face sans regard."],
+		4: ["L'air ondule de chaleur — ou de froid. Un élément a pris forme et t'a vu.",
+			"Le sol, le vent, la flamme : quelque chose ici a une volonté, et elle te fixe."],
+		5: ["Tes yeux refusent d'abord de comprendre ce qui se tient là.",
+			"Une chose qui ne devrait pas exister occupe l'espace devant toi."],
+		6: ["Une lueur trop belle danse entre les arbres. Méfie-toi de ce qui est beau, ici.",
+			"Une créature de conte te sourit. Les contes finissent rarement bien."],
+		7: ["Le souffle te manque : une gueule reptilienne s'incline vers toi.",
+			"Des écailles captent la lumière. Ce sang-là est ancien et fier."],
+	}
+	var en := {
+		0: ["A figure peels from the shadows and bars your path.",
+			"Someone was waiting. Their hand never strays far from a blade."],
+		1: ["A low growl rises from the brush. The beast sensed you first.",
+			"Eyes gleam in the gloom. Something is hunting — perhaps you."],
+		2: ["A gaunt shape rises where nothing should have stirred.",
+			"The air goes cold. What approaches has already known death."],
+		3: ["A colossus of stone and rust grinds to life.",
+			"Something built, not born, turns its sightless face toward you."],
+		4: ["The air shimmers with heat — or cold. An element has taken shape and seen you.",
+			"Earth, wind, flame: something here has a will, and it is fixed on you."],
+		5: ["Your eyes refuse, at first, to parse what stands there.",
+			"A thing that should not exist fills the space before you."],
+		6: ["A light too lovely dances between the trees. Beware what is beautiful here.",
+			"A creature of fable smiles at you. Fables rarely end well."],
+		7: ["Your breath catches: a reptilian maw inclines toward you.",
+			"Scales catch the light. That blood is ancient and proud."],
+	}
+	var id := {
+		0: ["Sebuah sosok lepas dari bayangan dan menghadang jalanmu.",
+			"Seseorang menunggu. Tangannya tak pernah jauh dari senjata."],
+		1: ["Geraman rendah naik dari semak. Binatang itu lebih dulu mencium baumu.",
+			"Mata bersinar dalam keremangan. Sesuatu sedang berburu — mungkin kau."],
+		2: ["Sosok kurus bangkit di tempat yang seharusnya tak bergerak.",
+			"Udara mendingin. Yang mendekat telah mengenal kematian."],
+		3: ["Raksasa dari batu dan karat berderak hidup.",
+			"Sesuatu yang dibuat, bukan dilahirkan, memutar wajah butanya ke arahmu."],
+		4: ["Udara bergetar oleh panas — atau dingin. Sebuah elemen menjelma dan melihatmu.",
+			"Tanah, angin, api: sesuatu di sini berkehendak, dan tertuju padamu."],
+		5: ["Matamu menolak, mulanya, memahami apa yang berdiri di sana.",
+			"Sesuatu yang seharusnya tak ada memenuhi ruang di depanmu."],
+		6: ["Cahaya yang terlalu indah menari di antara pepohonan. Waspadai yang indah di sini.",
+			"Makhluk dongeng tersenyum padamu. Dongeng jarang berakhir baik."],
+		7: ["Napasmu tertahan: moncong reptil menunduk ke arahmu.",
+			"Sisik menangkap cahaya. Darah itu purba dan angkuh."],
+	}
+	var table: Dictionary = fr
+	match Lang.code:
+		"en": table = en
+		"id": table = id
+	var arr: Array = table.get(family, table[0])
+	return arr[rng.range_i(0, arr.size())]
+
 static func biome_intro(biome: StringName, corruption: float) -> String:
 	match Lang.code:
 		"en": return PhrasePoolEN.biome_intro(biome, corruption)

@@ -20,16 +20,22 @@ func build(cls: Dictionary, p_skin: Color = Color(0.92, 0.78, 0.65), p_hair: Col
 	_root = Node3D.new()
 	add_child(_root)
 	_add_contact_shadow()
-	# Try a per-class external GLB first.
+	# Try a per-class external GLB first — but ONLY if it actually has
+	# animations. The bundled player GLBs are static bind-pose exports, so they
+	# would stand in a T-pose forever; in that case we discard them and build
+	# the stylized procedural avatar, which is modeled in a proper standing pose.
 	var loaded: Node3D = AssetLoader.instance_for_player(int(cls.kind))
-	_glb = loaded
-	if loaded != null:
+	if loaded != null and AssetLoader.has_animations(loaded):
+		_glb = loaded
 		_root.add_child(loaded)
 		_normalize_player_scale(loaded)
 		AssetLoader.play_named_action(loaded, &"idle", true)
 		_injury_overlays = Node3D.new()
 		add_child(_injury_overlays)
 		return
+	if loaded != null:
+		loaded.queue_free()   # static T-pose model — not usable
+	_glb = null
 	_build_body()
 	_build_head()
 	_build_arms()

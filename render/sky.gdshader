@@ -46,6 +46,10 @@ void sky() {
 	float t = clamp(h, 0.0, 1.0);
 	float grad = pow(1.0 - t, 2.2);
 	vec3 col = mix(top_color, horizon_color, grad);
+	// Warm glow band hugging the horizon — breaks the flat color and gives
+	// the sky a sense of light coming from somewhere.
+	float band = pow(clamp(1.0 - abs(h) * 3.5, 0.0, 1.0), 2.0);
+	col = mix(col, mix(horizon_color, sun_tint, 0.35), band * 0.4);
 	// Below horizon: dark ground haze.
 	if (h < 0.0) {
 		col = mix(horizon_color, ground_color, clamp(-h * 6.0, 0.0, 1.0));
@@ -68,8 +72,9 @@ void sky() {
 		float n = fbm(uv);
 		// Coverage shaping: soft cauliflower edges.
 		float cl = smoothstep(1.0 - cloud_coverage, 1.0 - cloud_coverage + 0.28, n);
-		// Fade clouds toward the horizon for depth.
-		float horizon_fade = smoothstep(0.02, 0.22, h);
+		// Fade clouds toward the horizon for depth — but keep some low cloud
+		// banks visible since the camera mostly frames the lower sky.
+		float horizon_fade = smoothstep(0.0, 0.14, h);
 		cl *= horizon_fade;
 		// Self-shading: denser core slightly darker.
 		float core = smoothstep(1.0 - cloud_coverage + 0.15, 1.0, n);

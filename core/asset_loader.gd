@@ -90,6 +90,21 @@ static func instance_for_player(class_kind: int) -> Node3D:
 	if scn == null: return null
 	return scn.instantiate()
 
+# True only if the node has an AnimationPlayer with at least one real,
+# non-trivial animation. Static GLB exports (KayKit/Quaternius bind-pose
+# models) return false — callers fall back to posed procedural builds so a
+# rig never shows its naked T-pose.
+static func has_animations(node: Node3D) -> bool:
+	if node == null: return false
+	var ap := node.find_child("AnimationPlayer", true, false)
+	if not (ap is AnimationPlayer): return false
+	var names := (ap as AnimationPlayer).get_animation_list()
+	for n in names:
+		# Godot auto-adds a "RESET" track; ignore it.
+		if String(n).to_upper() != "RESET":
+			return true
+	return false
+
 # Play the model's first animation in loop, if any.
 static func play_first_animation(node: Node3D) -> void:
 	play_named_action(node, &"idle", true)
