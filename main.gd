@@ -647,8 +647,11 @@ func _frame_static(subject: Node3D, headroom: float, dur: float) -> void:
 func _world_aabb(node: Node3D) -> AABB:
 	var combined := AABB()
 	var first := true
-	for mi in node.find_children("*", "VisualInstance3D", true, false):
-		var v := mi as VisualInstance3D
+	# ONLY meshes — never lights/particles. An OmniLight3D is a VisualInstance3D
+	# whose get_aabb() returns its (huge) range, which used to blow up the
+	# measured bounds and fling glowing creatures (elemental/fey) into the air.
+	for mi in node.find_children("*", "MeshInstance3D", true, false):
+		var v := mi as MeshInstance3D
 		var a: AABB = v.get_aabb()
 		a = v.global_transform * a
 		if first: combined = a; first = false

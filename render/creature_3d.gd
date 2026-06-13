@@ -179,24 +179,20 @@ func build(_arch: Archetype) -> void:
 		# FEY: small, hovering, glowing — a sprite, not a grounded animal.
 		if int(archetype.family) == Archetype.Family.FEY:
 			loaded.scale *= 0.55
-			loaded.position.y += 0.8   # low hover — a sprite, not flying off
-			set_meta("hovers", true)
+			# Sits on the ground (grounded by the camera framing); a glow + the
+			# idle animation sell the sprite — no position hover (it floated
+			# because lights inflated the bounds; fixed at the framing level).
 			var gl := OmniLight3D.new()
 			gl.light_color = Color(0.75, 0.9, 1.0)
 			gl.light_energy = 2.0
 			gl.omni_range = 3.5
-			gl.position = Vector3(0, 1.4, 0)
+			gl.position = Vector3(0, 1.0, 0)
 			body.add_child(gl)
-			var t := loaded.create_tween().set_loops()
-			t.tween_property(loaded, "position:y", loaded.position.y + 0.25, 1.6).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-			t.tween_property(loaded, "position:y", loaded.position.y, 1.6).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 		# DRACONIC: a drake — bulk it up so it reads as a big reptilian threat.
 		elif int(archetype.family) == Archetype.Family.DRACONIC:
 			loaded.scale *= 1.6
-		# ELEMENTAL: a blazing energy-being — float it + add a coloured glow.
+		# ELEMENTAL: a blazing energy-being — grounded, with a coloured glow.
 		elif int(archetype.family) == Archetype.Family.ELEMENTAL:
-			loaded.position.y += 0.4
-			set_meta("hovers", true)
 			var egl := OmniLight3D.new()
 			egl.light_color = FaunaLib._elemental_tint(archetype.id)
 			egl.light_energy = 3.0
