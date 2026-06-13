@@ -378,7 +378,10 @@ func _process(delta: float) -> void:
 		sin(_orbit_pitch),
 		cos(yaw) * cy
 	) * _orbit_radius
-	var rest_pos := focal + Vector3(0, focal.y * 0.35, 0) + orbit_offset
+	# Camera sits clearly ABOVE the focal and looks down at a 3/4 angle, so it
+	# never dips low enough to see under the ground edge. Height scales with the
+	# orbit radius (further back = higher) for a stable, slightly cinematic tilt.
+	var rest_pos := focal + Vector3(0, 1.4 + _orbit_radius * 0.32, 0) + orbit_offset
 	var pos := rest_pos + Vector3(off_x + _shake_offset.x, off_y + _shake_offset.y, _shake_offset.z)
 	camera.position = pos
 	camera.look_at(focal, Vector3.UP)
@@ -571,7 +574,7 @@ func _do_ground_and_frame(subject: Node3D, headroom: float) -> void:
 		# Bounds not resolved yet — use a safe default framing so the creature
 		# is never lost off-screen (rather than keeping stale boss values).
 		_cam_focal = Vector3(subject.position.x, 1.0, subject.position.z)
-		_orbit_radius = 6.0
+		_orbit_radius = 7.0
 		return
 	# Drop feet to y=0 (keep its x/z offset).
 	subject.position.y -= aabb.position.y
@@ -595,7 +598,7 @@ func _do_ground_and_frame(subject: Node3D, headroom: float) -> void:
 	var dist_h := (w * 0.6) / tan(hfov * 0.5)
 	# Tighter cap (10.5) now that the lens widens for big mobs — the camera
 	# never flies off into an empty wide shot.
-	_cam_radius_base = clampf(maxf(dist_v, dist_h), 5.0, 10.5)
+	_cam_radius_base = clampf(maxf(dist_v, dist_h), 6.5, 10.5)
 	_orbit_radius = _cam_radius_base
 
 func _on_zone_intro(text: String, _biome: StringName) -> void:
@@ -737,8 +740,8 @@ func _reset_camera_if_boss() -> void:
 	# Reset auto-frame to the default human-scale framing.
 	_cam_focal_y = 1.0
 	_cam_focal = Vector3(0, 1.0, 0)
-	_orbit_radius = 6.4
-	_cam_radius_base = 6.4
+	_orbit_radius = 7.0
+	_cam_radius_base = 7.0
 	if camera.position != Vector3(0, 2.2, 6.0) or camera.fov != 50.0:
 		Cinematic.reset_camera(camera)
 
