@@ -109,6 +109,7 @@ func _start_game_with_saved_seed(seed: int, zone_index: int) -> void:
 	director.final_duel.connect(_on_final_duel)
 	ui.choice_selected.connect(_on_choice)
 	Bus.zone_changed.connect(_on_zone_changed)
+	_current_act = 0
 	director.begin()
 
 func _on_menu_new_game() -> void:
@@ -192,6 +193,7 @@ func _start_game() -> void:
 		ui.pause_requested.connect(_open_pause_menu)
 	Bus.zone_changed.connect(_on_zone_changed)
 
+	_current_act = 0
 	Progress.record_run_start()
 	# Opening prologue (who you are / why you're here) over the built scene,
 	# then the run begins.
@@ -643,8 +645,33 @@ func _do_ground_and_frame(subject: Node3D, headroom: float) -> void:
 	_cam_radius_base = clampf(maxf(dist_v, dist_h), 6.5, 10.5)
 	_orbit_radius = _cam_radius_base
 
+var _current_act: int = 0
+
 func _on_zone_intro(text: String, _biome: StringName) -> void:
+	# D&D act structure: show an ACT title card whenever the act changes.
+	var total: int = orchestrator.world.zones.size() if orchestrator else 3
+	var idx: int = orchestrator.world.active_zone_index if orchestrator else 0
+	var act := _act_for(idx, total)
+	if act != _current_act:
+		_current_act = act
+		_show_act_card(act)
 	ui.present_intro(text)
+
+# Maps a zone index to an act (1..3): first zone = Act I, last = Act III,
+# everything between = Act II.
+func _act_for(idx: int, total: int) -> int:
+	if idx <= 0: return 1
+	if idx >= total - 1: return 3
+	return 2
+
+func _show_act_card(act: int) -> void:
+	var layer := CanvasLayer.new(); layer.layer = 86
+	add_child(layer)
+	var card: Control = preload("res://ui/act_card.gd").new()
+	card.setup(act)
+	layer.add_child(card)
+	card.done.connect(func():
+		if is_instance_valid(layer): layer.queue_free())
 
 # Static framed shot for set-pieces (world boss, finale dragon): grounds the
 # subject, then tweens the camera to a fixed position that fits the whole

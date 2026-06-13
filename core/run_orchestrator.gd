@@ -1,8 +1,8 @@
 class_name RunOrchestrator extends Node
 # Orchestrates a single run: seeds, world gen, memory commit on end.
 
-const ZONE_COUNT_MIN := 2
-const ZONE_COUNT_MAX := 4
+const ZONE_COUNT_MIN := 3
+const ZONE_COUNT_MAX := 5
 
 var master_seed: int
 var rng: DRNG
