@@ -11,6 +11,8 @@ var quality: int = 1               # 0=low, 1=mid, 2=high
 var grain_amount: float = 0.06
 var story_mode: bool = false       # gentler rolls, no permadeath outside bosses
 var portrait: bool = false         # phone portrait orientation (default landscape)
+var cam_distance: float = 1.0      # camera distance multiplier (0.7 close .. 1.6 far)
+var cam_height: float = 1.0        # camera height/tilt multiplier (0.6 low .. 1.6 high)
 
 const BUS_MUSIC := "Music"
 const BUS_SFX := "SFX"
@@ -42,6 +44,8 @@ func _load() -> void:
 	grain_amount = float(cfg.get_value("graphics", "grain", grain_amount))
 	story_mode = bool(cfg.get_value("gameplay", "story_mode", story_mode))
 	portrait = bool(cfg.get_value("display", "portrait", portrait))
+	cam_distance = float(cfg.get_value("camera", "distance", cam_distance))
+	cam_height = float(cfg.get_value("camera", "height", cam_height))
 
 func save() -> void:
 	var cfg := ConfigFile.new()
@@ -51,10 +55,18 @@ func save() -> void:
 	cfg.set_value("graphics", "grain", grain_amount)
 	cfg.set_value("gameplay", "story_mode", story_mode)
 	cfg.set_value("display", "portrait", portrait)
+	cfg.set_value("camera", "distance", cam_distance)
+	cfg.set_value("camera", "height", cam_height)
 	cfg.save(PATH)
 
 func set_story_mode(v: bool) -> void:
 	story_mode = v; save()
+
+func set_cam_distance(v: float) -> void:
+	cam_distance = clampf(v, 0.6, 1.8); save()
+
+func set_cam_height(v: float) -> void:
+	cam_height = clampf(v, 0.5, 1.8); save()
 
 # Phone portrait vs landscape. Default is landscape — only flipped if the user
 # turns it on. Applied at runtime: window is swapped on desktop, screen

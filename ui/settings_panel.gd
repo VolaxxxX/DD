@@ -76,6 +76,11 @@ func _ready() -> void:
 		Audio.play(&"click")
 		Settings.set_portrait(on))
 	o_row.add_child(o_chk)
+	# Camera distance + height sliders.
+	v.add_child(_make_slider(Lang.t({"fr": "Distance caméra", "en": "Camera distance", "id": "Jarak kamera"}),
+		Settings.cam_distance, 0.6, 1.8, func(val): Settings.set_cam_distance(val)))
+	v.add_child(_make_slider(Lang.t({"fr": "Hauteur caméra", "en": "Camera height", "id": "Tinggi kamera"}),
+		Settings.cam_height, 0.5, 1.8, func(val): Settings.set_cam_height(val)))
 	# Close
 	var close := Button.new()
 	close.text = Lang.ui("back")

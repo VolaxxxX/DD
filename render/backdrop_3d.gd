@@ -1424,7 +1424,7 @@ func _build_ground(biome: StringName, corruption: float) -> void:
 		# Light tint keeps the biome grade + corruption mood over the photo.
 		mat.albedo_color = Color(1, 1, 1).lerp(base.lightened(0.35), 0.35)
 		mat.albedo_color = mat.albedo_color.lerp(Color(0.55, 0.25, 0.50), corruption * 0.35)
-		mat.uv1_scale = Vector3(14, 14, 14)
+		mat.uv1_scale = Vector3(1, 1, 1)   # mesh already has world-space tiled UVs
 		if ResourceLoader.exists(nor_path):
 			mat.normal_enabled = true
 			mat.normal_texture = load(nor_path)
@@ -1469,52 +1469,67 @@ func _build_ground(biome: StringName, corruption: float) -> void:
 
 # Grid mesh with gentle rolling hills outside the flat play area, so the
 # terrain has real relief instead of an infinite billiard table.
+var _hn_big: FastNoiseLite
+var _hn_fine: FastNoiseLite
+
 func _displaced_ground_mesh(biome: StringName) -> ArrayMesh:
-	var size := 90.0
-	var div := 56
-	var hn := FastNoiseLite.new()
-	hn.seed = (int(biome.hash()) >> 7) & 0x7FFFFFFF
-	hn.frequency = 0.06
-	hn.fractal_octaves = 3
-	var amp := 0.9
+	var size := 100.0
+	var div := 80                      # finer mesh = smoother relief
+	# Two noise layers: broad rolling hills + fine surface detail.
+	_hn_big = FastNoiseLite.new()
+	_hn_big.seed = (int(biome.hash()) >> 7) & 0x7FFFFFFF
+	_hn_big.frequency = 0.025
+	_hn_big.fractal_octaves = 4
+	_hn_fine = FastNoiseLite.new()
+	_hn_fine.seed = (int(biome.hash()) >> 3) & 0x7FFFFFFF
+	_hn_fine.frequency = 0.13
+	_hn_fine.fractal_octaves = 3
+	var amp := 1.4
 	match String(biome):
-		"highland": amp = 1.8
-		"swamp", "coast": amp = 0.35
-		"city", "crypt": amp = 0.45
+		"highland": amp = 3.2          # dramatic peaks
+		"swamp", "coast": amp = 0.5    # near flat wetlands
+		"city": amp = 0.6
+		"crypt": amp = 0.7
+		"corrupted": amp = 1.8
+		"anomaly": amp = 2.2
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	var step := size / float(div)
+	var tile := 0.35                   # world-space UVs -> ~2.8 m per texture tile
 	for iz in div:
 		for ix in div:
 			var x0 := -size * 0.5 + float(ix) * step
 			var z0 := -size * 0.5 + float(iz) * step
-			var p00 := Vector3(x0, _ground_h(hn, x0, z0, amp), z0)
-			var p10 := Vector3(x0 + step, _ground_h(hn, x0 + step, z0, amp), z0)
-			var p01 := Vector3(x0, _ground_h(hn, x0, z0 + step, amp), z0 + step)
-			var p11 := Vector3(x0 + step, _ground_h(hn, x0 + step, z0 + step, amp), z0 + step)
-			var uv00 := Vector2(float(ix) / div, float(iz) / div)
-			var uv10 := Vector2(float(ix + 1) / div, float(iz) / div)
-			var uv01 := Vector2(float(ix) / div, float(iz + 1) / div)
-			var uv11 := Vector2(float(ix + 1) / div, float(iz + 1) / div)
-			st.set_uv(uv00); st.add_vertex(p00)
-			st.set_uv(uv01); st.add_vertex(p01)
-			st.set_uv(uv10); st.add_vertex(p10)
-			st.set_uv(uv10); st.add_vertex(p10)
-			st.set_uv(uv01); st.add_vertex(p01)
-			st.set_uv(uv11); st.add_vertex(p11)
+			var p00 := Vector3(x0, _ground_h(x0, z0, amp), z0)
+			var p10 := Vector3(x0 + step, _ground_h(x0 + step, z0, amp), z0)
+			var p01 := Vector3(x0, _ground_h(x0, z0 + step, amp), z0 + step)
+			var p11 := Vector3(x0 + step, _ground_h(x0 + step, z0 + step, amp), z0 + step)
+			var u00 := Vector2(x0, z0) * tile
+			var u10 := Vector2(x0 + step, z0) * tile
+			var u01 := Vector2(x0, z0 + step) * tile
+			var u11 := Vector2(x0 + step, z0 + step) * tile
+			st.set_uv(u00); st.add_vertex(p00)
+			st.set_uv(u01); st.add_vertex(p01)
+			st.set_uv(u10); st.add_vertex(p10)
+			st.set_uv(u10); st.add_vertex(p10)
+			st.set_uv(u01); st.add_vertex(p01)
+			st.set_uv(u11); st.add_vertex(p11)
 	st.generate_normals()
+	st.generate_tangents()
 	return st.commit()
 
-# Height function: dead flat inside the play disc (radius 7 around the stage
-# center at z=-2 local → world z≈-2..6 covered), rising smoothly outside.
-func _ground_h(hn: FastNoiseLite, x: float, z: float, amp: float) -> float:
-	# Local coords: stage center in this mesh's space is (0, 0) since the
-	# ground node itself sits at z=-2.
-	var d := Vector2(x, z + 2.0).length()      # distance from encounter focus
-	var mask := clampf((d - 7.0) / 8.0, 0.0, 1.0)
-	mask = mask * mask * (3.0 - 2.0 * mask)    # smoothstep
-	var h := hn.get_noise_2d(x, z) * amp
-	return h * mask
+# Height: a small, gentle micro-relief inside the play disc (so it's not a
+# perfect billiard table) blending into full rolling hills + fine detail
+# outside. Stage centre is local (0, -2).
+func _ground_h(x: float, z: float, amp: float) -> float:
+	var d := Vector2(x, z + 2.0).length()
+	var outer := clampf((d - 6.5) / 9.0, 0.0, 1.0)
+	outer = outer * outer * (3.0 - 2.0 * outer)        # smoothstep mask
+	var big: float = _hn_big.get_noise_2d(x, z) * amp
+	var fine: float = _hn_fine.get_noise_2d(x, z) * (amp * 0.18)
+	# Keep a faint ripple even on the play disc, but flat enough to stand on.
+	var inner := (1.0 - outer) * fine * 0.4
+	return big * outer + fine * outer + inner
 
 func _build_lights(biome: StringName, corruption: float) -> void:
 	var tint: Color = BIOME_LIGHT_TINT.get(biome, Color.WHITE)

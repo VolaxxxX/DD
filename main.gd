@@ -373,15 +373,17 @@ func _process(delta: float) -> void:
 	var focal := _cam_focal
 	var yaw := _orbit_yaw + _scene_yaw   # per-encounter base angle + drag
 	var cy := cos(_orbit_pitch)
+	# Player-tunable distance + height multipliers from Settings.
+	var radius := _orbit_radius * Settings.cam_distance
 	var orbit_offset := Vector3(
 		sin(yaw) * cy,
 		sin(_orbit_pitch),
 		cos(yaw) * cy
-	) * _orbit_radius
+	) * radius
 	# Camera sits clearly ABOVE the focal and looks down at a 3/4 angle, so it
 	# never dips low enough to see under the ground edge. Height scales with the
 	# orbit radius (further back = higher) for a stable, slightly cinematic tilt.
-	var rest_pos := focal + Vector3(0, 1.4 + _orbit_radius * 0.32, 0) + orbit_offset
+	var rest_pos := focal + Vector3(0, (1.4 + radius * 0.32) * Settings.cam_height, 0) + orbit_offset
 	var pos := rest_pos + Vector3(off_x + _shake_offset.x, off_y + _shake_offset.y, _shake_offset.z)
 	camera.position = pos
 	camera.look_at(focal, Vector3.UP)
