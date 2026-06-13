@@ -102,6 +102,7 @@ static func _tint(node: Node, tint: Color) -> void:
 			else:
 				m = StandardMaterial3D.new()
 			m.albedo_color = m.albedo_color * tint
+			m.metallic = minf(m.metallic, 0.1)   # no mirror -> never black on Mobile
 			mi.material_override = m
 		_tint(c, tint)
 

@@ -45,6 +45,7 @@ func build(situation_id: StringName) -> void:
 		"glowing_fungi":    _glowing_fungi()
 		"wind_harp":        _wind_harp()
 		"star_map":         _star_map()
+		"caged_beast":      _caged_beast()
 		_:                  _shrine()
 
 # Routes specific situations to a single KayKit prop scaled up + centered.
@@ -54,7 +55,8 @@ func _kayprop_for(situation_id: StringName) -> Node3D:
 		"buried_pilgrim":    path = "res://assets/models/biome_kayhalloween/grave_A.glb"
 		"burning_library":   path = "res://assets/models/biome_kaydungeon/shelves.glb"
 		"ferryman":          path = "res://assets/models/biome_kayhalloween/post.glb"
-		"caged_beast":       path = "res://assets/models/biome_kayhalloween/fence_pillar.glb"
+		# caged_beast handled by a dedicated procedural cage build (no real
+		# cage model exists; a lone fence pillar read wrong).
 		"wounded_merc":      path = "res://assets/models/biome_kayhalloween/coffin.glb"
 		"iron_door":         path = "res://assets/models/biome_kayhalloween/arch_gate.glb"
 		"cold_fork":         path = "res://assets/models/biome_kayforest/Tree_Bare_1_A_Color1.glb"
@@ -202,6 +204,37 @@ func _statue() -> void:
 	_add(arm, Vector3(-0.35, 1.1, 0), Color(0.55, 0.52, 0.47), 0.0, Vector3.ONE, Vector3(0, 0, 40))
 
 # ---------- new procedural builds ----------
+
+func _caged_beast() -> void:
+	# A real floor cage: 4 corner posts + top/bottom frame + vertical bars, with
+	# a hunched dark beast shape glowing inside.
+	var bar_col := Color(0.22, 0.22, 0.25)
+	# Corner posts.
+	for sx in [-1, 1]:
+		for sz in [-1, 1]:
+			var post := CylinderMesh.new(); post.top_radius = 0.06; post.bottom_radius = 0.06; post.height = 1.7
+			_add(post, Vector3(sx * 0.6, 0.85, sz * 0.6), bar_col)
+	# Vertical bars on each of the 4 sides.
+	for side in 4:
+		for b in 3:
+			var bar := CylinderMesh.new(); bar.top_radius = 0.025; bar.bottom_radius = 0.025; bar.height = 1.6
+			var f := -0.4 + b * 0.4
+			var pos: Vector3
+			match side:
+				0: pos = Vector3(f, 0.8, -0.6)
+				1: pos = Vector3(f, 0.8, 0.6)
+				2: pos = Vector3(-0.6, 0.8, f)
+				3: pos = Vector3(0.6, 0.8, f)
+			_add(bar, pos, bar_col)
+	# Top + bottom frames.
+	var frame := BoxMesh.new(); frame.size = Vector3(1.3, 0.08, 1.3)
+	_add(frame, Vector3(0, 1.66, 0), bar_col.darkened(0.1))
+	_add(frame, Vector3(0, 0.05, 0), bar_col.darkened(0.2))
+	# The captive beast — a hunched dark form with two glowing eyes.
+	var beast := SphereMesh.new(); beast.radius = 0.34; beast.height = 0.5
+	_add(beast, Vector3(0, 0.45, 0), Color(0.10, 0.09, 0.12), 0.0, Vector3(1.0, 0.8, 1.2))
+	_add(SphereMesh.new(), Vector3(-0.10, 0.55, 0.28), Color(1.0, 0.5, 0.2), 4.0, Vector3.ONE * 0.04)
+	_add(SphereMesh.new(), Vector3(0.10, 0.55, 0.28), Color(1.0, 0.5, 0.2), 4.0, Vector3.ONE * 0.04)
 
 func _hanging_cage() -> void:
 	var rope := CylinderMesh.new(); rope.top_radius = 0.04; rope.bottom_radius = 0.04; rope.height = 3.0

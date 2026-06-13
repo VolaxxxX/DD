@@ -537,7 +537,7 @@ func _spawn_creature(arch: Archetype) -> void:
 	creature_node.build(arch)
 	# Ground it and frame the camera so the whole creature is visible — big
 	# constructs/titans used to fly off the top of the screen.
-	_ground_and_frame(creature_node, 1.2)
+	_ground_and_frame(creature_node, 0.3)
 	_focal_spotlight(Vector3(creature_node.position.x, _cam_focal_y, creature_node.position.z))
 	Cinematic.play_for_creature(arch.id, int(arch.tier), creature_node, camera, get_tree(), int(arch.family))
 	# Orient the creature toward the HERO (active avatar), not dead-on at the
@@ -583,8 +583,11 @@ func _do_ground_and_frame(subject: Node3D, headroom: float) -> void:
 	var aspect: float = float(get_viewport().size.x) / float(maxi(1, get_viewport().size.y))
 	var hfov := 2.0 * atan(tan(vfov * 0.5) * aspect)
 	var dist_v := (h * (1.0 + headroom) * 0.5) / tan(vfov * 0.5)
-	var dist_h := (w * 0.7) / tan(hfov * 0.5)
-	_cam_radius_base = clampf(maxf(dist_v, dist_h), 5.0, 26.0)
+	var dist_h := (w * 0.6) / tan(hfov * 0.5)
+	# Cap kept tight so big monsters fill the frame instead of shrinking into an
+	# empty wide shot. Focal also kept low so the hero stays in view.
+	_cam_radius_base = clampf(maxf(dist_v, dist_h), 5.0, 15.0)
+	_cam_focal_y = minf(_cam_focal_y, 2.6)
 	_orbit_radius = _cam_radius_base
 
 func _on_zone_intro(text: String, _biome: StringName) -> void:

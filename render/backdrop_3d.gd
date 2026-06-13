@@ -607,11 +607,25 @@ func _build_water(biome: StringName) -> void:
 
 func _water_material(tint: Color, rough: float = 0.10) -> StandardMaterial3D:
 	var m := StandardMaterial3D.new()
-	m.albedo_color = tint
+	# IMPORTANT: a metallic mirror surface renders BLACK on the Mobile renderer
+	# (no reflection probes / SSR), which used to put a huge black plane in the
+	# foreground. We use a translucent, mostly-diffuse water look instead:
+	# tinted albedo + rim sheen + animated normal ripples, no mirror.
+	var c := tint
+	c.a = 0.78
+	m.albedo_color = c
 	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	m.metallic = 0.85
-	m.metallic_specular = 0.9
-	m.roughness = rough
+	m.metallic = 0.0
+	m.metallic_specular = 0.5
+	m.roughness = clampf(rough + 0.35, 0.25, 0.7)
+	# Faint emission so the surface never reads as a black hole even in shadow.
+	m.emission_enabled = true
+	m.emission = tint.lightened(0.15)
+	m.emission_energy_multiplier = 0.12
+	# Rim sheen catches the sky colour at grazing angles (cheap fake reflection).
+	m.rim_enabled = true
+	m.rim = 0.5
+	m.rim_tint = 0.4
 	var n := FastNoiseLite.new()
 	n.seed = 4242
 	n.frequency = 0.06

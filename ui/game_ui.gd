@@ -51,6 +51,7 @@ func _ready() -> void:
 	for i in choice_buttons.size():
 		var idx := i
 		choice_buttons[i].pressed.connect(func(): _on_choice_pressed(idx))
+		_apply_glass_button_style(choice_buttons[i])
 	_hide_choices()
 	narrative.text = ""
 	narrative_box.visible = false
@@ -391,6 +392,30 @@ func _hide_choices() -> void:
 
 func _show_choices() -> void:
 	for b in choice_buttons: b.visible = true
+
+# Semi-transparent "glass" styling for the choice buttons so the 3D scene
+# shows through instead of being masked by an opaque bar.
+func _apply_glass_button_style(btn: Button) -> void:
+	for state in ["normal", "hover", "pressed", "focus", "disabled"]:
+		var sb := StyleBoxFlat.new()
+		var a := 0.34
+		if state == "hover": a = 0.5
+		elif state == "pressed": a = 0.62
+		sb.bg_color = Color(0.05, 0.05, 0.08, a)
+		sb.corner_radius_top_left = 8
+		sb.corner_radius_top_right = 8
+		sb.corner_radius_bottom_left = 8
+		sb.corner_radius_bottom_right = 8
+		sb.border_width_left = 1
+		sb.border_width_bottom = 1
+		sb.border_width_right = 1
+		sb.border_width_top = 1
+		sb.border_color = Color(0.85, 0.72, 0.4, 0.30 if state == "normal" else 0.55)
+		sb.content_margin_left = 12
+		sb.content_margin_right = 12
+		sb.content_margin_top = 4
+		sb.content_margin_bottom = 4
+		btn.add_theme_stylebox_override(state, sb)
 
 func _flash_fade(color: Color, alpha: float) -> void:
 	fade.color = color

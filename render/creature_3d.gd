@@ -154,10 +154,14 @@ func build(_arch: Archetype) -> void:
 	# family GLB fallback looked like a placeholder for these two, and the
 	# remodelled procedural versions (vortex column / ethereal hovering sprite)
 	# have far stronger, more readable silhouettes.
-	var force_procedural := int(archetype.family) in [Archetype.Family.ELEMENTAL, Archetype.Family.FEY]
+	# Only the ELEMENTAL keeps the bespoke procedural build (its vortex column
+	# reads well). FEY now uses a small animated luminous flyer via FaunaLib —
+	# the procedural prism fairy looked like a placeholder.
+	var force_procedural := int(archetype.family) == Archetype.Family.ELEMENTAL
 	# Priority for the model:
 	#  1. id-specific GLB (a bespoke creature model, if one exists)
-	#  2. animated FaunaLib model for BEAST/HUMANOID/UNDEAD (real idle/walk anims)
+	#  2. animated FaunaLib model for BEAST/HUMANOID/UNDEAD/FEY (real anims,
+	#     beasts matched to their name, fey = glowing flyer)
 	#  3. static family GLB fallback (posed out of T-pose)
 	#  4. procedural primitives
 	var loaded: Node3D = null
@@ -177,6 +181,20 @@ func build(_arch: Archetype) -> void:
 			AssetLoader.pose_rest(loaded)
 			# Subtle continuous breath/sway/head-bob so the mob feels alive.
 			AssetLoader.idle_life(loaded)
+		# FEY: small, hovering, glowing — a sprite, not a grounded animal.
+		if int(archetype.family) == Archetype.Family.FEY:
+			loaded.scale *= 0.55
+			loaded.position.y += 1.1
+			set_meta("hovers", true)
+			var gl := OmniLight3D.new()
+			gl.light_color = Color(0.75, 0.9, 1.0)
+			gl.light_energy = 2.0
+			gl.omni_range = 3.5
+			gl.position = Vector3(0, 1.4, 0)
+			body.add_child(gl)
+			var t := loaded.create_tween().set_loops()
+			t.tween_property(loaded, "position:y", loaded.position.y + 0.25, 1.6).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+			t.tween_property(loaded, "position:y", loaded.position.y, 1.6).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 		_apply_tier_scale()
 		_animator = Animator.new()
 		add_child(_animator)
