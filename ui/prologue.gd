@@ -31,14 +31,16 @@ var _label: RichTextLabel
 var _hint: Label
 var _panel: PanelContainer
 var _busy: bool = false
+var _card_token: int = 0   # invalidates a card's auto-advance timer when it changes
 
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	_cards = CARDS.get(Lang.code, CARDS["fr"])
-	# Dim veil so text reads over the scene.
+	# Dim veil so text reads over the scene — kept light so the world and the
+	# creature behind it stay clearly visible.
 	var veil := ColorRect.new()
-	veil.color = Color(0, 0, 0, 0.55)
+	veil.color = Color(0, 0, 0, 0.35)
 	veil.set_anchors_preset(Control.PRESET_FULL_RECT)
 	veil.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(veil)
@@ -105,6 +107,13 @@ func _show_card(i: int) -> void:
 	var t := create_tween()
 	t.tween_property(_panel, "modulate:a", 1.0, 0.5)
 	t.tween_callback(func(): _busy = false)
+	# Auto-advance failsafe: each card moves on by itself after 5s so the intro
+	# can NEVER leave the player stuck, even if a tap is somehow missed.
+	_card_token += 1
+	var token: int = _card_token
+	get_tree().create_timer(5.0).timeout.connect(func() -> void:
+		if is_instance_valid(self) and token == _card_token:
+			_next())
 
 func _gui_input(event: InputEvent) -> void:
 	if _busy: return
