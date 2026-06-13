@@ -105,6 +105,43 @@ static func has_animations(node: Node3D) -> bool:
 			return true
 	return false
 
+# Pose a static (animation-less) rig into a natural rest stance: swing the
+# upper arms down out of the T-pose, with a faint elbow bend. Tuned for the
+# bundled KayKit rigs (rotating the arm bone's LOCAL X drops it straight down
+# for both sides). Safe no-op when there's no skeleton or no arm bones.
+static func pose_rest(node: Node3D) -> void:
+	var sk := _find_skeleton(node)
+	if sk == null: return
+	for side in ["l", "r"]:
+		var ua := _find_bone_like(sk, ["upperarm." + side, "upperarm_" + side, "upper_arm." + side, "shoulder." + side, "arm." + side])
+		if ua != -1:
+			_local_rotate(sk, ua, Vector3(1, 0, 0), deg_to_rad(-66.0))
+		var la := _find_bone_like(sk, ["lowerarm." + side, "lowerarm_" + side, "lower_arm." + side, "forearm." + side])
+		if la != -1:
+			_local_rotate(sk, la, Vector3(1, 0, 0), deg_to_rad(-16.0))   # slight elbow bend
+
+static func _local_rotate(sk: Skeleton3D, idx: int, axis: Vector3, ang: float) -> void:
+	var r := sk.get_bone_pose_rotation(idx)
+	sk.set_bone_pose_rotation(idx, r * Quaternion(axis.normalized(), ang))
+
+static func _find_skeleton(n: Node) -> Skeleton3D:
+	if n is Skeleton3D: return n
+	for c in n.get_children():
+		var r := _find_skeleton(c)
+		if r != null: return r
+	return null
+
+static func _find_bone_like(sk: Skeleton3D, patterns: Array) -> int:
+	for i in sk.get_bone_count():
+		var nm := sk.get_bone_name(i).to_lower()
+		for p in patterns:
+			if nm == String(p).to_lower(): return i
+	for i in sk.get_bone_count():
+		var nm2 := sk.get_bone_name(i).to_lower()
+		for p in patterns:
+			if nm2.contains(String(p).to_lower()): return i
+	return -1
+
 # Play the model's first animation in loop, if any.
 static func play_first_animation(node: Node3D) -> void:
 	play_named_action(node, &"idle", true)

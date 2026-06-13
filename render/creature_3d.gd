@@ -150,27 +150,24 @@ func build(_arch: Archetype) -> void:
 	body = Node3D.new()
 	add_child(body)
 	_add_contact_shadow()
-	# Try external GLB first. Bipedal families (humanoid/undead/fey/draconic)
-	# look broken when a static model stands in a T-pose, so for those we only
-	# keep the GLB if it actually animates; otherwise fall back to the posed
-	# procedural build. Non-bipedal families (beast/construct/elemental/
-	# aberration) read fine static, so we keep their GLB regardless.
-	var fam := int(archetype.family)
-	var bipedal := fam in [Archetype.Family.HUMANOID, Archetype.Family.UNDEAD, Archetype.Family.FEY, Archetype.Family.DRACONIC]
-	var loaded: Node3D = AssetLoader.instance_for_creature(archetype.id, fam)
-	if loaded != null and (not bipedal or AssetLoader.has_animations(loaded)):
+	# External GLB (detailed skinned model) first. KayKit rigs have no animation
+	# clips, so bipeds would T-pose — we pose their skeleton into a rest stance
+	# instead of throwing the model away. Animated rigs just play idle.
+	var loaded: Node3D = AssetLoader.instance_for_creature(archetype.id, int(archetype.family))
+	if loaded != null:
 		body.add_child(loaded)
 		_imported_root = loaded
 		_normalize_imported_scale(loaded)
-		AssetLoader.play_named_action(loaded, &"idle", true)
+		if AssetLoader.has_animations(loaded):
+			AssetLoader.play_named_action(loaded, &"idle", true)
+		else:
+			AssetLoader.pose_rest(loaded)
 		_apply_tier_scale()
 		_animator = Animator.new()
 		add_child(_animator)
 		_animator.target = body
 		_animator.start_idle()
 		return
-	if loaded != null:
-		loaded.queue_free()   # static T-posed biped — use procedural instead
 	var override: Dictionary = ID_VISUAL.get(archetype.id, {})
 	var col: Color = override.get("color", FAMILY_COLOR.get(archetype.family, Color.WHITE))
 	var acc: Color = override.get("accent", FAMILY_ACCENT.get(archetype.family, Color.WHITE))
