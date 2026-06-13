@@ -681,10 +681,13 @@ func _on_encounter(enc) -> void:
 			creature_node = null
 		_reset_camera_if_boss()
 		situation_node = Situation3D.new()
-		situation_node.position = Vector3(0.4, 0, -0.5)
+		situation_node.position = Vector3(0.4, 0, 0.4)
 		stage.add_child(situation_node)
 		situation_node.build(StringName(enc.template.id))
-		_focal_spotlight(situation_node.position + Vector3(0, 1.0, 0))
+		# Centre the camera ON the scene (altar, vagabond, well...) so it's
+		# always the focus — not the avatar off to the side.
+		_ground_and_frame(situation_node, 0.6)
+		_focal_spotlight(Vector3(situation_node.position.x, _cam_focal.y, situation_node.position.z))
 		Cinematic.play_for_situation(StringName(enc.template.id), situation_node, camera, get_tree())
 		var sit_title := String(enc.template.title)
 		if _encounter_counter > 1:

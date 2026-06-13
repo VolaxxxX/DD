@@ -20,14 +20,14 @@ const POOLS := {
 		"tint": Color(1, 1, 1),
 	},
 	&"city": {
-		"hero": ["statue_column", "tn_fountain_round", "tn_fountain_square", "tn_cart_high", "tn_pillar_stone", "gy_lightpost_single"],
-		"scatter": ["tn_cart", "tn_barrel", "tn_planks", "tn_fence_broken", "rock_smallB", "statue_block", "tn_chimney", "tn_banner_red"],
+		"hero": ["ct_tower_square_base", "ct_tower_square_mid", "ct_gate", "ct_wall", "tn_fountain_round", "tn_cart_high"],
+		"scatter": ["ct_wall_half", "ct_flag", "ct_stairs_stone", "tn_cart", "tn_barrel", "tn_planks", "tn_chimney", "tn_banner_red", "gy_lightpost_single"],
 		"ground": ["grass_leafs", "plant_bushSmall"],
 		"tint": Color(0.85, 0.85, 0.88),
 	},
 	&"ruins": {
-		"hero": ["statue_column", "statue_columnDamaged", "statue_obelisk", "gy_altar_stone", "gy_pillar_large", "gy_stone_wall_damaged", "gy_brick_wall"],
-		"scatter": ["rock_largeA", "gy_debris", "gy_rocks", "gy_urn_square", "gy_bench_damaged", "statue_head", "gy_stone_wall_curve"],
+		"hero": ["statue_column", "statue_columnDamaged", "ct_wall_corner", "ct_siege_ram_demolished", "gy_altar_stone", "gy_pillar_large", "gy_stone_wall_damaged"],
+		"scatter": ["rock_largeA", "gy_debris", "gy_rocks", "ct_wall_half", "ct_siege_catapult_demolished", "ct_rocks_large", "gy_urn_square", "statue_head"],
 		"ground": ["grass", "plant_bushSmall", "flower_yellowA"],
 		"tint": Color(0.95, 0.9, 0.78),
 	},

@@ -230,9 +230,8 @@ static func nudge_for_tone(camera: Camera3D, tone: int) -> void:
 # Situation arrival: brief reveal cinematic per situation kind.
 static func play_for_situation(sit_id: StringName, target: Node3D, camera: Camera3D, tree: SceneTree) -> void:
 	if target == null: return
-	target.scale = Vector3.ZERO
-	var t := target.create_tween()
-	t.tween_property(target, "scale", Vector3.ONE, 0.6).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	# NB: no scale-pop on `target` — it would fight the camera auto-frame, which
+	# measures the scene's bounds. Entrance is covered by the narrative fade.
 	match String(sit_id):
 		"collapse":
 			_shake_camera(camera, tree, 0.25, 1.0)
@@ -241,8 +240,7 @@ static func play_for_situation(sit_id: StringName, target: Node3D, camera: Camer
 			_shake_camera(camera, tree, 0.15, 1.5)
 			_flash_screen(tree, Color(1, 1, 1, 0.85), 0.12)
 		"deep_well":
-			var cam := camera.create_tween()
-			cam.tween_property(camera, "position", HOME_CAM + Vector3(0, 1.0, -1.0), 1.0)
+			_flash_screen(tree, Color(0.1, 0.2, 0.3, 0.4), 0.3)
 		"the_double":
 			_flash_screen(tree, Color(0.05, 0.0, 0.10, 0.85), 0.40)
 		"shrine":
