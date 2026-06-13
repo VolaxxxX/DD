@@ -70,6 +70,17 @@ func build(biome: StringName, corruption: float, sub_biome: int = 0) -> void:
 	_build_ground_fauna(biome, DRNG.new((int(biome.hash()) >> 4) ^ 0xFA0A))
 
 var _time_of_day: int = 0   # 0=noon, 1=dusk, 2=pre-dawn
+var _nature_root: Node3D = null
+
+func _process(_delta: float) -> void:
+	# Gentle wind sway on foliage props (marked with sway_amp meta).
+	if _nature_root == null or not is_instance_valid(_nature_root): return
+	var t := Time.get_ticks_msec() / 1000.0
+	for child in _nature_root.get_children():
+		if child is Node3D and child.has_meta("sway_amp"):
+			var amp: float = child.get_meta("sway_amp")
+			var ph: float = child.get_meta("sway_phase")
+			(child as Node3D).rotation.z = sin(t * 0.9 + ph) * amp
 
 func _apply_sub_tint(biome: StringName, sub_biome: int) -> void:
 	# Multiply the directional sun + fill light by the sub-biome tint so each
@@ -135,6 +146,11 @@ func _ambient_part(parent: Node3D, mesh: Mesh, pos: Vector3, color: Color, rot_d
 # so they fill the frame behind the action without ever obscuring mobs or UI.
 func _build_signature_props(biome: StringName, corruption: float) -> void:
 	var rng := DRNG.new((int(biome.hash()) >> 5) ^ 0xBE110)
+	# Real Kenney Nature Kit props compose the biome's identity (low-poly,
+	# one shared atlas = coherent look). Falls back to procedural shapes only
+	# if the models are missing.
+	if _build_nature_props(biome, corruption, rng):
+		return
 	match String(biome):
 		"forest":     _sig_forest(rng, corruption)
 		"city":       _sig_city(rng)
@@ -145,6 +161,88 @@ func _build_signature_props(biome: StringName, corruption: float) -> void:
 		"highland":   _sig_highland(rng)
 		"crypt":      _sig_crypt(rng)
 		"coast":      _sig_coast(rng)
+
+# Composes the biome from real Kenney models: a ring of hero landmarks framing
+# the playspace, a dense scatter of mid-props, and ground detail. Returns true
+# if anything was placed. Respects the playspace exclusion so nothing covers
+# the creature or the UI.
+func _build_nature_props(biome: StringName, corruption: float, rng: DRNG) -> bool:
+	var pool := NatureLib.pool(biome)
+	var tint: Color = NatureLib.biome_tint(biome)
+	tint = tint.lerp(Color(0.55, 0.2, 0.5), corruption * 0.35)
+	var root := Node3D.new()
+	root.name = "NatureProps"
+	add_child(root)
+	_nature_root = root
+	var placed := 0
+	# --- Hero landmarks: 10 large props in an arc behind & beside the action.
+	var hero: Array = pool.get("hero", [])
+	for i in 10:
+		if hero.is_empty(): break
+		var name: String = hero[rng.range_i(0, hero.size())]
+		var n := NatureLib.instance(name, tint)
+		if n == null: continue
+		var xz := _nature_xz(rng, 5.0, 16.0, -16.0, -3.0)
+		if xz == Vector2.INF: continue
+		root.add_child(n)
+		var target_h := _frng_h(rng, 3.0, 6.5)
+		AssetLoader.normalize_height(n, target_h)
+		n.position = Vector3(xz.x, n.position.y, xz.y)
+		n.rotation.y = _frng_h(rng, 0, TAU)
+		var s := _frng_h(rng, 0.85, 1.2)
+		n.scale *= Vector3(s, _frng_h(rng, 0.9, 1.25), s)
+		_mark_sway_if_foliage(n, name)
+		placed += 1
+	# --- Scatter: 16 mid-props (rocks/stumps/bushes/mushrooms) closer in.
+	var scatter: Array = pool.get("scatter", [])
+	for i in 16:
+		if scatter.is_empty(): break
+		var name: String = scatter[rng.range_i(0, scatter.size())]
+		var n := NatureLib.instance(name, tint)
+		if n == null: continue
+		var xz := _nature_xz(rng, 2.6, 13.0, -12.0, -2.0)
+		if xz == Vector2.INF: continue
+		root.add_child(n)
+		AssetLoader.normalize_height(n, _frng_h(rng, 0.6, 1.6))
+		n.position = Vector3(xz.x, n.position.y, xz.y)
+		n.rotation.y = _frng_h(rng, 0, TAU)
+		_mark_sway_if_foliage(n, name)
+		placed += 1
+	# --- Ground detail: 22 tiny props (grass/flowers) carpeting the field.
+	var ground: Array = pool.get("ground", [])
+	for i in 22:
+		if ground.is_empty(): break
+		var name: String = ground[rng.range_i(0, ground.size())]
+		var n := NatureLib.instance(name, tint)
+		if n == null: continue
+		var xz := _nature_xz(rng, 1.8, 12.0, -10.0, 1.0)
+		if xz == Vector2.INF: continue
+		root.add_child(n)
+		AssetLoader.normalize_height(n, _frng_h(rng, 0.25, 0.55))
+		n.position = Vector3(xz.x, n.position.y, xz.y)
+		n.rotation.y = _frng_h(rng, 0, TAU)
+		_mark_sway_if_foliage(n, name)
+		placed += 1
+	return placed > 0
+
+# Random x/z outside the playspace (creature footprint + avatar slots + UI
+# sightline). Returns Vector2.INF if no clear spot found in a few tries.
+func _nature_xz(rng: DRNG, r_min: float, r_max: float, z_lo: float, z_hi: float) -> Vector2:
+	for _i in 6:
+		var x := _frng_h(rng, -r_max, r_max)
+		var z := _frng_h(rng, z_lo, z_hi)
+		# Keep the central play column clear (creature at x~0.6,z~0.4; avatars
+		# flank at z~2.8). Exclude a generous front-centre box.
+		if absf(x) < 2.4 and z > -2.5: continue
+		if Vector2(x, z).length() < r_min: continue
+		return Vector2(x, z)
+	return Vector2.INF
+
+func _mark_sway_if_foliage(n: Node3D, name: String) -> void:
+	var nm := name.to_lower()
+	if "tree" in nm or "bush" in nm or "grass" in nm or "plant" in nm or "flower" in nm:
+		n.set_meta("sway_amp", 0.03 + randf() * 0.025)
+		n.set_meta("sway_phase", randf() * TAU)
 
 func _sig_part(parent: Node3D, mesh: Mesh, pos: Vector3, color: Color, rough: float = 0.85, emit: float = 0.0, sc: Vector3 = Vector3.ONE, rot_y: float = 0.0) -> MeshInstance3D:
 	var mi := MeshInstance3D.new()
