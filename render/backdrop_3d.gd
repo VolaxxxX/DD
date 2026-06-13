@@ -1409,6 +1409,25 @@ func _build_environment(biome: StringName, corruption: float) -> void:
 func _build_ground(biome: StringName, corruption: float) -> void:
 	ground = MeshInstance3D.new()
 	ground.mesh = _displaced_ground_mesh(biome)
+	# Anomaly & corrupted get a glowing energy-vein ground shader — far more
+	# fitting (and striking) than a flat photo texture.
+	if biome == &"anomaly" or biome == &"corrupted":
+		var sm := ShaderMaterial.new()
+		sm.shader = preload("res://render/energy_ground.gdshader")
+		if biome == &"anomaly":
+			sm.set_shader_parameter("base_color", Color(0.04, 0.05, 0.13))
+			sm.set_shader_parameter("glow_color", Color(0.35, 0.6, 1.0))
+			sm.set_shader_parameter("glow_strength", 2.8)
+			sm.set_shader_parameter("pulse_speed", 0.7)
+		else:  # corrupted
+			sm.set_shader_parameter("base_color", Color(0.10, 0.04, 0.10))
+			sm.set_shader_parameter("glow_color", Color(1.0, 0.25, 0.55))
+			sm.set_shader_parameter("glow_strength", 2.2)
+			sm.set_shader_parameter("pulse_speed", 0.5)
+		ground.material_override = sm
+		ground.position = Vector3(0, 0, -2)
+		add_child(ground)
+		return
 	var mat := StandardMaterial3D.new()
 	var base: Color = BIOME_GROUND.get(biome, Color(0.2, 0.2, 0.2))
 	mat.roughness = 0.92
