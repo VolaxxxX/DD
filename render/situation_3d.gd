@@ -70,12 +70,14 @@ const CENTERPIECE := {
 	&"blood_fruit": "tree_oak*3.5",
 	&"healer_cottage": "fn_bedDouble*0.9",
 	&"frozen_tower": "gy_crypt_large*4.0",
-	# Genuinely abstract scenes keep their procedural build:
+	# These now use a real, on-theme prop instead of an abstract procedural pile.
+	&"path_doll": "gy_cross_wood*1.8",
+	&"bear_trap": "md_trap*0.8",
+	&"head_pole": "statue_head*1.8",
+	# Genuinely abstract scenes keep their procedural build (water surfaces,
+	# constellations and cages have no fitting model):
 	&"caged_beast": "@proc",
 	&"hanging_cage": "@proc",
-	&"path_doll": "@proc",
-	&"bear_trap": "@proc",
-	&"head_pole": "@proc",
 	&"mirror_lake": "@proc",
 	&"frozen_pool": "@proc",
 	&"star_map": "@proc",
