@@ -64,6 +64,7 @@ func build(biome: StringName, corruption: float, sub_biome: int = 0) -> void:
 	_build_vegetation_field(biome, corruption)
 	_build_water(biome)
 	_build_signature_props(biome, corruption)
+	_build_points_of_interest(biome, corruption)
 	_build_weather(biome, corruption)
 	_build_atmosphere(biome, corruption)
 	_build_ambient_critters(biome, DRNG.new(int(Time.get_ticks_msec())))
@@ -970,20 +971,20 @@ func _fauna_orbiting_shard(pos: Vector3) -> void:
 # life without hiding mobs or UI.
 func _build_vegetation_field(biome: StringName, corruption: float) -> void:
 	var rng := DRNG.new((int(biome.hash()) >> 2) ^ 0xF1E1D)
-	var count := 420
+	var count := 620
 	var base_col: Color
 	var tip_col: Color
 	var blade := true              # blade=true: thin box; false: pebble sphere
 	match String(biome):
 		"forest":    base_col = Color(0.16, 0.34, 0.12); tip_col = Color(0.38, 0.55, 0.20)
 		"highland":  base_col = Color(0.25, 0.36, 0.16); tip_col = Color(0.55, 0.55, 0.30)
-		"swamp":     base_col = Color(0.10, 0.26, 0.14); tip_col = Color(0.30, 0.45, 0.22); count = 320
-		"coast":     base_col = Color(0.55, 0.50, 0.32); tip_col = Color(0.72, 0.68, 0.45); count = 220
-		"corrupted": base_col = Color(0.28, 0.08, 0.26); tip_col = Color(0.65, 0.20, 0.55); count = 300
-		"city":      base_col = Color(0.24, 0.24, 0.26); tip_col = Color(0.38, 0.38, 0.40); blade = false; count = 260
-		"ruins":     base_col = Color(0.38, 0.34, 0.26); tip_col = Color(0.55, 0.50, 0.38); blade = false; count = 280
-		"crypt":     base_col = Color(0.14, 0.13, 0.15); tip_col = Color(0.26, 0.24, 0.28); blade = false; count = 220
-		"anomaly":   base_col = Color(0.12, 0.16, 0.38); tip_col = Color(0.35, 0.45, 0.95); count = 240
+		"swamp":     base_col = Color(0.10, 0.26, 0.14); tip_col = Color(0.30, 0.45, 0.22); count = 480
+		"coast":     base_col = Color(0.55, 0.50, 0.32); tip_col = Color(0.72, 0.68, 0.45); count = 340
+		"corrupted": base_col = Color(0.28, 0.08, 0.26); tip_col = Color(0.65, 0.20, 0.55); count = 440
+		"city":      base_col = Color(0.24, 0.24, 0.26); tip_col = Color(0.38, 0.38, 0.40); blade = false; count = 380
+		"ruins":     base_col = Color(0.38, 0.34, 0.26); tip_col = Color(0.55, 0.50, 0.38); blade = false; count = 400
+		"crypt":     base_col = Color(0.14, 0.13, 0.15); tip_col = Color(0.26, 0.24, 0.28); blade = false; count = 320
+		"anomaly":   base_col = Color(0.12, 0.16, 0.38); tip_col = Color(0.35, 0.45, 0.95); count = 360
 		_:           base_col = Color(0.2, 0.3, 0.15); tip_col = Color(0.4, 0.5, 0.25)
 	base_col = base_col.lerp(Color(0.25, 0.06, 0.22), corruption * 0.35)
 	var mm := MultiMesh.new()
@@ -1008,8 +1009,8 @@ func _build_vegetation_field(biome: StringName, corruption: float) -> void:
 	var guard := 0
 	while placed < count and guard < count * 4:
 		guard += 1
-		var x := _frng_h(rng, -22, 22)
-		var z := _frng_h(rng, -18, 4)
+		var x := _frng_h(rng, -28, 28)
+		var z := _frng_h(rng, -24, 5)
 		# Keep the creature footprint + avatar slots visually clean.
 		if absf(x) < 1.6 and z > -3.0: continue
 		var sc := _frng_h(rng, 0.6, 1.5)
@@ -1025,6 +1026,98 @@ func _build_vegetation_field(biome: StringName, corruption: float) -> void:
 	mmi.multimesh = mm
 	mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(mmi)
+
+# A single huge, biome-defining landmark far on the horizon — something to
+# travel toward. Tinted into the atmosphere so it reads as distant, never
+# blocking the action. Built from real Kenney models scaled up where it fits,
+# or a distinctive procedural silhouette.
+func _build_points_of_interest(biome: StringName, corruption: float) -> void:
+	var rng := DRNG.new((int(biome.hash()) >> 6) ^ 0x901)
+	var horizon: Color = BIOME_SKY_HORIZON.get(biome, Color(0.6, 0.6, 0.6))
+	# POI colour: dark, pushed toward the horizon haze (aerial perspective).
+	var col := Color(0.2, 0.22, 0.28).lerp(horizon, 0.4).lerp(Color(0.18, 0.05, 0.2), corruption * 0.35)
+	var root := Node3D.new()
+	root.name = "POI"
+	add_child(root)
+	# Place the landmark off-centre on the horizon so the centre stays open.
+	var side := -1.0 if rng.range_i(0, 2) == 0 else 1.0
+	var base_pos := Vector3(side * _frng_h(rng, 8.0, 16.0), 0, -_frng_h(rng, 48.0, 62.0))
+	match String(biome):
+		"forest":
+			# A colossal world-tree towering over the canopy.
+			var t := NatureLib.instance("tree_oak", col)
+			if t: root.add_child(t); AssetLoader.normalize_height(t, 30.0); t.position = base_pos
+		"swamp":
+			var t := NatureLib.instance("tree_oak_dark", col)
+			if t: root.add_child(t); AssetLoader.normalize_height(t, 26.0); t.position = base_pos
+		"ruins":
+			# A great broken obelisk + flanking columns.
+			var o := NatureLib.instance("statue_obelisk", col)
+			if o: root.add_child(o); AssetLoader.normalize_height(o, 34.0); o.position = base_pos
+		"crypt", "city":
+			# A leaning broken tower (stacked damaged columns).
+			for i in 5:
+				var c := NatureLib.instance("statue_columnDamaged", col)
+				if c == null: continue
+				root.add_child(c); AssetLoader.normalize_height(c, 9.0)
+				c.position = base_pos + Vector3(i * 0.4, i * 7.2, 0)
+				c.rotation.z = 0.04 * i
+		"highland":
+			# A distant peak (big cone) crowned with a monolith.
+			var peak := _poi_mesh(root, _cone(14.0, 24.0), base_pos + Vector3(0, 12.0, 0), col)
+			var mono := NatureLib.instance("statue_obelisk", col.lightened(0.05))
+			if mono: root.add_child(mono); AssetLoader.normalize_height(mono, 8.0); mono.position = base_pos + Vector3(0, 24.0, 0)
+		"coast":
+			# A lighthouse-like tower + a sea arch.
+			_poi_mesh(root, _cylinder(2.2, 1.4, 20.0), base_pos + Vector3(0, 10.0, 0), col)
+			_poi_mesh(root, _torus(5.0, 7.0), base_pos + Vector3(side * -10.0, 6.0, 4.0), col, Vector3(0, 0, 0))
+		"corrupted":
+			# An immense jagged crystal spire, faintly glowing.
+			var spire := _poi_mesh(root, _cone(4.0, 30.0), base_pos + Vector3(0, 15.0, 0), Color(0.5, 0.12, 0.55))
+			var m := spire.get_active_material(0)
+			if m is StandardMaterial3D:
+				(m as StandardMaterial3D).emission_enabled = true
+				(m as StandardMaterial3D).emission = Color(0.6, 0.15, 0.7)
+				(m as StandardMaterial3D).emission_energy_multiplier = 0.8
+		"anomaly":
+			# A floating island ring drifting in the sky.
+			var ring := _poi_mesh(root, _torus(8.0, 11.0), base_pos + Vector3(0, 20.0, 0), Color(0.4, 0.5, 0.95), Vector3(20, 0, 10))
+			var rm := ring.get_active_material(0)
+			if rm is StandardMaterial3D:
+				(rm as StandardMaterial3D).emission_enabled = true
+				(rm as StandardMaterial3D).emission = Color(0.4, 0.55, 1.0)
+				(rm as StandardMaterial3D).emission_energy_multiplier = 0.6
+			var spin := ring.create_tween().set_loops()
+			spin.tween_property(ring, "rotation:y", TAU, 60.0)
+		_:
+			var t := NatureLib.instance("tree_default", col)
+			if t: root.add_child(t); AssetLoader.normalize_height(t, 24.0); t.position = base_pos
+
+func _poi_mesh(parent: Node3D, mesh: Mesh, pos: Vector3, col: Color, rot_deg: Vector3 = Vector3.ZERO) -> MeshInstance3D:
+	var mi := MeshInstance3D.new()
+	mi.mesh = mesh
+	mi.position = pos
+	mi.rotation_degrees = rot_deg
+	var m := StandardMaterial3D.new()
+	m.albedo_color = col
+	m.roughness = 1.0
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_PER_VERTEX
+	mi.material_override = m
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	parent.add_child(mi)
+	return mi
+
+func _cone(radius: float, height: float) -> CylinderMesh:
+	var c := CylinderMesh.new(); c.top_radius = 0.05; c.bottom_radius = radius; c.height = height
+	return c
+
+func _cylinder(top: float, bottom: float, height: float) -> CylinderMesh:
+	var c := CylinderMesh.new(); c.top_radius = top; c.bottom_radius = bottom; c.height = height
+	return c
+
+func _torus(inner: float, outer: float) -> TorusMesh:
+	var t := TorusMesh.new(); t.inner_radius = inner; t.outer_radius = outer
+	return t
 
 func _build_far_silhouettes(biome: StringName, corruption: float) -> void:
 	# A row of large dim shapes ~30 m behind the encounter, plus a second further
