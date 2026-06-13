@@ -26,6 +26,15 @@ static func roster(rng: DRNG, biome: StringName, chaos: float) -> Array[Archetyp
 			a = _from_template(named[rng.range_i(0, named.size())])
 		else:
 			a = _procedural(rng, families, tier, chaos)
+		# KARMA visible in the world: persistent reputation shifts aggression.
+		# Slaughter a family enough and they default to hostile against you;
+		# spare them and they read calmer. Capped so it never flips combat.
+		var fk: int = Progress.family_kills(int(a.family))
+		var fs: int = Progress.family_spared(int(a.family))
+		if fk >= 5:
+			a.aggression = mini(95, a.aggression + mini(20, fk - 4))
+		elif fs >= 3 and fk == 0:
+			a.aggression = maxi(5, a.aggression - mini(15, fs - 2))
 		out.append(a)
 	return out
 

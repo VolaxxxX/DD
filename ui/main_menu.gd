@@ -6,6 +6,7 @@ signal continue_run()
 signal open_bestiary()
 signal open_settings()
 signal open_achievements()
+signal open_sanctum()
 
 @onready var title_label: Label = $UI/Root/Title
 @onready var tagline_label: Label = $UI/Root/Tagline
@@ -57,6 +58,16 @@ func _ready() -> void:
 		open_settings.emit())
 	box.add_child(sett)
 	box.move_child(sett, ach.get_index() + 1)
+	# Sanctuaire — the lived-in hub (residents, trophies, Keeper speech).
+	var sanc := Button.new()
+	sanc.custom_minimum_size = Vector2(0, 50)
+	sanc.add_theme_font_size_override("font_size", 17)
+	sanc.text = Lang.t({"fr": "🜂 Le Sanctuaire", "en": "🜂 The Sanctuary", "id": "🜂 Sanctuari"})
+	sanc.pressed.connect(func():
+		Audio.play(&"click")
+		open_sanctum.emit())
+	box.add_child(sanc)
+	box.move_child(sanc, sett.get_index() + 1)
 	fr_btn.pressed.connect(func(): _set_lang("fr"))
 	en_btn.pressed.connect(func(): _set_lang("en"))
 	id_btn.pressed.connect(func(): _set_lang("id"))

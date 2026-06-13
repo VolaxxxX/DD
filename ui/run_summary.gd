@@ -3,6 +3,9 @@ extends Control
 
 signal closed()
 
+var _v: VBoxContainer
+var _ok_btn: Button
+
 func setup(zones: int, kills: int, time_sec: int, new_discoveries: int, cause: String) -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
@@ -19,6 +22,7 @@ func setup(zones: int, kills: int, time_sec: int, new_discoveries: int, cause: S
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 14)
 	panel.add_child(v)
+	_v = v
 	var title := Label.new()
 	title.text = Lang.ui("summary_title")
 	title.add_theme_font_size_override("font_size", 30)
@@ -53,6 +57,30 @@ func setup(zones: int, kills: int, time_sec: int, new_discoveries: int, cause: S
 		closed.emit()
 		queue_free())
 	v.add_child(ok)
+	_ok_btn = ok
+
+# Adds a meta-story fragment block above the OK button. Called by main.gd when
+# a new story step was revealed for this run (death OR extraction reveals one).
+func set_story_step(step: Dictionary) -> void:
+	if _v == null or step.is_empty(): return
+	var sep := HSeparator.new()
+	_v.add_child(sep)
+	var speak := Label.new()
+	speak.text = "— " + String(step.get("speaker", ""))
+	speak.add_theme_font_size_override("font_size", 14)
+	speak.add_theme_color_override("font_color", Color(0.85, 0.72, 0.4))
+	speak.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_v.add_child(speak)
+	var body := Label.new()
+	body.text = String(step.get("text", ""))
+	body.add_theme_font_size_override("font_size", 16)
+	body.add_theme_color_override("font_color", Color(0.92, 0.88, 0.78))
+	body.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	body.custom_minimum_size = Vector2(500, 0)
+	_v.add_child(body)
+	if _ok_btn != null:
+		_v.move_child(_ok_btn, _v.get_child_count() - 1)
 
 func _stat_row(label: String, value: String) -> Control:
 	var row := HBoxContainer.new()

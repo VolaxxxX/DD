@@ -21,9 +21,19 @@ var _started: bool = false
 
 var _menu_root: Node3D
 var _bestiary_root: Node3D
+var _pending_story_idx: int = -1
 
 func _ready() -> void:
 	_show_main_menu()
+
+# Signature stat per class kind (SOLDAT=force, ECLAIREUR=vivacite,
+# MYSTIQUE=esprit, VOLEUR=charisme). Used by class-mastery passives.
+func _signature_stat_for_class(kind: int) -> StringName:
+	match kind:
+		1: return &"vivacite"   # ECLAIREUR
+		2: return &"esprit"     # MYSTIQUE
+		3: return &"charisme"   # VOLEUR
+		_: return &"force"      # SOLDAT
 
 func _show_main_menu() -> void:
 	# Safety: ensure no leftover slow-motion / camera lock if returning from a run.
@@ -38,7 +48,19 @@ func _show_main_menu() -> void:
 	_menu_root.open_bestiary.connect(_on_menu_bestiary)
 	_menu_root.open_settings.connect(_on_menu_settings)
 	_menu_root.open_achievements.connect(_on_menu_achievements)
+	_menu_root.open_sanctum.connect(_on_menu_sanctum)
 	Music.play_menu()
+
+func _on_menu_sanctum() -> void:
+	# Open the Sanctuaire scene; on Back, restore the main menu.
+	var s = preload("res://ui/sanctum.gd").new()
+	add_child(s)
+	for n in [_menu_root, _bestiary_root, _char_create_root]:
+		if n and is_instance_valid(n): n.queue_free()
+	_menu_root = null
+	s.back_pressed.connect(func():
+		if is_instance_valid(s): s.queue_free()
+		_show_main_menu())
 
 func _on_menu_settings() -> void:
 	_open_panel(preload("res://ui/settings_panel.gd").new())
@@ -140,6 +162,22 @@ func _on_characters_ready(player_defs: Array) -> void:
 	for d in player_defs:
 		var p := PlayerState.new()
 		p.setup(String(d.name), int(d.kind), d.stats)
+		# Class mastery: each run with this class counts toward auto-unlocks
+		# that grant a passive (no menu, no spend — just play that class).
+		var unlocks: Array = Progress.record_class_run(int(d.kind))
+		# Apply currently-unlocked class passives (cumulative): each tier adds
+		# +1 to the class's signature stat (force/vivacite/esprit/charisme).
+		var sig := _signature_stat_for_class(int(d.kind))
+		var tiers := 0
+		for tier in Progress.CLASS_UNLOCK_THRESHOLDS.size():
+			if Progress.has_class_unlock(int(d.kind), tier): tiers += 1
+		if tiers > 0 and sig in p.stats:
+			p.stats[sig] = int(p.stats[sig]) + tiers
+		for uid in unlocks:
+			Toast.info(Lang.t({
+				"fr": "🎖 Maîtrise de classe : %s" % uid,
+				"en": "🎖 Class mastery: %s" % uid,
+				"id": "🎖 Penguasaan kelas: %s" % uid}))
 		players.append(p)
 		Progress.record_class_played(int(d.kind))
 	player_state = players[0]
@@ -913,11 +951,21 @@ func _on_run_over(cause: StringName) -> void:
 	for p in players:
 		if p.injuries.size() > 0: any_inj = true
 		if not p.alive: duo_both = false
+	var zones_cleared: int = (orchestrator.world.active_zone_index + 1) if (extracted and orchestrator) else (orchestrator.world.active_zone_index if orchestrator else 0)
 	Progress.record_zone_depth(orchestrator.world.active_zone_index if orchestrator else 0)
 	Progress.record_run_end(extracted, any_inj, duo_both)
 	if _world_boss_seen_this_run:
 		Progress.record_titan_survived()
 	Progress.record_language(Lang.code)
+	# Phase 4 — Rare currency awarded ONLY on a successful extraction.
+	if extracted:
+		var gained := Progress.award_extraction_echoes(zones_cleared)
+		Toast.info(Lang.t({
+			"fr": "🜂 Tu rapportes %d Écho(s) au Sanctuaire." % gained,
+			"en": "🜂 You bring %d Echo(es) back to the Sanctuary." % gained,
+			"id": "🜂 Kau membawa %d Gema ke Sanctuari." % gained}))
+	# Phase 4 — Every run (success OR failure) reveals one meta-story fragment.
+	_pending_story_idx = Progress.reveal_next_story_step(MetaStory.step_count())
 	ui.show_run_over(cause)
 	# Run summary panel after the cinematic settles.
 	get_tree().create_timer(4.5, true, false, true).timeout.connect(_show_run_summary.bind(String(cause)))
@@ -946,6 +994,12 @@ func _show_run_summary(cause: String) -> void:
 		Progress.run_duration_seconds(),
 		_new_discoveries_this_run,
 		cause)
+	# Inject the meta-story fragment so death is never "for nothing".
+	if _pending_story_idx >= 0 and panel.has_method("set_story_step"):
+		var step := MetaStory.step(_pending_story_idx, Lang.code,
+			Progress.voyageur_name, Progress.flair_name)
+		panel.set_story_step(step)
+	_pending_story_idx = -1
 	var layer := CanvasLayer.new(); layer.layer = 90
 	add_child(layer); layer.add_child(panel)
 	panel.closed.connect(func():

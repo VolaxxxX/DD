@@ -9,6 +9,7 @@ var template: Dictionary
 var choices: Array[Dictionary] = []
 var creature_name: String = Lang.t({"fr": "le lieu", "en": "the place", "id": "tempat itu"})  # for run-over message
 var creature = null                          # nil — flags this as situation
+var npc_id: StringName = &""                  # set when this situation IS an NPC encounter
 
 func _init(_zone: Zone, _rng: DRNG, _player: PlayerState, _template: Dictionary) -> void:
 	zone = _zone

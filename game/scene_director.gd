@@ -95,6 +95,18 @@ func next_encounter() -> void:
 			_npc_done_this_zone = true
 			var meetings: int = Progress.record_npc_meeting(StringName(npc.id))
 			current = SituationEncounter.new(z, er, player, NPCRegistry.template(npc, meetings > 1))
+			current.npc_id = StringName(npc.id)
+			# If this NPC owes you an intervention (bond consumed), drop a hint.
+			if Progress.bond_consume_owes(StringName(npc.id)):
+				Toast.info(Lang.t({
+					"fr": "🪶 Un visage familier — il se souvient de ton aide.",
+					"en": "🪶 A familiar face — they remember your help.",
+					"id": "🪶 Wajah yang akrab — ia mengingat bantuanmu."}))
+				# Free heal as the intervention.
+				if not player.injuries.is_empty():
+					var inj = player.injuries[0]
+					player.heal(inj)
+					healed.emit(inj, active_idx)
 			_awaiting_choice = true
 			encounter_progress.emit(_encounters_in_zone + 1, ENCOUNTERS_PER_ZONE)
 			encounter_presented.emit(current)
@@ -144,6 +156,13 @@ func choose(idx: int) -> void:
 			if not p.alive: both_alive = false
 		if both_alive: coop_mod = 1
 	var result: Dictionary = current.resolve(idx, resolver, coop_mod)
+	# Tone mastery: every choice contributes to long-term tone usage.
+	var fresh_unlocks: Array = Progress.record_tone_use(int(result.get("tone", 0)))
+	for uid in fresh_unlocks:
+		Toast.info(Lang.t({
+			"fr": "🜂 Maîtrise débloquée : %s" % uid,
+			"en": "🜂 Mastery unlocked: %s" % uid,
+			"id": "🜂 Penguasaan terbuka: %s" % uid}))
 	if result.get("second_chance", false):
 		second_chance_triggered.emit()
 	narrative_logged.emit(result.narrative, result.tone, result.outcome)
@@ -194,6 +213,20 @@ func choose(idx: int) -> void:
 	next_encounter()
 
 func _apply(result: Dictionary) -> void:
+	# Phase 6 — NPC bonds: when the current encounter is an NPC, a positive
+	# outcome counts as helping (builds loyalty + may add them to the
+	# Sanctuaire's residents); a negative outcome is a betrayal.
+	if current != null and current is SituationEncounter and current.npc_id != &"":
+		var outc: int = int(result.get("outcome", 2))
+		if outc >= 3:                                 # SUCCESS or CRIT
+			Progress.bond_helped(current.npc_id)
+			if Progress.add_sanctum_resident(current.npc_id):
+				Toast.info(Lang.t({
+					"fr": "🏛 Un nouvel habitant rejoint le Sanctuaire.",
+					"en": "🏛 A new dweller joins the Sanctuary.",
+					"id": "🏛 Penghuni baru bergabung dengan Sanctuari."}))
+		elif outc <= 0:                               # CRIT FAIL = betrayal
+			Progress.bond_betrayed(current.npc_id)
 	var stat_delta: int = int(result.get("stat_delta", 0))
 	if stat_delta != 0:
 		var stat_key: StringName = result.get("stat", &"force")
@@ -222,8 +255,14 @@ func _apply(result: Dictionary) -> void:
 	if has_creature and result.get("creature_dies", false):
 		var kfam := int(current.creature.archetype.family)
 		_karma_kills[kfam] = int(_karma_kills.get(kfam, 0)) + 1
+		# Persistent family karma (across runs) — used to make the world react
+		# to the player's long-term reputation.
+		Progress.record_family_action(kfam, "kill")
 		creature_reaction.emit(&"die")
 		Progress.record_kill(current.creature.archetype.id)
+		# Sanctuary trophy: every distinct creature you defeat earns a trophy
+		# displayed in the lived-in Sanctuary.
+		Progress.add_sanctum_trophy(current.creature.archetype.id)
 		var tier := int(current.creature.archetype.tier)
 		if tier >= Archetype.Tier.ELITE:
 			_elite_kills_this_run += 1
@@ -244,6 +283,7 @@ func _apply(result: Dictionary) -> void:
 		if tone_used in [1, 2, 4] and int(result.get("outcome", 0)) >= FateEngine.Outcome.SUCCESS:
 			var sfam := int(current.creature.archetype.family)
 			_karma_spared[sfam] = int(_karma_spared.get(sfam, 0)) + 1
+			Progress.record_family_action(sfam, "spared")
 		creature_reaction.emit(&"flee")
 		current.creature.kill()
 	elif has_creature and result.get("mutate", false):
