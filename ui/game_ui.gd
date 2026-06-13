@@ -125,13 +125,19 @@ func present_intro(text: String) -> void:
 	_intro_active = true
 	narrative_box.visible = true
 	narrative.modulate = Color(1, 0.96, 0.85)
-	# First line = title (bold gold), the rest = scene description in soft white.
+	# Compact layout: line 1 = bold gold title, line 2 = scene description,
+	# optional tag line (mood / etc) in smaller dim text. Keeps the box small
+	# so the playable scene above stays clearly visible.
 	var parts := text.split("\n", false)
 	var body := ""
 	if parts.size() > 0:
 		body = "[center][b][color=#ffd98a]%s[/color][/b][/center]" % parts[0]
-	for i in range(1, parts.size()):
-		body += "\n[center]%s[/center]" % parts[i]
+	if parts.size() > 1:
+		body += "\n[center]%s[/center]" % parts[1]
+	# Anything beyond line 2 = small tags (mood etc).
+	if parts.size() > 2:
+		var tag := " · ".join(parts.slice(2))
+		body += "\n[center][color=#b8b3a3]%s[/color][/center]" % tag
 	narrative.text = body
 	narrative.visible_characters = -1
 	narrative.modulate.a = 0.0
