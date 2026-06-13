@@ -11,8 +11,8 @@ var quality: int = 1               # 0=low, 1=mid, 2=high
 var grain_amount: float = 0.06
 var story_mode: bool = false       # gentler rolls, no permadeath outside bosses
 var portrait: bool = false         # phone portrait orientation (default landscape)
-var cam_distance: float = 1.0      # camera distance multiplier (0.7 close .. 1.6 far)
-var cam_height: float = 1.0        # camera height/tilt multiplier (0.6 low .. 1.6 high)
+var cam_distance: float = 1.3      # camera distance multiplier (0.6 close .. 2.4 far)
+var cam_height: float = 1.0        # camera height/tilt multiplier (0.5 low .. 1.8 high)
 
 const BUS_MUSIC := "Music"
 const BUS_SFX := "SFX"
@@ -45,6 +45,9 @@ func _load() -> void:
 	story_mode = bool(cfg.get_value("gameplay", "story_mode", story_mode))
 	portrait = bool(cfg.get_value("display", "portrait", portrait))
 	cam_distance = float(cfg.get_value("camera", "distance", cam_distance))
+	# Migration: the old default was 1.0 (felt too close). Bump anyone still at
+	# the old default to the new wider default so they get the better framing.
+	if cam_distance <= 1.0: cam_distance = 1.3
 	cam_height = float(cfg.get_value("camera", "height", cam_height))
 
 func save() -> void:
@@ -63,7 +66,7 @@ func set_story_mode(v: bool) -> void:
 	story_mode = v; save()
 
 func set_cam_distance(v: float) -> void:
-	cam_distance = clampf(v, 0.6, 1.8); save()
+	cam_distance = clampf(v, 0.6, 2.4); save()
 
 func set_cam_height(v: float) -> void:
 	cam_height = clampf(v, 0.5, 1.8); save()

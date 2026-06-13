@@ -281,10 +281,10 @@ func _unhandled_input(event: InputEvent) -> void:
 var _orbit_active: bool = false
 var _orbit_yaw: float = 0.0       # radians
 var _orbit_pitch: float = 0.0     # radians
-var _orbit_radius: float = 6.4
+var _orbit_radius: float = 8.4
 var _cam_focal_y: float = 1.0     # focal height — raised for tall subjects
 var _cam_focal: Vector3 = Vector3(0, 1.0, 0)   # 3D point the camera orbits/looks at
-var _cam_radius_base: float = 6.4 # auto-framed distance for the current subject
+var _cam_radius_base: float = 8.4 # auto-framed distance for the current subject
 var _orbit_return_tween: Tween
 
 func _start_orbit(screen_pos: Vector2) -> void:
@@ -651,7 +651,7 @@ func _do_ground_and_frame(subject: Node3D, headroom: float) -> void:
 		# Bounds not resolved yet — use a safe default framing so the creature
 		# is never lost off-screen (rather than keeping stale boss values).
 		_cam_focal = Vector3(subject.position.x, 1.0, subject.position.z)
-		_orbit_radius = 7.0
+		_orbit_radius = 9.0
 		return
 	# Drop feet to y=0 (keep its x/z offset).
 	subject.position.y -= aabb.position.y
@@ -673,9 +673,11 @@ func _do_ground_and_frame(subject: Node3D, headroom: float) -> void:
 	var hfov := 2.0 * atan(tan(vfov * 0.5) * aspect)
 	var dist_v := (h * (1.0 + headroom) * 0.5) / tan(vfov * 0.5)
 	var dist_h := (w * 0.6) / tan(hfov * 0.5)
-	# Tighter cap (10.5) now that the lens widens for big mobs — the camera
-	# never flies off into an empty wide shot.
-	_cam_radius_base = clampf(maxf(dist_v, dist_h), 6.5, 10.5)
+	# Pulled back: previously the auto-frame sat too close to the creature so
+	# the player felt stuck on top of it; cap raised so even small mobs are
+	# framed with more breathing room. The cam_distance slider can scale it
+	# further (0.6×..2.4×) for taste.
+	_cam_radius_base = clampf(maxf(dist_v, dist_h), 8.5, 13.5)
 	_orbit_radius = _cam_radius_base
 
 var _current_act: int = 0
@@ -850,8 +852,8 @@ func _reset_camera_if_boss() -> void:
 	# Reset auto-frame to the default human-scale framing.
 	_cam_focal_y = 1.0
 	_cam_focal = Vector3(0, 1.0, 0)
-	_orbit_radius = 7.0
-	_cam_radius_base = 7.0
+	_orbit_radius = 9.0
+	_cam_radius_base = 9.0
 	if camera.position != Vector3(0, 2.2, 6.0) or camera.fov != 50.0:
 		Cinematic.reset_camera(camera)
 
