@@ -1,15 +1,18 @@
-# Ground texture credits
+# Ground textures — credits (all CC0, polyhaven.com)
 
-All textures CC0 from polyhaven.com (1k JPG, diffuse + GL normal):
+Per biome: diffuse + GL normal + roughness (1k JPG).
 
-| Biome | Asset |
+| Biome | Polyhaven asset |
 |---|---|
-| forest | forest_leaves_03 |
+| forest | forest_ground_04 |
 | city | cobblestone_floor_04 |
-| ruins | gravel_concrete |
-| corrupted | brown_mud_03 |
-| anomaly | aerial_rocks_02 |
+| ruins | rocky_trail |
+| corrupted | brown_mud_dry |
+| anomaly | rocky_terrain_02 |
 | swamp | brown_mud_leaves_01 |
 | highland | aerial_grass_rock |
-| crypt | mossy_cobblestone |
+| crypt | cobblestone_floor_08 |
 | coast | coast_sand_01 |
+
+Wired in render/backdrop_3d.gd _build_ground: albedo + normal + roughness
+texture + AO (from the roughness map).

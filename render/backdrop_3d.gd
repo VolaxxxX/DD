@@ -1413,9 +1413,12 @@ func _build_ground(biome: StringName, corruption: float) -> void:
 	var base: Color = BIOME_GROUND.get(biome, Color(0.2, 0.2, 0.2))
 	mat.roughness = 0.92
 	mat.metallic_specular = 0.05
-	# Photographic PBR ground (Polyhaven CC0): real diffuse + normal per biome.
+	# Photographic PBR ground (Polyhaven CC0): diffuse + normal + ROUGHNESS per
+	# biome. The roughness map is what stops the ground looking flat/plastic —
+	# wet/smooth and dry/rough areas now catch light differently.
 	var diff_path := "res://assets/textures/ground/%s_diff.jpg" % String(biome)
 	var nor_path := "res://assets/textures/ground/%s_nor.jpg" % String(biome)
+	var rough_path := "res://assets/textures/ground/%s_rough.jpg" % String(biome)
 	if ResourceLoader.exists(diff_path):
 		mat.albedo_texture = load(diff_path)
 		# Light tint keeps the biome grade + corruption mood over the photo.
@@ -1425,7 +1428,15 @@ func _build_ground(biome: StringName, corruption: float) -> void:
 		if ResourceLoader.exists(nor_path):
 			mat.normal_enabled = true
 			mat.normal_texture = load(nor_path)
-			mat.normal_scale = 0.85
+			mat.normal_scale = 1.0
+		if ResourceLoader.exists(rough_path):
+			mat.roughness_texture = load(rough_path)
+			mat.roughness = 1.0   # texture drives it; 1.0 = use full range
+		# A touch of ambient occlusion read from the roughness map adds depth.
+		mat.ao_enabled = ResourceLoader.exists(rough_path)
+		if mat.ao_enabled:
+			mat.ao_texture = load(rough_path)
+			mat.ao_light_affect = 0.4
 	else:
 		# Fallback: procedural noise detail (albedo mottling + normal grain).
 		mat.albedo_color = base.lerp(Color(0.28, 0.05, 0.22), corruption * 0.4)
