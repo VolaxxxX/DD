@@ -13,6 +13,10 @@ var followup_choices: Array[Dictionary] = []  # populated after successful diplo
 var has_followup: bool = false
 # Per-family run karma injected by the director: {"kills": int, "spared": int}.
 var karma: Dictionary = {"kills": 0, "spared": 0}
+# Multi-hit: tough creatures can't be ended in one exchange. They need several
+# resolving blows/words across rounds. Set from tier at construction.
+var max_hits: int = 1
+var hits_taken: int = 0
 
 func _init(_zone: Zone, _creature: Creature, _rng: DRNG, _player: PlayerState) -> void:
 	zone = _zone
@@ -20,6 +24,12 @@ func _init(_zone: Zone, _creature: Creature, _rng: DRNG, _player: PlayerState) -
 	rng = _rng
 	player = _player
 	creature_name = _resolve_name()
+	# Tougher tiers take more than one resolving exchange to put down/turn away.
+	match int(creature.archetype.tier):
+		Archetype.Tier.ELITE:  max_hits = 2
+		Archetype.Tier.APEX:   max_hits = 3
+		Archetype.Tier.MYTHIC: max_hits = 4
+		_:                     max_hits = 1
 	choices = _build_choices()
 
 func _resolve_name() -> String:
@@ -159,6 +169,21 @@ func resolve(choice_idx: int, resolver: EventResolver, coop_mod: int) -> Diction
 	cons["narrative"] = narrative
 	cons["outcome"] = outcome
 	cons["tone"] = tone
+	# Multi-hit gate: if this exchange WOULD end a tough creature (kill or turn
+	# away) but it still has resolve left, downgrade it to a stagger — the
+	# creature stays and the fight continues for another round.
+	var would_end: bool = bool(cons.get("creature_dies", false)) or bool(cons.get("creature_flees", false))
+	if would_end and max_hits > 1 and hits_taken + 1 < max_hits:
+		hits_taken += 1
+		cons["creature_dies"] = false
+		cons["creature_flees"] = false
+		cons["creature_staggered"] = true
+		cons["hits_taken"] = hits_taken
+		cons["hits_max"] = max_hits
+		cons["narrative"] = "%s\n%s" % [narrative, _stagger_line(hits_taken, max_hits)]
+		# Fresh choices for the next round (so the wording varies).
+		choices = _build_choices()
+		return cons
 	# Trigger followup dialogue on diplomatic/mystical success vs smart creature.
 	if creature.archetype.intelligence >= 70 and outcome >= FateEngine.Outcome.SUCCESS:
 		if tone == PhrasePool.Tone.DIPLOMATIC or tone == PhrasePool.Tone.MYSTICAL:
@@ -167,6 +192,22 @@ func resolve(choice_idx: int, resolver: EventResolver, coop_mod: int) -> Diction
 			has_followup = true
 			cons["has_followup"] = true
 	return cons
+
+# Short "it's still standing" line shown when a tough creature is staggered.
+func _stagger_line(taken: int, total: int) -> String:
+	var left := total - taken
+	var dots := ""
+	for i in total: dots += "◆" if i < taken else "◇"
+	var tail: Dictionary
+	if left <= 1:
+		tail = {"fr": "Il vacille — encore un assaut et il tombe.",
+			"en": "It reels — one more blow and it falls.",
+			"id": "Ia terhuyung — satu serangan lagi dan ia tumbang."}
+	else:
+		tail = {"fr": "Ce n'est pas suffisant. Il tient encore debout.",
+			"en": "Not enough. It is still standing.",
+			"id": "Belum cukup. Ia masih berdiri."}
+	return "%s  [%s]" % [Lang.t(tail), dots]
 
 func _followup_pool() -> Array:
 	match Lang.code:

@@ -87,6 +87,7 @@ func _start_game_with_saved_seed(seed: int, zone_index: int) -> void:
 		orchestrator.world.advance_zone()
 	_setup_camera()
 	_build_stage_for_active_zone()
+	ui.reset_story_log()
 	ui.set_player(player_state)
 	ui.update_zone(orchestrator.world.active_zone_index, orchestrator.world.active_zone().biome)
 	director.zone_intro.connect(_on_zone_intro)
@@ -165,6 +166,7 @@ func _start_game() -> void:
 	_setup_camera()
 	_build_stage_for_active_zone()
 
+	ui.reset_story_log()
 	ui.set_player(player_state)
 	ui.update_zone(orchestrator.world.active_zone_index, orchestrator.world.active_zone().biome)
 
@@ -228,6 +230,8 @@ var _orbit_active: bool = false
 var _orbit_yaw: float = 0.0       # radians
 var _orbit_pitch: float = 0.0     # radians
 var _orbit_radius: float = 6.4
+var _cam_focal_y: float = 1.0     # focal height — raised for tall subjects
+var _cam_radius_base: float = 6.4 # auto-framed distance for the current subject
 var _orbit_return_tween: Tween
 
 func _start_orbit(screen_pos: Vector2) -> void:
@@ -281,13 +285,13 @@ func _on_final_duel(dragon_id: StringName) -> void:
 		_shake_camera(0.5, 1.2)
 		_light_burst(Color(1.0, 0.6, 0.3), 9.0, 1.0)
 		for off in [Vector3(-1.5, 0.3, 0.8), Vector3(1.5, 0.3, 0.8)]:
-			CombatVFX.dust_puff(stage, dragon.position + off, Color(0.75, 0.68, 0.55)))
+			CombatVFX.dust_puff(stage, dragon.position + off, Color(0.75, 0.68, 0.55))
+		# Frame the whole dragon for the duel (it must be fully in shot).
+		_frame_static(dragon, 0.4, 1.3))
 	Audio.play(&"dragon")
 	Audio.play(&"boss")
 	Music.play_boss(&"prismatic_ascendant")
 	_darken_environment(0.35, 1.5)
-	# Track it like a boss so the camera idle loop yields during the duel.
-	boss_node = null
 	_final_dragon = dragon
 
 var _final_dragon: Dragon3D = null
@@ -362,16 +366,17 @@ func _process(delta: float) -> void:
 	# not a metronome.
 	var off_y := sin(_breath_time * 0.55) * 0.035 + sin(_breath_time * 1.7) * 0.012
 	var off_x := sin(_breath_time * 0.37) * 0.028 + sin(_breath_time * 1.3 + 1.7) * 0.014
-	# Orbital component: rotate around the focal point (0, 1, 0) at radius
-	# _orbit_radius.  Yaw 0 / pitch 0 puts the camera back at its rest pose.
-	var focal := Vector3(0, 1.0, 0)
+	# Orbital component: rotate around the focal point at radius _orbit_radius.
+	# Focal height and radius are auto-framed to the current subject so even a
+	# towering creature/boss stays fully in shot. Yaw 0 / pitch 0 = rest pose.
+	var focal := Vector3(0, _cam_focal_y, 0)
 	var cy := cos(_orbit_pitch)
 	var orbit_offset := Vector3(
 		sin(_orbit_yaw) * cy,
 		sin(_orbit_pitch),
 		cos(_orbit_yaw) * cy
 	) * _orbit_radius
-	var rest_pos := focal + Vector3(0, 1.2, 0) + orbit_offset    # base pose lifted 1.2 m
+	var rest_pos := focal + Vector3(0, _cam_focal_y * 0.4, 0) + orbit_offset
 	var pos := rest_pos + Vector3(off_x + _shake_offset.x, off_y + _shake_offset.y, _shake_offset.z)
 	camera.position = pos
 	camera.look_at(focal, Vector3.UP)
@@ -516,7 +521,10 @@ func _spawn_creature(arch: Archetype) -> void:
 	creature_node.position = Vector3(0.6, 0.0, 0.4)
 	stage.add_child(creature_node)
 	creature_node.build(arch)
-	_focal_spotlight(creature_node.position + Vector3(0, 1.0, 0))
+	# Ground it and frame the camera so the whole creature is visible — big
+	# constructs/titans used to fly off the top of the screen.
+	_ground_and_frame(creature_node, 1.2)
+	_focal_spotlight(Vector3(creature_node.position.x, _cam_focal_y, creature_node.position.z))
 	Cinematic.play_for_creature(arch.id, int(arch.tier), creature_node, camera, get_tree(), int(arch.family))
 	# Turn each player avatar to look at the creature.
 	for a in avatar_nodes:
@@ -525,8 +533,75 @@ func _spawn_creature(arch: Archetype) -> void:
 			# look_at faces -Z; flip so character looks forward.
 			a.rotation.y += PI
 
+# Measures the subject's true world AABB, drops its feet to the ground, and
+# auto-frames the camera (focal height + dolly distance) so the whole thing is
+# in shot with headroom. Runs again next frame because skinned rigs only
+# resolve their real bounds after one animation tick.
+func _ground_and_frame(subject: Node3D, headroom: float) -> void:
+	_do_ground_and_frame(subject, headroom)
+	await get_tree().process_frame
+	if is_instance_valid(subject):
+		_do_ground_and_frame(subject, headroom)
+
+func _do_ground_and_frame(subject: Node3D, headroom: float) -> void:
+	var aabb := _world_aabb(subject)
+	if aabb.size == Vector3.ZERO: return
+	# Drop feet to y=0 (keep its x/z offset).
+	var feet_y := aabb.position.y
+	subject.position.y -= feet_y
+	# Recompute after grounding.
+	aabb = _world_aabb(subject)
+	var h: float = maxf(aabb.size.y, 1.0)
+	var w: float = maxf(aabb.size.x, aabb.size.z)
+	# Focal at the subject's vertical centre.
+	_cam_focal_y = aabb.position.y + h * 0.5
+	# Distance needed so height (with headroom) fits the vertical FOV, and width
+	# fits the horizontal FOV. Take the larger.
+	var vfov := deg_to_rad(camera.fov)
+	var aspect: float = float(get_viewport().size.x) / float(maxi(1, get_viewport().size.y))
+	var hfov := 2.0 * atan(tan(vfov * 0.5) * aspect)
+	var dist_v := (h * (1.0 + headroom) * 0.5) / tan(vfov * 0.5)
+	var dist_h := (w * 0.7) / tan(hfov * 0.5)
+	_cam_radius_base = clampf(maxf(dist_v, dist_h), 5.0, 26.0)
+	_orbit_radius = _cam_radius_base
+
 func _on_zone_intro(text: String, _biome: StringName) -> void:
 	ui.present_intro(text)
+
+# Static framed shot for set-pieces (world boss, finale dragon): grounds the
+# subject, then tweens the camera to a fixed position that fits the whole
+# silhouette with headroom. Holds the camera (no orbit drift) for the duel.
+func _frame_static(subject: Node3D, headroom: float, dur: float) -> void:
+	if not is_instance_valid(subject): return
+	var aabb := _world_aabb(subject)
+	if aabb.size == Vector3.ZERO: return
+	subject.position.y -= aabb.position.y
+	aabb = _world_aabb(subject)
+	var center := aabb.position + aabb.size * 0.5
+	var h: float = maxf(aabb.size.y, 2.0)
+	var w: float = maxf(aabb.size.x, aabb.size.z)
+	var vfov := deg_to_rad(camera.fov)
+	var aspect: float = float(get_viewport().size.x) / float(maxi(1, get_viewport().size.y))
+	var hfov := 2.0 * atan(tan(vfov * 0.5) * aspect)
+	var dist := maxf((h * (1.0 + headroom) * 0.5) / tan(vfov * 0.5), (w * 0.6) / tan(hfov * 0.5))
+	dist = clampf(dist, 6.0, 32.0)
+	var target_pos := Vector3(0, center.y, center.z + dist)
+	_cam_hold = true   # stop _process from fighting the framed shot
+	var t := camera.create_tween().set_parallel(true)
+	t.tween_property(camera, "position", target_pos, dur).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	t.tween_method(func(_v): camera.look_at(center, Vector3.UP), 0.0, 1.0, dur)
+
+# Combined world-space AABB of every visual mesh under `node` (skinned or not).
+func _world_aabb(node: Node3D) -> AABB:
+	var combined := AABB()
+	var first := true
+	for mi in node.find_children("*", "VisualInstance3D", true, false):
+		var v := mi as VisualInstance3D
+		var a: AABB = v.get_aabb()
+		a = v.global_transform * a
+		if first: combined = a; first = false
+		else: combined = combined.merge(a)
+	return combined
 
 var situation_node: Situation3D
 var _encounter_counter: int = 0
@@ -611,6 +686,11 @@ func _reset_camera_if_boss() -> void:
 	if boss_node and is_instance_valid(boss_node):
 		boss_node.queue_free()
 	boss_node = null
+	_cam_hold = false   # release any set-piece camera lock
+	# Reset auto-frame to the default human-scale framing.
+	_cam_focal_y = 1.0
+	_orbit_radius = 6.4
+	_cam_radius_base = 6.4
 	if camera.position != Vector3(0, 2.2, 6.0) or camera.fov != 50.0:
 		Cinematic.reset_camera(camera)
 
@@ -852,6 +932,11 @@ func _on_world_boss(boss: Dictionary) -> void:
 	_world_boss_seen_this_run = true
 	_darken_environment(0.35, 1.5)
 	Cinematic.play_world_boss(StringName(boss.id), boss_node, camera, get_tree())
+	# After the entrance cinematic, lock a framed shot that shows the WHOLE
+	# titan (they're 8 m — they must not be cropped during the duel).
+	get_tree().create_timer(3.6).timeout.connect(func():
+		if boss_node and is_instance_valid(boss_node):
+			_frame_static(boss_node, 0.35, 1.4))
 	# Ground impact when the grow-in lands (1.8s entrance tween): quake +
 	# dust ring + light burst — the world acknowledges the titan's weight.
 	get_tree().create_timer(1.8).timeout.connect(func():

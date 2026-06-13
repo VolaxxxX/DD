@@ -151,6 +151,22 @@ func _best_stat_key() -> String:
 
 var _intro_tween: Tween
 var _intro_active: bool = false
+var _last_story: String = ""   # last outcome, shown as a "previously" recap line
+
+func reset_story_log() -> void:
+	_last_story = ""
+
+func _strip_bb(s: String) -> String:
+	# Remove bbcode tags for the recap line + clamp length.
+	var out := ""
+	var depth := 0
+	for ch in s:
+		if ch == "[": depth += 1
+		elif ch == "]": depth = maxi(0, depth - 1)
+		elif depth == 0: out += ch
+	out = out.replace("\n", " ").strip_edges()
+	if out.length() > 90: out = out.substr(0, 88) + "…"
+	return out
 
 func present_intro(text: String) -> void:
 	# Render in the narrative box (the dark bar above the choices) so the player
@@ -167,8 +183,12 @@ func present_intro(text: String) -> void:
 	# so the playable scene above stays clearly visible.
 	var parts := text.split("\n", false)
 	var body := ""
+	# "Previously" recap line so the story stays continuous — what just happened
+	# before this new encounter. Dim, small, italic.
+	if _last_story != "":
+		body = "[center][i][font_size=11][color=#8a8678]↪ %s[/color][/font_size][/i][/center]\n" % _last_story
 	if parts.size() > 0:
-		body = "[center][b][color=#ffd98a]%s[/color][/b][/center]" % parts[0]
+		body += "[center][b][color=#ffd98a]%s[/color][/b][/center]" % parts[0]
 	if parts.size() > 1:
 		body += "\n[center]%s[/center]" % parts[1]
 	# Anything beyond line 2 = small tags (mood etc).
@@ -261,6 +281,7 @@ func show_narrative(text: String, _tone: int, outcome: int) -> void:
 	_hide_choices()
 	_dismiss_intro()
 	narrative_box.visible = true
+	_last_story = _strip_bb(text)   # remember for the next encounter's recap
 	narrative.modulate = OUTCOME_TINT.get(outcome, Color.WHITE)
 	narrative.text = "[center]%s[/center]" % text
 	var raw_len := text.length()

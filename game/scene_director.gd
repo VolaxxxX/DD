@@ -173,6 +173,14 @@ func choose(idx: int) -> void:
 		await _wait(2.6)
 		_finish_duel(duel, bool(result.duel_victory))
 		return
+	# Tough creature staggered: it's still standing — re-present the SAME
+	# encounter for another exchange (choices were already refreshed).
+	if result.get("creature_staggered", false) and current is Encounter:
+		creature_reaction.emit(&"hit")
+		await _wait(2.2)
+		_awaiting_choice = true
+		encounter_presented.emit(current)
+		return
 	# If encounter triggered a followup dialogue, present its choices instead of moving on.
 	if result.get("has_followup", false) and current is Encounter:
 		await _wait(2.0)
