@@ -56,9 +56,9 @@ const POOLS := {
 		"tint": Color(0.92, 0.95, 0.95),
 	},
 	&"crypt": {
-		"hero": ["gy_crypt", "gy_crypt_large", "gy_crypt_small", "gy_gravestone_cross_large", "gy_pillar_obelisk", "gy_cross_column"],
-		"scatter": ["gy_gravestone_bevel", "gy_gravestone_broken", "gy_grave", "gy_coffin", "gy_urn_round", "gy_candle_multiple", "gy_iron_fence", "gy_gravestone_decorative"],
-		"ground": ["plant_bushSmall", "gy_candle"],
+		"hero": ["gy_crypt", "gy_crypt_large", "gy_crypt_small", "md_column", "gy_pillar_obelisk", "gy_cross_column"],
+		"scatter": ["gy_gravestone_bevel", "gy_gravestone_broken", "gy_coffin", "gy_urn_round", "gy_candle_multiple", "md_chest", "md_banner", "md_stones"],
+		"ground": ["plant_bushSmall", "gy_candle", "md_coin"],
 		"tint": Color(0.6, 0.6, 0.72),
 	},
 	&"coast": {

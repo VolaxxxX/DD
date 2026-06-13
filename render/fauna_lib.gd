@@ -13,7 +13,8 @@ const BEASTS := ["beast_fox", "beast_lion", "beast_tiger", "beast_hog", "beast_d
 	"beast_panda", "beast_polar", "beast_cow", "beast_dog", "beast_cat",
 	"beast_elephant", "beast_koala", "beast_bunny", "beast_pig", "beast_giraffe"]
 const CHARS := ["char_a", "char_b", "char_c", "char_d", "char_e", "char_f",
-	"char_g", "char_h", "char_i", "char_j", "char_k", "char_l"]
+	"char_g", "char_h", "char_i", "char_j", "char_k", "char_l",
+	"humanoid_orc", "humanoid_human", "humanoid_orc"]   # orc weighted for menace
 # Small animated flyers for the FEY family — tinted luminous + hovering they
 # read as glowing sprites, far better than the procedural prism fairy.
 const FEY := ["fey_parrot", "beast_bee", "fey_chick"]
