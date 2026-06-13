@@ -52,25 +52,25 @@ var _village_visits: int = 0
 var _langs_played: Array = []         # for polyglot tracking
 var second_chance_used_this_run: bool = false
 var run_start_msec: int = 0
-var fragments: int = 0                # currency, persists across runs
-var meta_level: int = 0               # permanent "Sanctuaire" upgrade, persists
-const META_MAX := 6                   # caps the permanent power creep
-
-# Cost in fragments to buy the next permanent upgrade level.
-func meta_cost() -> int:
-	return 30 + meta_level * 25
-
-# Spend fragments to gain one permanent level (+1 to every starting stat).
-# Returns true on success.
-func buy_meta() -> bool:
-	if meta_level >= META_MAX: return false
-	if not spend(meta_cost()): return false
-	meta_level += 1
-	save()
-	return true
+var fragments: int = 0                # short-term currency, spent IN run
 var fragment_scale: float = 1.0       # route multiplier (set per zone, not saved)
 var npc_meetings: Dictionary = {}     # npc_id -> times met (persists: they remember you)
 var next_zone_blessing: StringName = &""   # buff applied at next zone start
+
+# --- Persistent meta-progression fields (replace the +1-stat Sanctuaire) ---
+var echoes: int = 0                   # RARE currency, earned ONLY on extraction
+var family_karma: Dictionary = {}     # family int -> {"kills": int, "spared": int}
+var tone_usage: Dictionary = {}       # tone int -> count
+var class_usage: Dictionary = {}      # class kind int -> count
+var story_index: int = 0              # # of meta-story fragments revealed
+var voyageur_name: String = ""        # custom Traveler name (empty = use class name)
+var flair_name: String = ""           # custom Companion name (empty = random)
+var npc_bonds: Dictionary = {}        # npc_id -> {"helped": int, "betrayed": int, "owes": bool}
+var tone_unlocks: Array = []          # ids of unlocked tone variants (mastery)
+var class_unlocks: Array = []         # ids of unlocked class passives (mastery)
+var sanctum_residents: Array = []     # npc_ids of PNJs that live in the Sanctuaire
+var sanctum_trophies: Array = []      # creature_ids displayed as trophies
+const ECHOES_PER_EXTRACTION := 1      # base; +1 per zone past 3
 
 const KILL_REWARD := 1
 const ELITE_REWARD := 3
@@ -97,10 +97,23 @@ func _load() -> void:
 	achievements = v.get("achievements", [])
 	_langs_played = v.get("langs", [])
 	fragments = int(v.get("fragments", 0))
-	meta_level = int(v.get("meta_level", 0))
+	# v.get("meta_level", 0) — legacy +1-stat Sanctuaire field, ignored on
+	# purpose so old saves load cleanly (replaced by the lived-in Sanctuaire).
 	_classes_played = v.get("classes_played", [])
 	_village_visits = int(v.get("village_visits", 0))
 	npc_meetings = v.get("npc_meetings", {})
+	echoes = int(v.get("echoes", 0))
+	family_karma = v.get("family_karma", {})
+	tone_usage = v.get("tone_usage", {})
+	class_usage = v.get("class_usage", {})
+	story_index = int(v.get("story_index", 0))
+	voyageur_name = String(v.get("voyageur_name", ""))
+	flair_name = String(v.get("flair_name", ""))
+	npc_bonds = v.get("npc_bonds", {})
+	tone_unlocks = v.get("tone_unlocks", [])
+	class_unlocks = v.get("class_unlocks", [])
+	sanctum_residents = v.get("sanctum_residents", [])
+	sanctum_trophies = v.get("sanctum_trophies", [])
 
 func save() -> void:
 	var f := FileAccess.open(PATH, FileAccess.WRITE)
@@ -109,9 +122,17 @@ func save() -> void:
 		"kills": kills, "dragons_seen": dragons_seen, "bosses_seen": bosses_seen,
 		"runs_completed": runs_completed, "runs_total": runs_total,
 		"deepest_zone": deepest_zone, "achievements": achievements,
-		"langs": _langs_played, "fragments": fragments, "meta_level": meta_level,
+		"langs": _langs_played, "fragments": fragments,
 		"classes_played": _classes_played, "village_visits": _village_visits,
 		"npc_meetings": npc_meetings,
+		"echoes": echoes, "family_karma": family_karma,
+		"tone_usage": tone_usage, "class_usage": class_usage,
+		"story_index": story_index,
+		"voyageur_name": voyageur_name, "flair_name": flair_name,
+		"npc_bonds": npc_bonds,
+		"tone_unlocks": tone_unlocks, "class_unlocks": class_unlocks,
+		"sanctum_residents": sanctum_residents,
+		"sanctum_trophies": sanctum_trophies,
 	})
 
 # Returns the new meeting count (1 = first time ever).
@@ -241,3 +262,134 @@ func kill_count(creature_id: StringName) -> int:
 
 func unlocked(achievement_id: StringName) -> bool:
 	return String(achievement_id) in achievements
+
+# ---------- PHASE 1-6: Persistent meta-progression API ----------
+
+# Family karma persists ACROSS runs (kills/spared cumulatively per family).
+func record_family_action(family: int, kind: String) -> void:
+	var k := str(family)
+	var entry: Dictionary = family_karma.get(k, {"kills": 0, "spared": 0})
+	if kind == "kill":
+		entry["kills"] = int(entry.get("kills", 0)) + 1
+	elif kind == "spared":
+		entry["spared"] = int(entry.get("spared", 0)) + 1
+	family_karma[k] = entry
+	save()
+
+func family_kills(family: int) -> int:
+	return int(family_karma.get(str(family), {}).get("kills", 0))
+
+func family_spared(family: int) -> int:
+	return int(family_karma.get(str(family), {}).get("spared", 0))
+
+# Tone & class mastery: counts cumulate, unlocks fire automatically at thresholds.
+const TONE_UNLOCK_THRESHOLDS := [10, 25, 60]   # mastery tiers per tone
+const CLASS_UNLOCK_THRESHOLDS := [3, 8, 20]    # runs played with that class
+
+func record_tone_use(tone: int) -> Array:
+	var k := str(tone)
+	tone_usage[k] = int(tone_usage.get(k, 0)) + 1
+	var freshly: Array = []
+	for tier in TONE_UNLOCK_THRESHOLDS.size():
+		if int(tone_usage[k]) >= TONE_UNLOCK_THRESHOLDS[tier]:
+			var uid := "tone_%d_t%d" % [tone, tier]
+			if uid not in tone_unlocks:
+				tone_unlocks.append(uid)
+				freshly.append(uid)
+	if not freshly.is_empty(): save()
+	return freshly
+
+func record_class_run(kind: int) -> Array:
+	var k := str(kind)
+	class_usage[k] = int(class_usage.get(k, 0)) + 1
+	var freshly: Array = []
+	for tier in CLASS_UNLOCK_THRESHOLDS.size():
+		if int(class_usage[k]) >= CLASS_UNLOCK_THRESHOLDS[tier]:
+			var uid := "class_%d_t%d" % [kind, tier]
+			if uid not in class_unlocks:
+				class_unlocks.append(uid)
+				freshly.append(uid)
+	if not freshly.is_empty(): save()
+	return freshly
+
+func has_tone_unlock(tone: int, tier: int) -> bool:
+	return ("tone_%d_t%d" % [tone, tier]) in tone_unlocks
+
+func has_class_unlock(kind: int, tier: int) -> bool:
+	return ("class_%d_t%d" % [kind, tier]) in class_unlocks
+
+# Rare currency (Échos) — awarded ONLY on a successful extraction.
+func award_extraction_echoes(zones_cleared: int) -> int:
+	var gained: int = ECHOES_PER_EXTRACTION + maxi(0, zones_cleared - 3)
+	echoes += gained
+	save()
+	return gained
+
+func spend_echoes(amount: int) -> bool:
+	if echoes < amount: return false
+	echoes -= amount
+	save()
+	return true
+
+# Story fragments revealed at the Sanctuary on RETURN (success OR death).
+# Returns the new fragment index revealed (-1 if nothing new).
+func reveal_next_story_step(max_steps: int) -> int:
+	if story_index >= max_steps: return -1
+	var idx := story_index
+	story_index += 1
+	save()
+	return idx
+
+# Naming.
+func set_voyageur_name(n: String) -> void:
+	voyageur_name = n.strip_edges().substr(0, 24)
+	save()
+
+func set_flair_name(n: String) -> void:
+	flair_name = n.strip_edges().substr(0, 24)
+	save()
+
+# NPC bonds: long-term relationship (helped vs betrayed). owes == intervention pending.
+func bond_helped(npc_id: StringName) -> void:
+	var k := String(npc_id)
+	var b: Dictionary = npc_bonds.get(k, {"helped": 0, "betrayed": 0, "owes": false})
+	b["helped"] = int(b.get("helped", 0)) + 1
+	if int(b["helped"]) >= 3 and int(b.get("betrayed", 0)) == 0:
+		b["owes"] = true
+	npc_bonds[k] = b
+	save()
+
+func bond_betrayed(npc_id: StringName) -> void:
+	var k := String(npc_id)
+	var b: Dictionary = npc_bonds.get(k, {"helped": 0, "betrayed": 0, "owes": false})
+	b["betrayed"] = int(b.get("betrayed", 0)) + 1
+	b["owes"] = false
+	npc_bonds[k] = b
+	save()
+
+func bond_consume_owes(npc_id: StringName) -> bool:
+	var k := String(npc_id)
+	var b: Dictionary = npc_bonds.get(k, {})
+	if not bool(b.get("owes", false)): return false
+	b["owes"] = false
+	npc_bonds[k] = b
+	save()
+	return true
+
+func bond_state(npc_id: StringName) -> Dictionary:
+	return npc_bonds.get(String(npc_id), {"helped": 0, "betrayed": 0, "owes": false})
+
+# Sanctuaire vivant — residents (PNJ saved) & trophies (creatures defeated).
+func add_sanctum_resident(npc_id: StringName) -> bool:
+	var k := String(npc_id)
+	if k in sanctum_residents: return false
+	sanctum_residents.append(k)
+	save()
+	return true
+
+func add_sanctum_trophy(creature_id: StringName) -> bool:
+	var k := String(creature_id)
+	if k in sanctum_trophies: return false
+	sanctum_trophies.append(k)
+	save()
+	return true
