@@ -36,11 +36,13 @@ func _ready() -> void:
 	var veil := ColorRect.new()
 	veil.color = Color(0, 0, 0, 0.0)
 	veil.set_anchors_preset(Control.PRESET_FULL_RECT)
+	veil.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(veil)
 	var box := VBoxContainer.new()
 	box.alignment = BoxContainer.ALIGNMENT_CENTER
 	box.set_anchors_preset(Control.PRESET_FULL_RECT)
 	box.add_theme_constant_override("separation", 10)
+	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(box)
 	var numeral := Label.new()
 	numeral.text = data[0]

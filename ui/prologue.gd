@@ -50,12 +50,17 @@ func _ready() -> void:
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.anchor_left = 0.0; title.anchor_right = 1.0
 	title.anchor_top = 0.16; title.offset_top = 0
+	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(title)
-	# Card panel.
+	# Card panel. Everything here must let taps fall through to this Control's
+	# _gui_input — otherwise the full-rect container eats the tap and the
+	# prologue can never be advanced (player gets stuck on the first card).
 	var center := CenterContainer.new()
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(center)
 	_panel = PanelContainer.new()
+	_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_panel.custom_minimum_size = Vector2(720, 0)
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = Color(0.04, 0.04, 0.07, 0.85)
@@ -70,6 +75,7 @@ func _ready() -> void:
 	_label.fit_content = true
 	_label.scroll_active = false
 	_label.custom_minimum_size = Vector2(660, 0)
+	_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_label.add_theme_font_size_override("normal_font_size", 21)
 	_panel.add_child(_label)
 	# Tap hint.
@@ -80,6 +86,7 @@ func _ready() -> void:
 	_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_hint.anchor_left = 0.0; _hint.anchor_right = 1.0
 	_hint.anchor_top = 0.82
+	_hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_hint)
 	# Skip button.
 	var skip := Button.new()
