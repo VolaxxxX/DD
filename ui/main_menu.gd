@@ -59,15 +59,39 @@ func _ready() -> void:
 	fr_btn.pressed.connect(func(): _set_lang("fr"))
 	en_btn.pressed.connect(func(): _set_lang("en"))
 	id_btn.pressed.connect(func(): _set_lang("id"))
-	# Showcase dragon (a metallic gold one — bright, regal).
+	# Atmospheric backdrop behind the menu: a full biome vista (ground, shader
+	# sky, fog, lit props) so the title sits over a living world, not the void.
+	var biomes := [&"highland", &"forest", &"coast", &"ruins", &"crypt"]
+	var backdrop := Backdrop3D.new()
+	add_child(backdrop)
+	backdrop.build(biomes[randi() % biomes.size()], 0.2, 0)
+	# Pull the showcase dragon back so it glides over the landscape.
 	_dragon = Dragon3D.new()
 	anchor.add_child(_dragon)
 	_dragon.build(&"lawbringer")
-	_dragon.position = Vector3(0, 0.5, -3.0)
-	_dragon.scale = Vector3.ONE * 0.6
-	var spin := create_tween().set_loops()
-	spin.tween_property(anchor, "rotation:y", TAU, 22.0)
+	_dragon.position = Vector3(-14, 7.5, -16)
+	_dragon.scale = Vector3.ONE * 1.1
+	# Slow cinematic flyby that loops across the sky.
+	_dragon_flyby_loop()
+	# Gentle camera drift for life.
+	var cam := $Camera3D as Camera3D
+	var cdrift := create_tween().set_loops()
+	cdrift.tween_property(cam, "position:x", 0.6, 9.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	cdrift.tween_property(cam, "position:x", -0.6, 9.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	# Title breathing glow.
+	var tpulse := create_tween().set_loops()
+	tpulse.tween_property(title_label, "modulate", Color(1.0, 0.97, 0.85), 2.2).set_trans(Tween.TRANS_SINE)
+	tpulse.tween_property(title_label, "modulate", Color(0.85, 0.75, 0.55), 2.2).set_trans(Tween.TRANS_SINE)
 	_refresh_lang()
+
+func _dragon_flyby_loop() -> void:
+	if not is_instance_valid(_dragon): return
+	_dragon.position = Vector3(-16, 7.5, -16)
+	_dragon.rotation.y = 0.0
+	var t := create_tween()
+	t.tween_property(_dragon, "position", Vector3(16, 9.5, -18), 14.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	t.parallel().tween_property(_dragon, "rotation:y", -0.35, 14.0)
+	t.tween_callback(_dragon_flyby_loop)
 
 func _set_lang(c: String) -> void:
 	Lang.code = c
