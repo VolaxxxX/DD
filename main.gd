@@ -358,6 +358,7 @@ func _setup_camera() -> void:
 
 var _breath_time: float = 0.0
 var _cam_hold: bool = false   # true while a cinematic owns the camera
+var _scene_yaw: float = 0.0   # per-encounter viewpoint angle (sense of travel)
 
 func _process(delta: float) -> void:
 	if camera == null or boss_node != null or _cam_hold: return
@@ -370,11 +371,12 @@ func _process(delta: float) -> void:
 	# Focal height and radius are auto-framed to the current subject so even a
 	# towering creature/boss stays fully in shot. Yaw 0 / pitch 0 = rest pose.
 	var focal := Vector3(0, _cam_focal_y, 0)
+	var yaw := _orbit_yaw + _scene_yaw   # per-encounter base angle + drag
 	var cy := cos(_orbit_pitch)
 	var orbit_offset := Vector3(
-		sin(_orbit_yaw) * cy,
+		sin(yaw) * cy,
 		sin(_orbit_pitch),
-		cos(_orbit_yaw) * cy
+		cos(yaw) * cy
 	) * _orbit_radius
 	var rest_pos := focal + Vector3(0, _cam_focal_y * 0.4, 0) + orbit_offset
 	var pos := rest_pos + Vector3(off_x + _shake_offset.x, off_y + _shake_offset.y, _shake_offset.z)
@@ -481,6 +483,18 @@ func _rebuild_companion() -> void:
 				"en": "its instinct 🐾 marks the safest choice",
 				"id": "nalurinya 🐾 menandai pilihan teraman"})])
 
+# Short walk-in: the avatars slide in from slightly behind, selling the idea
+# that the party just travelled to this new spot.
+func _walk_in_avatars() -> void:
+	for a in avatar_nodes:
+		if not is_instance_valid(a): continue
+		var home: Vector3 = a.position
+		a.position = home + Vector3(0, 0, 1.6)   # start a step back
+		var t: Tween = a.create_tween()
+		t.tween_property(a, "position", home, 0.9).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+		if a.has_method("act_tone"):
+			a.act_tone(1)   # gentle stride animation
+
 func _refresh_avatars_injuries() -> void:
 	for i in players.size():
 		if i < avatar_nodes.size() and is_instance_valid(avatar_nodes[i]):
@@ -526,6 +540,14 @@ func _spawn_creature(arch: Archetype) -> void:
 	_ground_and_frame(creature_node, 1.2)
 	_focal_spotlight(Vector3(creature_node.position.x, _cam_focal_y, creature_node.position.z))
 	Cinematic.play_for_creature(arch.id, int(arch.tier), creature_node, camera, get_tree(), int(arch.family))
+	# Orient the creature toward the HERO (active avatar), not dead-on at the
+	# camera — fixes the "it stares at the real player" immersion break.
+	var hero_pos := _avatar_world_pos(director.active_idx if director else 0)
+	if hero_pos == Vector3.ZERO and avatar_nodes.size() > 0 and is_instance_valid(avatar_nodes[0]):
+		hero_pos = avatar_nodes[0].global_position
+	var to_hero := hero_pos - creature_node.position
+	if Vector2(to_hero.x, to_hero.z).length() > 0.1:
+		creature_node.rotation.y = atan2(to_hero.x, to_hero.z)
 	# Turn each player avatar to look at the creature.
 	for a in avatar_nodes:
 		if is_instance_valid(a):
@@ -628,9 +650,14 @@ func _on_encounter(enc) -> void:
 	Music.nudge_for_encounter(_encounter_counter)
 	# Per-encounter visual refresh: shift the sun a bit so the scene feels alive.
 	_nudge_environment(_encounter_counter)
-	# Decor evolution inside the same zone: props drift, fresh ambience motes.
-	if _encounter_counter > 1 and decor and is_instance_valid(decor):
-		decor.evolve(_encounter_counter)
+	# Sense of TRAVEL: each new spot in the same zone is viewed from a fresh
+	# angle, the decor drifts to a new layout, and the avatars do a short
+	# walk-in so it feels like the party moved on to a new clearing.
+	if _encounter_counter > 1:
+		_scene_yaw = sin(float(_encounter_counter) * 1.7) * 0.45   # alternating viewpoint
+		if decor and is_instance_valid(decor):
+			decor.evolve(_encounter_counter)
+		_walk_in_avatars()
 	if situation_node and is_instance_valid(situation_node):
 		situation_node.queue_free()
 		situation_node = null
@@ -645,7 +672,11 @@ func _on_encounter(enc) -> void:
 		situation_node.build(StringName(enc.template.id))
 		_focal_spotlight(situation_node.position + Vector3(0, 1.0, 0))
 		Cinematic.play_for_situation(StringName(enc.template.id), situation_node, camera, get_tree())
-		ui.present_intro(String(enc.template.title))
+		var sit_title := String(enc.template.title)
+		if _encounter_counter > 1:
+			var lead := PhrasePool.travel_lead(_rng.derive(_encounter_counter * 31 + 5), enc.zone.biome)
+			if lead != "": sit_title = "%s\n%s" % [sit_title, lead]
+		ui.present_intro(sit_title)
 		ui.present_encounter(enc)
 	else:
 		_spawn_creature(enc.creature.archetype)
@@ -654,6 +685,11 @@ func _on_encounter(enc) -> void:
 		# Scene description (what's happening) + name + tactical mood, all in
 		# the dark narrative box so she reads the situation before choosing.
 		var opening := PhrasePool.encounter_opening(_rng.derive(_encounter_counter), int(enc.creature.archetype.family), enc.zone.biome)
+		# After the first encounter, lead with a short travel clause so the
+		# adventure reads as a journey, not disconnected events.
+		if _encounter_counter > 1:
+			var lead := PhrasePool.travel_lead(_rng.derive(_encounter_counter * 31 + 5), enc.zone.biome)
+			if lead != "": opening = "%s %s" % [lead, opening]
 		ui.present_intro("%s\n%s\n%s" % [enc.creature_name, opening, _mood_line(enc.creature.archetype)])
 		ui.present_encounter(enc)
 
@@ -898,6 +934,7 @@ func _avatar_world_pos(player_idx: int) -> Vector3:
 func _on_zone_changed(idx: int, _seed: int) -> void:
 	# Smooth fade-out, swap stage, fade-in — like Hollow Knight's room cuts.
 	_encounter_counter = 0
+	_scene_yaw = 0.0
 	ui.update_zone(idx, orchestrator.world.zones[idx].biome)
 	var layer := CanvasLayer.new(); layer.layer = 70
 	add_child(layer)

@@ -682,6 +682,43 @@ static func encounter_opening(rng: DRNG, family: int, biome: StringName) -> Stri
 	var arr: Array = table.get(family, table[0])
 	return arr[rng.range_i(0, arr.size())]
 
+# Short "you travel onward" clause prefixed to encounters after the first, so
+# the adventure reads as a continuous journey through the biome. Trilingual.
+static func travel_lead(rng: DRNG, biome: StringName) -> String:
+	var by_biome := {
+		&"forest": {"fr": ["Tu t'enfonces plus loin sous les frondaisons.", "Le sentier serpente entre les troncs moussus.", "Tu franchis un rideau de fougères."],
+			"en": ["You press deeper beneath the canopy.", "The path winds between mossy trunks.", "You push through a curtain of ferns."],
+			"id": ["Kau masuk lebih dalam ke bawah tajuk pohon.", "Jalan setapak berkelok di antara batang berlumut.", "Kau menerobos tirai pakis."]},
+		&"city": {"fr": ["Tu longes une nouvelle rue éventrée.", "Tu contournes des décombres fumants.", "Tes pas résonnent sur le pavé désert."],
+			"en": ["You skirt another gutted street.", "You round a heap of smoking rubble.", "Your steps echo on the deserted cobbles."],
+			"id": ["Kau menyusuri jalan lain yang hancur.", "Kau memutari tumpukan puing berasap.", "Langkahmu menggema di batu jalan yang sepi."]},
+		&"ruins": {"fr": ["Tu passes sous une arche brisée.", "Tu gravis des marches usées par les siècles.", "Tu traverses une cour effondrée."],
+			"en": ["You pass beneath a broken arch.", "You climb steps worn by centuries.", "You cross a collapsed courtyard."],
+			"id": ["Kau melintas di bawah lengkungan retak.", "Kau menaiki anak tangga usang.", "Kau menyeberangi halaman runtuh."]},
+		&"corrupted": {"fr": ["Le sol malade palpite à chaque pas.", "Tu enjambes une faille luisante.", "L'air épaissit autour de toi."],
+			"en": ["The sick ground pulses with each step.", "You step over a glowing fissure.", "The air thickens around you."],
+			"id": ["Tanah sakit berdenyut di tiap langkah.", "Kau melangkahi celah bercahaya.", "Udara mengental di sekitarmu."]},
+		&"anomaly": {"fr": ["Les distances cessent d'avoir un sens.", "Tu avances et le décor se réécrit.", "Le sol te porte sans que tu marches."],
+			"en": ["Distances stop making sense.", "You move on and the scene rewrites itself.", "The ground carries you without your stepping."],
+			"id": ["Jarak berhenti masuk akal.", "Kau berjalan dan pemandangan menulis ulang dirinya.", "Tanah membawamu tanpa kau melangkah."]},
+		&"swamp": {"fr": ["Tu patauges vers une nouvelle berge.", "La vase aspire tes pas un à un.", "Tu écartes des roseaux trempés."],
+			"en": ["You wade toward a new bank.", "The mire sucks at each step.", "You part sodden reeds."],
+			"id": ["Kau mengarungi menuju tepian baru.", "Lumpur mengisap tiap langkah.", "Kau menyibak alang-alang basah."]},
+		&"highland": {"fr": ["Tu gravis une nouvelle crête.", "Le vent te pousse vers le col suivant.", "Tu suis la ligne de pierres dressées."],
+			"en": ["You crest another ridge.", "The wind pushes you toward the next pass.", "You follow the line of standing stones."],
+			"id": ["Kau mendaki punggung bukit lain.", "Angin mendorongmu ke celah berikut.", "Kau mengikuti barisan batu tegak."]},
+		&"crypt": {"fr": ["Tu t'enfonces dans un nouveau couloir.", "Ta lumière révèle d'autres niches.", "L'écho de tes pas te précède."],
+			"en": ["You descend into another corridor.", "Your light reveals more alcoves.", "The echo of your steps goes ahead of you."],
+			"id": ["Kau menuruni lorong lain.", "Cahayamu menyingkap relung-relung lain.", "Gema langkahmu mendahuluimu."]},
+		&"coast": {"fr": ["Tu longes la grève vers de nouveaux rochers.", "La marée efface tes traces derrière toi.", "L'écume t'accompagne vers le large."],
+			"en": ["You follow the shore toward new rocks.", "The tide erases your tracks behind you.", "The surf accompanies you seaward."],
+			"id": ["Kau menyusuri pantai menuju batu baru.", "Pasang menghapus jejakmu di belakang.", "Buih menemanimu ke arah laut."]},
+	}
+	var d: Dictionary = by_biome.get(biome, by_biome[&"forest"])
+	var arr: Array = d.get(Lang.code, d.get("fr", []))
+	if arr.is_empty(): return ""
+	return arr[rng.range_i(0, arr.size())]
+
 static func biome_intro(biome: StringName, corruption: float) -> String:
 	match Lang.code:
 		"en": return PhrasePoolEN.biome_intro(biome, corruption)

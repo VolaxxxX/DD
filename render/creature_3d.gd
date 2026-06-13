@@ -150,10 +150,15 @@ func build(_arch: Archetype) -> void:
 	body = Node3D.new()
 	add_child(body)
 	_add_contact_shadow()
+	# ELEMENTAL and FEY always use the bespoke procedural build — the generic
+	# family GLB fallback looked like a placeholder for these two, and the
+	# remodelled procedural versions (vortex column / ethereal hovering sprite)
+	# have far stronger, more readable silhouettes.
+	var force_procedural := int(archetype.family) in [Archetype.Family.ELEMENTAL, Archetype.Family.FEY]
 	# External GLB (detailed skinned model) first. KayKit rigs have no animation
 	# clips, so bipeds would T-pose — we pose their skeleton into a rest stance
 	# instead of throwing the model away. Animated rigs just play idle.
-	var loaded: Node3D = AssetLoader.instance_for_creature(archetype.id, int(archetype.family))
+	var loaded: Node3D = null if force_procedural else AssetLoader.instance_for_creature(archetype.id, int(archetype.family))
 	if loaded != null:
 		body.add_child(loaded)
 		_imported_root = loaded
@@ -413,17 +418,36 @@ func _build_construct() -> void:
 	_add_eye(Vector3(0, 1.55, 0.21), 0.07)
 
 func _build_elemental() -> void:
-	_head_pos = Vector3(0, 1.45, 0); _head_radius = 0.30
-	var core := SphereMesh.new(); core.radius = 0.38; core.height = 0.76
-	_add(core, Vector3(0, 1.1, 0))
-	var halo := TorusMesh.new(); halo.inner_radius = 0.45; halo.outer_radius = 0.55
-	_add(halo, Vector3(0, 1.1, 0), _accent, Vector3.ONE, Vector3(70, 0, 20))
-	var orb := SphereMesh.new(); orb.radius = 0.13; orb.height = 0.26
-	_add(orb, Vector3(-0.42, 1.45, 0))
-	_add(orb, Vector3(0.42, 0.85, 0))
-	_add(orb, Vector3(0, 1.65, -0.20))
-	_add(orb, Vector3(0.20, 0.55, 0.20))
-	_add(orb, Vector3(-0.30, 0.7, -0.15))
+	# A churning vertical column of stacked, rotating shards around a blazing
+	# core — reads as a living force of nature rather than a static blob.
+	_head_pos = Vector3(0, 1.85, 0); _head_radius = 0.26
+	# Strongly emissive core material (the elemental's "heart").
+	var core_mat := StandardMaterial3D.new()
+	core_mat.albedo_color = _eye_color
+	core_mat.emission_enabled = true; core_mat.emission = _eye_color
+	core_mat.emission_energy_multiplier = 6.0
+	# Central blazing core.
+	var core := SphereMesh.new(); core.radius = 0.32; core.height = 0.64
+	_add(core, Vector3(0, 1.05, 0), core_mat)
+	# Stacked tapering ring of shards forming an hourglass/vortex column.
+	for level in 5:
+		var y := 0.45 + level * 0.42
+		var radius := 0.5 - absf(level - 2) * 0.12   # widest in the middle
+		var count := 6
+		for i in count:
+			var ang := i * TAU / count + level * 0.5
+			var shard := PrismMesh.new()
+			shard.size = Vector3(0.12, 0.34, 0.10)
+			var m := _accent if (level + i) % 2 == 0 else _material
+			var mi := _add(shard, Vector3(cos(ang) * radius, y, sin(ang) * radius), m,
+				Vector3.ONE, Vector3(0, rad_to_deg(ang), 18))
+			mi.set_meta("elem_ring", y)   # animator spins these per level
+	# Rising embers/motes above the core.
+	for i in 4:
+		var mote := SphereMesh.new(); mote.radius = 0.07; mote.height = 0.14
+		_add(mote, Vector3(sin(i * 1.7) * 0.18, 1.55 + i * 0.18, cos(i * 1.7) * 0.14), core_mat)
+	body.position.y += 0.1
+	set_meta("hovers", true)
 
 func _build_aberration() -> void:
 	_head_pos = Vector3(0, 1.30, 0); _head_radius = 0.40
@@ -442,22 +466,63 @@ func _build_aberration() -> void:
 		_add_eye(off, 0.05)
 
 func _build_fey() -> void:
-	_head_pos = Vector3(0, 1.55, 0); _head_radius = 0.17
-	var head := SphereMesh.new(); head.radius = 0.17; head.height = 0.34
-	_add(head, Vector3(0, 1.55, 0))
-	var torso := CapsuleMesh.new(); torso.radius = 0.15; torso.height = 0.7
-	_add(torso, Vector3(0, 1.05, 0), _accent)
-	var leg := CylinderMesh.new(); leg.top_radius = 0.05; leg.bottom_radius = 0.05; leg.height = 0.6
-	_add(leg, Vector3(-0.08, 0.40, 0))
-	_add(leg, Vector3(0.08, 0.40, 0))
-	var wing := PrismMesh.new(); wing.size = Vector3(0.55, 0.7, 0.04)
-	_add(wing, Vector3(-0.28, 1.20, -0.10), _material, Vector3.ONE, Vector3(0, 0, 22))
-	_add(wing, Vector3(0.28, 1.20, -0.10), _material, Vector3.ONE, Vector3(0, 180, -22))
-	# crown
-	var crown := PrismMesh.new(); crown.size = Vector3(0.20, 0.12, 0.06)
-	_add(crown, Vector3(0, 1.74, 0), _accent)
-	_add_eye(Vector3(-0.06, 1.58, 0.16), 0.030)
-	_add_eye(Vector3(0.06, 1.58, 0.16), 0.030)
+	# An ethereal floating sprite: slender luminous body that HOVERS (no legs on
+	# the ground), four large translucent wings in an X, a glowing heart-core,
+	# a halo of orbiting motes and a trailing wisp. Reads instantly as fey.
+	_head_pos = Vector3(0, 1.70, 0); _head_radius = 0.16
+	# Translucent glowing wing material.
+	var wing_mat := StandardMaterial3D.new()
+	wing_mat.albedo_color = Color(_accent.albedo_color.r, _accent.albedo_color.g, _accent.albedo_color.b, 0.5)
+	wing_mat.emission_enabled = true
+	wing_mat.emission = _accent.albedo_color
+	wing_mat.emission_energy_multiplier = 1.4
+	wing_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	wing_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	# Tapered body (head + slim glowing torso ending in a wisp, no feet).
+	var head := SphereMesh.new(); head.radius = 0.16; head.height = 0.32
+	_add(head, Vector3(0, 1.70, 0))
+	var torso := CapsuleMesh.new(); torso.radius = 0.13; torso.height = 0.62
+	_add(torso, Vector3(0, 1.28, 0), _material)
+	# Tapering wisp where legs would be — fey trail off into light.
+	for i in 4:
+		var seg := SphereMesh.new()
+		var rr := 0.11 - i * 0.022
+		seg.radius = rr; seg.height = rr * 2.0
+		var m := _accent if i % 2 == 0 else _material
+		_add(seg, Vector3(sin(i * 1.3) * 0.05, 0.95 - i * 0.18, cos(i * 1.3) * 0.04), m)
+	# Glowing heart-core in the chest.
+	var core := SphereMesh.new(); core.radius = 0.09; core.height = 0.18
+	var core_mat := StandardMaterial3D.new()
+	core_mat.albedo_color = _eye_color
+	core_mat.emission_enabled = true; core_mat.emission = _eye_color
+	core_mat.emission_energy_multiplier = 5.0
+	_add(core, Vector3(0, 1.30, 0.10), core_mat)
+	# Four large translucent wings (upper + lower pair) in an X.
+	var w_up := PrismMesh.new(); w_up.size = Vector3(0.42, 0.85, 0.02)
+	_add(w_up, Vector3(-0.22, 1.45, -0.06), wing_mat, Vector3.ONE, Vector3(0, 0, 34))
+	_add(w_up, Vector3(0.22, 1.45, -0.06), wing_mat, Vector3.ONE, Vector3(0, 180, -34))
+	var w_lo := PrismMesh.new(); w_lo.size = Vector3(0.30, 0.6, 0.02)
+	_add(w_lo, Vector3(-0.18, 1.10, -0.06), wing_mat, Vector3.ONE, Vector3(0, 0, 150))
+	_add(w_lo, Vector3(0.18, 1.10, -0.06), wing_mat, Vector3.ONE, Vector3(0, 180, -150))
+	# Crown of light points.
+	for i in 5:
+		var ang := -0.6 + i * 0.3
+		var pt := PrismMesh.new(); pt.size = Vector3(0.05, 0.14, 0.05)
+		_add(pt, Vector3(sin(ang) * 0.17, 1.86, cos(ang) * 0.04), _accent, Vector3.ONE, Vector3(0, 0, rad_to_deg(ang) * 0.5))
+	# Halo of orbiting motes (marked so the animator can spin them).
+	for i in 6:
+		var ang := i * TAU / 6.0
+		var mote := SphereMesh.new(); mote.radius = 0.035; mote.height = 0.07
+		var mm := StandardMaterial3D.new()
+		mm.albedo_color = _eye_color; mm.emission_enabled = true
+		mm.emission = _eye_color; mm.emission_energy_multiplier = 4.0
+		var mi := _add(mote, Vector3(cos(ang) * 0.42, 1.35 + sin(ang) * 0.12, sin(ang) * 0.42), mm)
+		mi.set_meta("fey_mote", ang)
+	_add_eye(Vector3(-0.055, 1.72, 0.14), 0.028)
+	_add_eye(Vector3(0.055, 1.72, 0.14), 0.028)
+	# Fey hover — lift the whole body off the ground.
+	body.position.y += 0.35
+	set_meta("hovers", true)
 
 func _build_draconic() -> void:
 	_head_pos = Vector3(1.45, 1.85, 0); _head_radius = 0.28

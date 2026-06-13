@@ -103,16 +103,22 @@ func _crossfade(key: StringName, stream: AudioStream, extra_db: float = 0.0) -> 
 	if key == _current_key: return
 	_current_key = key
 	var next_player := _player_b if _active == _player_a else _player_a
+	# Capture the OUTGOING player in a local — the fade-out callback fires 2s
+	# later, by which time the member `_active` already points to the NEW
+	# player. Referencing `_active` in the callback would stop the track that
+	# just started (the long-standing "music cuts after a couple seconds" bug).
+	var old_player := _active
 	next_player.stream = stream
 	next_player.pitch_scale = 1.0
 	next_player.volume_db = -50.0
 	next_player.play()
 	var fade_in := next_player.create_tween()
 	fade_in.tween_property(next_player, "volume_db", _base_volume_db + extra_db, 2.0)
-	var fade_out := _active.create_tween()
-	fade_out.tween_property(_active, "volume_db", -50.0, 2.0)
-	fade_out.tween_callback(func():
-		if is_instance_valid(_active): _active.stop())
+	if old_player != null and old_player.playing:
+		var fade_out := old_player.create_tween()
+		fade_out.tween_property(old_player, "volume_db", -50.0, 2.0)
+		fade_out.tween_callback(func():
+			if is_instance_valid(old_player): old_player.stop())
 	_active = next_player
 
 # ---------- Procedural fallback synthesis ----------
