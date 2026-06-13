@@ -193,7 +193,18 @@ func _start_game() -> void:
 	Bus.zone_changed.connect(_on_zone_changed)
 
 	Progress.record_run_start()
-	director.begin()
+	# Opening prologue (who you are / why you're here) over the built scene,
+	# then the run begins.
+	_show_prologue(func(): director.begin())
+
+func _show_prologue(on_done: Callable) -> void:
+	var layer := CanvasLayer.new(); layer.layer = 88
+	add_child(layer)
+	var pro: Control = preload("res://ui/prologue.gd").new()
+	layer.add_child(pro)
+	pro.done.connect(func():
+		if is_instance_valid(layer): layer.queue_free()
+		on_done.call())
 
 func _open_pause_menu() -> void:
 	var pm: Control = preload("res://ui/pause_menu.gd").new()
