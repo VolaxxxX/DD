@@ -779,9 +779,11 @@ func _play_outcome_vfx(tone: int, outcome: int) -> void:
 			_slowmo(0.35, 0.6)
 			_shake_camera(0.30, 0.4)
 			_light_burst(Color(1.0, 0.20, 0.20), 6.0, 0.6)
+			CombatVFX.shockwave(stage, Vector3(0, 0.1, 0), Color(1.0, 0.25, 0.2))
 		4:  # CRIT_SUCCESS
 			_slowmo(0.45, 0.5)
 			_light_burst(Color(1.0, 0.95, 0.55), 7.0, 0.7)
+			CombatVFX.shockwave(stage, Vector3(0, 0.1, 0), Color(1.0, 0.92, 0.6))
 	if creature_node == null or not is_instance_valid(creature_node): return
 	var pos: Vector3 = creature_node.position + Vector3(0, 1.0, 0)
 	match outcome:

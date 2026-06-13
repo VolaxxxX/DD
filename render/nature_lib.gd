@@ -91,7 +91,39 @@ static func instance(name: String, tint: Color = Color(1, 1, 1)) -> Node3D:
 	var n := scn.instantiate()
 	if tint != Color(1, 1, 1):
 		_tint(n, tint)
+	_attach_fire_light(n, name)
 	return n
+
+# Auto-attach a warm, flickering point light to any fire/candle/lantern/lamp
+# prop so the world actually lights up around it (campfires glow, candles
+# flicker). Cheap: one OmniLight + a looping energy tween.
+static func _attach_fire_light(n: Node3D, name: String) -> void:
+	var nm := name.to_lower()
+	var warm: Color
+	var energy := 1.4
+	var rng := 4.0
+	var h := 0.6
+	if "campfire" in nm or "pyre" in nm or "fire" in nm:
+		warm = Color(1.0, 0.55, 0.2); energy = 2.6; rng = 7.0; h = 0.7
+	elif "candle" in nm:
+		warm = Color(1.0, 0.6, 0.3); energy = 1.0; rng = 3.0; h = 0.4
+	elif "lantern" in nm or "lamp" in nm or "lightpost" in nm:
+		warm = Color(1.0, 0.78, 0.45); energy = 1.8; rng = 5.5; h = 1.2
+	else:
+		return
+	var ol := OmniLight3D.new()
+	ol.light_color = warm
+	ol.light_energy = energy
+	ol.omni_range = rng
+	ol.position = Vector3(0, h, 0)
+	ol.shadow_enabled = true   # dancing shadows from the flame
+	n.add_child(ol)
+	# Flicker.
+	var t := ol.create_tween().set_loops()
+	t.tween_property(ol, "light_energy", energy * 0.7, 0.09)
+	t.tween_property(ol, "light_energy", energy * 1.1, 0.12)
+	t.tween_property(ol, "light_energy", energy * 0.85, 0.08)
+	t.tween_property(ol, "light_energy", energy, 0.11)
 
 static func _tint(node: Node, tint: Color) -> void:
 	for c in node.get_children():

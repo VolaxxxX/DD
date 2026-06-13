@@ -21,6 +21,32 @@ static func void_implode(parent: Node3D, position: Vector3) -> void:
 	var p := _make_burst(parent, position, 30, 0.8, Color(0.45, 0.15, 0.85), Vector3(0, 0, 0), 360.0, Vector3.ZERO, 0.06, 3.0)
 	_autofree(p, 1.1)
 
+# Rising fire embers (for fire crits / burning situations).
+static func embers(parent: Node3D, position: Vector3) -> void:
+	var p := _make_burst(parent, position, 26, 1.0, Color(1.0, 0.55, 0.2), Vector3(0, 1, 0), 25.0, Vector3(0, 1.0, 0), 0.05, 5.0)
+	_autofree(p, 1.2)
+
+# Expanding ground shockwave ring — big punch on critical outcomes.
+static func shockwave(parent: Node3D, position: Vector3, color: Color = Color(1.0, 0.9, 0.6)) -> void:
+	if parent == null: return
+	var ring := MeshInstance3D.new()
+	var torus := TorusMesh.new(); torus.inner_radius = 0.25; torus.outer_radius = 0.4
+	ring.mesh = torus
+	ring.rotation_degrees = Vector3(90, 0, 0)
+	ring.position = position - Vector3(0, position.y - 0.1, 0)
+	var m := StandardMaterial3D.new()
+	m.albedo_color = color
+	m.emission_enabled = true; m.emission = color; m.emission_energy_multiplier = 4.0
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	ring.material_override = m
+	parent.add_child(ring)
+	var t := ring.create_tween().set_parallel(true)
+	t.tween_property(ring, "scale", Vector3(9, 9, 9), 0.5).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
+	t.tween_property(m, "albedo_color:a", 0.0, 0.5)
+	t.tween_property(m, "emission_energy_multiplier", 0.0, 0.5)
+	t.chain().tween_callback(func(): if is_instance_valid(ring): ring.queue_free())
+
 static func _make_burst(parent: Node3D, position: Vector3, amount: int, lifetime: float, color: Color, dir: Vector3, spread: float, gravity: Vector3, size: float, emission_e: float) -> GPUParticles3D:
 	var pg := GPUParticles3D.new()
 	pg.position = position

@@ -77,11 +77,17 @@ static func instance_for(family: int, id: StringName) -> Node3D:
 			pool = FEY
 			tint = Color(0.8, 0.9, 1.0)
 			emissive = true
-		5:  # ABERRATION — weird animal tinted eldritch violet + glow
+		5:  # ABERRATION — a Quaternius slime mesh, tinted eldritch + glow.
+			var slm := _obj_mesh("res://assets/models/qmonsters/Slime.obj")
+			if slm != null:
+				_tint(slm, Color(0.7, 0.4, 0.9), true)
+				return slm
 			pool = ["beast_crab", "beast_caterpillar", "beast_bee"]
 			tint = Color(0.7, 0.35, 0.85)
 			emissive = true
-		7:  # DRACONIC — large beast tinted dark crimson (a drake)
+		7:  # DRACONIC — a real Quaternius dragon mesh (static, breathes via idle).
+			var drg := _obj_mesh("res://assets/models/qmonsters/Dragon.obj")
+			if drg != null: return drg
 			pool = ["beast_lion", "beast_tiger", "beast_hog"]
 			tint = Color(0.85, 0.45, 0.4)
 		3:  # CONSTRUCT — character tinted cold stone-grey (a golem)
@@ -111,6 +117,18 @@ static func _beast_for_name(id: StringName) -> String:
 	for pair in BEAST_KEYWORDS:
 		if s.contains(String(pair[0])): return String(pair[1])
 	return ""
+
+# Wraps an imported OBJ Mesh (static) in a MeshInstance3D node.
+static func _obj_mesh(path: String) -> Node3D:
+	if not ResourceLoader.exists(path): return null
+	var res := load(path)
+	if res is Mesh:
+		var mi := MeshInstance3D.new()
+		mi.mesh = res
+		return mi
+	if res is PackedScene:
+		return (res as PackedScene).instantiate()
+	return null
 
 static func _make(name: String, tint: Color, emissive: bool) -> Node3D:
 	var scn := _load(name)
