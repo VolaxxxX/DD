@@ -28,11 +28,16 @@ func _build_choices() -> Array[Dictionary]:
 	while out.size() < template.choices.size() and out.size() < 3:
 		var c: Dictionary = template.choices[out.size()]
 		out.append({"tone": int(c.tone), "text": String(c.text), "kind": 3})
+	# Always add a 4th WILD choice — strangeness for its own sake.
+	out.append({"tone": PhrasePool.Tone.WILD, "text": PhrasePool.pick_wild_choice(rng), "kind": 3})
 	return out
 
 func resolve(choice_idx: int, _resolver: EventResolver, _coop_mod: int) -> Dictionary:
 	var ui_choice: Dictionary = choices[choice_idx]
 	var tone: int = int(ui_choice.tone)
+	# WILD: pure chaos table, no template branch needed.
+	if tone == PhrasePool.Tone.WILD:
+		return _resolve_wild_sit()
 	var template_choice: Dictionary = {}
 	for c in template.choices:
 		if int(c.tone) == tone:
@@ -66,3 +71,43 @@ func resolve(choice_idx: int, _resolver: EventResolver, _coop_mod: int) -> Dicti
 		"grant_relic": bool(section.get("grant_relic", false)),
 	}
 	return result
+
+# Wild chaos resolution for the 4th choice on situations (no creature involved,
+# so no flees/mutate — just stat shifts, fragment swings, injuries, gifts).
+func _resolve_wild_sit() -> Dictionary:
+	var r := rng.range_i(0, 100)
+	var outcome: int
+	if r < 15: outcome = 0
+	elif r < 35: outcome = 1
+	elif r < 60: outcome = 2
+	elif r < 85: outcome = 3
+	else: outcome = 4
+	if Settings.story_mode and outcome == 0: outcome = 1
+	var res := {
+		"narrative": PhrasePool.pick_wild_outcome(rng, outcome),
+		"outcome": outcome,
+		"tone": PhrasePool.Tone.WILD,
+		"stat_delta": 0, "stat": &"esprit",
+		"creature_dies": false, "creature_flees": false, "mutate": false,
+		"injury": &"", "heal": &"", "fatal": false,
+		"fragments": 0, "grant_relic": false,
+	}
+	var w := rng.range_i(0, 100)
+	match outcome:
+		4:
+			if w < 60: res.fragments = 6
+			else: res.grant_relic = true
+		3:
+			if w < 50: res.fragments = 3
+			elif w < 80 and not player.injuries.is_empty():
+				res.heal = player.injuries[rng.range_i(0, player.injuries.size())]
+			else:
+				res.stat_delta = 1; res.stat = [&"instinct", &"esprit", &"charisme"][rng.range_i(0, 3)]
+		2:
+			res.stat_delta = 1; res.stat = [&"instinct", &"esprit"][rng.range_i(0, 2)]
+		1:
+			if w < 50: res.injury = InjuryRegistry.pick_for(rng, PhrasePool.Tone.MYSTICAL, zone.biome)
+			else: res.fragments = -2
+		0:
+			res.injury = InjuryRegistry.pick_for(rng, PhrasePool.Tone.MYSTICAL, zone.biome)
+	return res

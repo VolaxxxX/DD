@@ -9,6 +9,7 @@ signal choice_selected(index: int)
 @onready var choice0: Button = $Root/ChoicesBox/Choice0
 @onready var choice1: Button = $Root/ChoicesBox/Choice1
 @onready var choice2: Button = $Root/ChoicesBox/Choice2
+@onready var choice3: Button = $Root/ChoicesBox/Choice3
 @onready var name_label: Label = $Root/StatsBox/NameLabel
 @onready var stat_label: Label = $Root/StatsBox/StatLabel
 @onready var zone_label: Label = $Root/StatsBox/ZoneLabel
@@ -24,6 +25,7 @@ const TONE_COLOR := {
 	3: Color(0.85, 0.75, 1.0),
 	4: Color(0.85, 1.0, 0.55),
 	5: Color(1.0, 0.65, 1.0),
+	6: Color(1.0, 0.55, 0.85),  # WILD — pink-magenta, off-script
 }
 
 const TONE_GLYPH := {
@@ -33,6 +35,7 @@ const TONE_GLYPH := {
 	3: "?",   # CURIOUS - question
 	4: "♣",   # DECEPTIVE - club / mask
 	5: "✦",   # MYSTICAL - star / sigil
+	6: "✺",   # WILD - chaos rosette
 }
 
 const OUTCOME_TINT := {
@@ -44,7 +47,7 @@ const OUTCOME_TINT := {
 }
 
 func _ready() -> void:
-	choice_buttons = [choice0, choice1, choice2]
+	choice_buttons = [choice0, choice1, choice2, choice3]
 	for i in choice_buttons.size():
 		var idx := i
 		choice_buttons[i].pressed.connect(func(): _on_choice_pressed(idx))
@@ -152,6 +155,7 @@ func _flair_index(enc) -> int:
 	var best_margin := -INF
 	for i in enc.choices.size():
 		var tone: int = int(enc.choices[i].tone)
+		if tone == PhrasePool.Tone.WILD: continue   # chaos rolls have no margin
 		var stat_key: StringName = PlayerClass.tone_stat(tone)
 		var s: float = float(_player.effective_stat(stat_key) + _player.tone_modifier(tone) + BiomeRules.stat_mod(enc.zone.biome, stat_key))
 		var d: float = 10.0 + enc.zone.chaos * 5.0 + float(BiomeRules.tone_difficulty_mod(enc.zone.biome, tone))
@@ -183,14 +187,20 @@ func present_encounter(enc) -> void:
 		if i < enc.choices.size():
 			var c: Dictionary = enc.choices[i]
 			btn.visible = true
-			# Format: "<glyph>  text\n— STAT" so the player sees which stat is rolled.
-			var stat_key: String = TONE_STAT_LABEL.get(c.tone, "force")
-			var stat_short: String = PlayerClass.stat_label(StringName(stat_key))
-			# Star the choice that rolls the player's strongest stat.
-			var star := "  ★" if stat_key == _best_stat_key() else ""
-			# Companion's paw on the statistically safest path.
-			var paw := "🐾 " if i == flair else ""
-			btn.text = "%s%s %s  ·  %s%s" % [paw, TONE_GLYPH.get(c.tone, ""), c.text, stat_short, star]
+			# WILD has no stat — show "?" instead so the player feels the
+			# wildness; flair/star don't apply to chaos rolls.
+			if int(c.tone) == PhrasePool.Tone.WILD:
+				var wild_tag := Lang.t({"fr": "ÉTRANGE", "en": "STRANGE", "id": "ANEH"})
+				btn.text = "%s %s  ·  %s ?" % [TONE_GLYPH.get(c.tone, ""), c.text, wild_tag]
+			else:
+				# Format: "<glyph>  text  ·  STAT" so the player sees which stat is rolled.
+				var stat_key: String = TONE_STAT_LABEL.get(c.tone, "force")
+				var stat_short: String = PlayerClass.stat_label(StringName(stat_key))
+				# Star the choice that rolls the player's strongest stat.
+				var star := "  ★" if stat_key == _best_stat_key() else ""
+				# Companion's paw on the statistically safest path.
+				var paw := "🐾 " if i == flair else ""
+				btn.text = "%s%s %s  ·  %s%s" % [paw, TONE_GLYPH.get(c.tone, ""), c.text, stat_short, star]
 			btn.modulate = TONE_COLOR.get(c.tone, Color.WHITE)
 			btn.modulate.a = 0.0
 			btn.disabled = false

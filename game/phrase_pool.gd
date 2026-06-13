@@ -3,7 +3,92 @@ class_name PhrasePool extends RefCounted
 # Tone integers: 0=AGGRESSIVE 1=DIPLOMATIC 2=CAUTIOUS 3=CURIOUS 4=DECEPTIVE 5=MYSTICAL
 # Outcome integers match FateEngine.Outcome: 0=CRIT_FAIL 1=FAIL 2=MIXED 3=SUCCESS 4=CRIT_SUCCESS
 
-enum Tone { AGGRESSIVE, DIPLOMATIC, CAUTIOUS, CURIOUS, DECEPTIVE, MYSTICAL }
+enum Tone { AGGRESSIVE, DIPLOMATIC, CAUTIOUS, CURIOUS, DECEPTIVE, MYSTICAL, WILD }
+
+# A bizarre / out-of-place fourth choice that ignores stats and rolls on its
+# own chaos table. Trilingual. Picked from a flat pool — the strangeness is
+# the point, no per-family tuning needed.
+static func wild_choices() -> Array:
+	match Lang.code:
+		"en": return [
+			"You toss a coin and do the opposite of what it tells you.",
+			"You close your eyes and walk straight ahead.",
+			"You sing a lullaby to no one.",
+			"You greet whatever is watching you without eyes.",
+			"You dance a step your mother once taught you.",
+			"You offer your shadow to the ground.",
+			"You declare aloud that none of this is happening.",
+			"You bite your tongue, to see if pain changes the moment.",
+			"You count to seven backwards and wait.",
+			"You take off one boot and present it as a gift.",
+			"You ask the wind for permission to exist here.",
+			"You laugh — not at anything in particular.",
+		]
+		"id": return [
+			"Kau lempar koin dan lakukan kebalikan dari yang ia katakan.",
+			"Kau memejamkan mata dan berjalan lurus ke depan.",
+			"Kau menyanyikan ninabobo untuk tak seorang pun.",
+			"Kau menyapa apa pun yang menatapmu tanpa mata.",
+			"Kau menari satu langkah yang dulu diajarkan ibumu.",
+			"Kau persembahkan bayanganmu pada tanah.",
+			"Kau menyatakan dengan suara keras bahwa semua ini tidak terjadi.",
+			"Kau menggigit lidahmu, untuk melihat apakah rasa sakit mengubah saat ini.",
+			"Kau menghitung mundur sampai tujuh dan menunggu.",
+			"Kau melepas satu sepatu bot dan menyerahkannya sebagai hadiah.",
+			"Kau meminta izin pada angin untuk ada di sini.",
+			"Kau tertawa — tanpa alasan tertentu.",
+		]
+		_: return [
+			"Tu lances une pièce et fais le contraire de ce qu'elle dit.",
+			"Tu fermes les yeux et avances droit devant toi.",
+			"Tu chantes une berceuse pour personne.",
+			"Tu dis bonjour à ce qui te regarde sans yeux.",
+			"Tu danses un pas que ta mère t'a appris.",
+			"Tu offres ton ombre au sol.",
+			"Tu déclares à voix haute que rien de tout ceci n'arrive.",
+			"Tu mords ta langue pour voir si la douleur change l'instant.",
+			"Tu comptes à l'envers jusqu'à sept et tu attends.",
+			"Tu retires une botte et la présentes comme un cadeau.",
+			"Tu demandes au vent la permission d'exister ici.",
+			"Tu ris — pas de quelque chose en particulier.",
+		]
+
+# Pure-chaos outcome narrations for WILD choices. No %s — the absurd act
+# doesn't always involve the creature. Picked by FateEngine.Outcome.
+static func wild_outcomes(outcome: int) -> Array:
+	match Lang.code:
+		"en":
+			match outcome:
+				4: return ["The world considers your gesture — and laughs. Something opens.", "It worked. You don't know how. You don't need to.", "Reality blinks first."]
+				3: return ["The strangeness lands. Nobody is more surprised than you.", "A door you hadn't seen stands ajar.", "Something tilts in your favor."]
+				2: return ["The world neither approves nor refuses. It simply notes.", "Something shifts. You can't tell yet if it was worth it.", "A bargain is made. The terms will be read later."]
+				1: return ["The gesture falls flat. The silence afterward is worse.", "Whatever you tried — it wasn't the password.", "You feel suddenly very small."]
+				0: return ["You have invited something. It has accepted.", "The strangeness comes back at you, threefold.", "You should not have done that. You did."]
+				_: return ["Nothing answers."]
+		"id":
+			match outcome:
+				4: return ["Dunia menimbang isyaratmu — lalu tertawa. Sesuatu terbuka.", "Berhasil. Kau tak tahu bagaimana. Kau tak perlu tahu.", "Realitas berkedip lebih dulu."]
+				3: return ["Keanehan itu mendarat. Tak ada yang lebih terkejut darimu.", "Sebuah pintu yang tak kau lihat terbuka sedikit.", "Sesuatu bergeser ke arahmu."]
+				2: return ["Dunia tak menyetujui pun tak menolak. Ia hanya mencatat.", "Sesuatu berubah. Kau belum tahu apakah itu sepadan.", "Sebuah kesepakatan terjadi. Syaratnya akan dibaca nanti."]
+				1: return ["Gerakanmu jatuh hambar. Hening setelahnya lebih buruk.", "Apa pun yang kau coba — itu bukan kata sandinya.", "Kau merasa tiba-tiba sangat kecil."]
+				0: return ["Kau telah mengundang sesuatu. Ia menerima.", "Keanehan itu kembali kepadamu, tiga kali lipat.", "Seharusnya tak kau lakukan. Kau melakukannya."]
+				_: return ["Tak ada yang menjawab."]
+		_:
+			match outcome:
+				4: return ["Le monde considère ton geste — puis rit. Quelque chose s'ouvre.", "Ça a marché. Tu ne sais pas comment. Tu n'as pas besoin de savoir.", "La réalité cligne des yeux la première."]
+				3: return ["L'étrangeté trouve sa cible. Personne n'est plus surpris que toi.", "Une porte que tu n'avais pas vue est entrebâillée.", "Quelque chose bascule en ta faveur."]
+				2: return ["Le monde n'approuve ni ne refuse. Il prend simplement note.", "Quelque chose se déplace. Tu ne sais pas encore si ça valait le coup.", "Un marché est conclu. Les termes seront lus plus tard."]
+				1: return ["Le geste tombe à plat. Le silence qui suit est pire.", "Quoi que tu aies tenté — ce n'était pas le mot de passe.", "Tu te sens soudain très petit."]
+				0: return ["Tu as invité quelque chose. Cela a accepté.", "L'étrangeté te revient, au triple.", "Tu n'aurais pas dû. Tu l'as fait."]
+				_: return ["Rien ne répond."]
+
+static func pick_wild_choice(rng: DRNG) -> String:
+	var arr := wild_choices()
+	return arr[rng.range_i(0, arr.size())]
+
+static func pick_wild_outcome(rng: DRNG, outcome: int) -> String:
+	var arr := wild_outcomes(outcome)
+	return arr[rng.range_i(0, arr.size())]
 
 static func choices_for(tone: int) -> Array:
 	match tone:

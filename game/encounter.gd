@@ -76,6 +76,13 @@ func _build_choices() -> Array[Dictionary]:
 			"text": txt,
 			"kind": _tone_to_kind(t),
 		})
+	# Fourth choice: WILD — strange, off-script. No stat rolled; rolls on a
+	# pure chaos table when picked. Always present.
+	out.append({
+		"tone": PhrasePool.Tone.WILD,
+		"text": PhrasePool.pick_wild_choice(rng),
+		"kind": EventResolver.Kind.ANOMALY,
+	})
 	return out
 
 func _tone_to_kind(tone: int) -> int:
@@ -91,6 +98,9 @@ func _tone_to_kind(tone: int) -> int:
 func resolve(choice_idx: int, resolver: EventResolver, coop_mod: int) -> Dictionary:
 	var choice: Dictionary = choices[choice_idx]
 	var tone: int = choice.tone
+	# WILD: pure chaos table, ignores stats and tone-stat. Anything can happen.
+	if tone == PhrasePool.Tone.WILD:
+		return _resolve_wild()
 	var difficulty: int = 10 + creature.archetype.aggression / 10 + int(zone.chaos * 5)
 	var world_mod: int = -int(zone.corruption * 3)
 	difficulty += BiomeRules.tone_difficulty_mod(zone.biome, tone)
@@ -321,6 +331,73 @@ func _consequences(tone: int, outcome: int) -> Dictionary:
 			c.fatal = _roll_fatal(tone)
 			# Second-chance: once per run, a fatal blow drops the player to
 			# critical (TERROR + the injury) instead of killing them outright.
+			if c.fatal and Progress.can_use_second_chance():
+				Progress.consume_second_chance()
+				c.fatal = false
+				c["second_chance"] = true
+				if not (&"terror" in player.injuries):
+					c.injury = &"terror"
+	return c
+
+# Pure-chaos resolution for the WILD choice. Ignores stats, rolls on a flat
+# outcome distribution, and adds occasional weird side-effects (relic gift,
+# free heal, fragment bonus, creature flees, mutation, stat shift...) so the
+# 4th choice always feels like a moment of strangeness.
+func _resolve_wild() -> Dictionary:
+	# Flat outcome distribution: 15/20/25/25/15 -> CF/F/MIX/S/CS
+	var r := rng.range_i(0, 100)
+	var outcome: int
+	if r < 15:       outcome = FateEngine.Outcome.CRIT_FAIL
+	elif r < 35:     outcome = FateEngine.Outcome.FAIL
+	elif r < 60:     outcome = FateEngine.Outcome.MIXED
+	elif r < 85:     outcome = FateEngine.Outcome.SUCCESS
+	else:            outcome = FateEngine.Outcome.CRIT_SUCCESS
+	# Story mode kindness: never wipe the player on a wild crit-fail.
+	if Settings.story_mode and outcome == FateEngine.Outcome.CRIT_FAIL:
+		outcome = FateEngine.Outcome.FAIL
+	var c := {
+		"stat_delta": 0,
+		"creature_dies": false, "creature_flees": false, "mutate": false,
+		"injury": &"", "heal": &"", "fatal": false,
+		"narrative": PhrasePool.pick_wild_outcome(rng, outcome),
+		"outcome": outcome,
+		"tone": PhrasePool.Tone.WILD,
+	}
+	# Bonus weird side-effects, weighted by outcome.
+	var weird := rng.range_i(0, 100)
+	match outcome:
+		FateEngine.Outcome.CRIT_SUCCESS:
+			if weird < 60: c.creature_flees = true
+			elif weird < 80: c["fragments"] = 6
+			else: c["grant_relic"] = true
+		FateEngine.Outcome.SUCCESS:
+			if weird < 40: c.creature_flees = true
+			elif weird < 70: c["fragments"] = 3
+			elif weird < 85 and not player.injuries.is_empty():
+				c.heal = player.injuries[rng.range_i(0, player.injuries.size())]
+			else:
+				c.stat_delta = 1
+				c["stat"] = [&"instinct", &"esprit", &"charisme"][rng.range_i(0, 3)]
+		FateEngine.Outcome.MIXED:
+			if weird < 50:
+				c.stat_delta = 1
+				c["stat"] = [&"instinct", &"esprit"][rng.range_i(0, 2)]
+				if not Settings.story_mode and rng.chance(40, 100):
+					c.injury = InjuryRegistry.pick_for(rng, PhrasePool.Tone.MYSTICAL, zone.biome)
+			else:
+				c.mutate = true
+		FateEngine.Outcome.FAIL:
+			if weird < 50:
+				c.injury = InjuryRegistry.pick_for(rng, PhrasePool.Tone.MYSTICAL, zone.biome)
+			elif weird < 80:
+				c["fragments"] = -2
+			else:
+				c.stat_delta = -1
+				c["stat"] = [&"charisme", &"esprit"][rng.range_i(0, 2)]
+		FateEngine.Outcome.CRIT_FAIL:
+			c.injury = InjuryRegistry.pick_for(rng, PhrasePool.Tone.MYSTICAL, zone.biome)
+			c.fatal = _roll_fatal(PhrasePool.Tone.MYSTICAL) and not Settings.story_mode
+			# Second-chance still applies on a wild collapse.
 			if c.fatal and Progress.can_use_second_chance():
 				Progress.consume_second_chance()
 				c.fatal = false

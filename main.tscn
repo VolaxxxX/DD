@@ -121,7 +121,7 @@ anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
 offset_left = 90.0
-offset_top = -150.0
+offset_top = -198.0
 offset_right = -90.0
 offset_bottom = -12.0
 grow_horizontal = 2
@@ -143,6 +143,13 @@ autowrap_mode = 2
 clip_text = false
 
 [node name="Choice2" type="Button" parent="GameUI/Root/ChoicesBox"]
+custom_minimum_size = Vector2(0, 42)
+theme_override_font_sizes/font_size = 13
+text = ""
+autowrap_mode = 2
+clip_text = false
+
+[node name="Choice3" type="Button" parent="GameUI/Root/ChoicesBox"]
 custom_minimum_size = Vector2(0, 42)
 theme_override_font_sizes/font_size = 13
 text = ""
