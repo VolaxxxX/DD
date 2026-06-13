@@ -31,6 +31,7 @@ var _label: RichTextLabel
 var _hint: Label
 var _panel: PanelContainer
 var _busy: bool = false
+var _finished: bool = false
 var _card_token: int = 0   # invalidates a card's auto-advance timer when it changes
 
 func _ready() -> void:
@@ -50,8 +51,12 @@ func _ready() -> void:
 	title.add_theme_font_size_override("font_size", 40)
 	title.add_theme_color_override("font_color", Color(0.95, 0.85, 0.55))
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	# Full-width band near the top — set BOTH anchors+offsets or the rect
+	# collapses to (0,0) and the text ends up stuck in the top-left corner.
 	title.anchor_left = 0.0; title.anchor_right = 1.0
-	title.anchor_top = 0.16; title.offset_top = 0
+	title.anchor_top = 0.0; title.anchor_bottom = 0.0
+	title.offset_left = 0.0; title.offset_right = 0.0
+	title.offset_top = 70.0; title.offset_bottom = 130.0
 	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(title)
 	# Card panel. Everything here must let taps fall through to this Control's
@@ -86,16 +91,21 @@ func _ready() -> void:
 	_hint.add_theme_font_size_override("font_size", 16)
 	_hint.add_theme_color_override("font_color", Color(0.8, 0.8, 0.85, 0.8))
 	_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	# Full-width band near the bottom (proper anchors+offsets, see title note).
 	_hint.anchor_left = 0.0; _hint.anchor_right = 1.0
-	_hint.anchor_top = 0.82
+	_hint.anchor_top = 1.0; _hint.anchor_bottom = 1.0
+	_hint.offset_left = 0.0; _hint.offset_right = 0.0
+	_hint.offset_top = -110.0; _hint.offset_bottom = -60.0
 	_hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_hint)
-	# Skip button.
+	# Skip button — skips the WHOLE intro instantly, always responsive.
 	var skip := Button.new()
-	skip.text = Lang.t({"fr": "Passer", "en": "Skip", "id": "Lewati"})
+	skip.text = Lang.t({"fr": "Passer ⏭", "en": "Skip ⏭", "id": "Lewati ⏭"})
+	skip.add_theme_font_size_override("font_size", 18)
 	skip.anchor_left = 1.0; skip.anchor_right = 1.0
-	skip.offset_left = -120; skip.offset_right = -20
-	skip.offset_top = 24; skip.offset_bottom = 60
+	skip.offset_left = -150; skip.offset_right = -20
+	skip.offset_top = 22; skip.offset_bottom = 70
+	skip.focus_mode = Control.FOCUS_NONE
 	skip.pressed.connect(_finish)
 	add_child(skip)
 	_show_card(0)
@@ -105,22 +115,28 @@ func _show_card(i: int) -> void:
 	_label.text = "[center]%s[/center]" % _cards[i]
 	_panel.modulate.a = 0.0
 	var t := create_tween()
-	t.tween_property(_panel, "modulate:a", 1.0, 0.5)
+	t.tween_property(_panel, "modulate:a", 1.0, 0.3)
 	t.tween_callback(func(): _busy = false)
-	# Auto-advance failsafe: each card moves on by itself after 5s so the intro
+	# Auto-advance failsafe: each card moves on by itself after 4s so the intro
 	# can NEVER leave the player stuck, even if a tap is somehow missed.
 	_card_token += 1
 	var token: int = _card_token
-	get_tree().create_timer(5.0).timeout.connect(func() -> void:
+	get_tree().create_timer(4.0).timeout.connect(func() -> void:
 		if is_instance_valid(self) and token == _card_token:
 			_next())
 
 func _gui_input(event: InputEvent) -> void:
-	if _busy: return
+	if _finished: return
 	if (event is InputEventMouseButton and event.pressed) or (event is InputEventScreenTouch and event.pressed):
 		_next()
 
 func _next() -> void:
+	# A tap during a card's short fade snaps it to full instead of being ignored,
+	# so input never feels dead.
+	if _busy:
+		_busy = false
+		if _panel != null: _panel.modulate.a = 1.0
+		return
 	_idx += 1
 	if _idx >= _cards.size():
 		_finish()
@@ -129,7 +145,8 @@ func _next() -> void:
 		_show_card(_idx)
 
 func _finish() -> void:
-	if _busy: return
+	if _finished: return
+	_finished = true
 	_busy = true
 	Audio.play(&"click")
 	var t := create_tween()
