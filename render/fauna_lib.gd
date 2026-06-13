@@ -17,6 +17,8 @@ const CHARS := ["char_a", "char_b", "char_c", "char_d", "char_e", "char_f",
 # Small animated flyers for the FEY family — tinted luminous + hovering they
 # read as glowing sprites, far better than the procedural prism fairy.
 const FEY := ["fey_parrot", "beast_bee", "fey_chick"]
+# Proper animated undead from the Kenney Graveyard kit (idle/walk).
+const UNDEAD := ["undead_skeleton", "undead_zombie", "undead_ghost", "undead_vampire"]
 
 # Keyword -> preferred beast model, so a creature's NAME matches its model
 # (a "dire wolf" becomes a fox/canine, not a random panda).
@@ -64,9 +66,12 @@ static func instance_for(family: int, id: StringName) -> Node3D:
 			pool = BEASTS
 		0:  # HUMANOID
 			pool = CHARS
-		2:  # UNDEAD — reuse characters, tinted corpse-pale
-			pool = CHARS
-			tint = Color(0.62, 0.72, 0.6)
+		2:  # UNDEAD — real animated skeleton/zombie/ghost/vampire
+			pool = UNDEAD
+			# ghost reads better faintly translucent-blue; others stay as-is.
+			var hh: int = abs(int(String(id).hash()))
+			if UNDEAD[hh % UNDEAD.size()] == "undead_ghost":
+				tint = Color(0.7, 0.85, 1.0)
 		6:  # FEY — small luminous animated flyer
 			pool = FEY
 			tint = Color(0.8, 0.9, 1.0)

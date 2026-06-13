@@ -583,13 +583,19 @@ func _do_ground_and_frame(subject: Node3D, headroom: float) -> void:
 	# Camera orbits/looks at the creature's true centre (x/z included) so it's
 	# always framed dead-centre, clamped so the hero stays in view too.
 	_cam_focal = Vector3(centre.x * 0.5, minf(centre.y, 2.6), centre.z * 0.5)
-	var vfov := deg_to_rad(camera.fov)
+	# Tall mobs WIDEN the lens instead of the camera flying far back — keeps the
+	# action close and readable while still fitting the whole silhouette.
+	var target_fov: float = clampf(48.0 + maxf(0.0, h - 2.5) * 2.6, 48.0, 66.0)
+	var t_fov := camera.create_tween()
+	t_fov.tween_property(camera, "fov", target_fov, 0.6).set_trans(Tween.TRANS_SINE)
+	var vfov := deg_to_rad(target_fov)
 	var aspect: float = float(get_viewport().size.x) / float(maxi(1, get_viewport().size.y))
 	var hfov := 2.0 * atan(tan(vfov * 0.5) * aspect)
 	var dist_v := (h * (1.0 + headroom) * 0.5) / tan(vfov * 0.5)
 	var dist_h := (w * 0.6) / tan(hfov * 0.5)
-	# Tight cap so big monsters fill the frame instead of a huge empty wide shot.
-	_cam_radius_base = clampf(maxf(dist_v, dist_h), 5.0, 14.0)
+	# Tighter cap (10.5) now that the lens widens for big mobs — the camera
+	# never flies off into an empty wide shot.
+	_cam_radius_base = clampf(maxf(dist_v, dist_h), 5.0, 10.5)
 	_orbit_radius = _cam_radius_base
 
 func _on_zone_intro(text: String, _biome: StringName) -> void:

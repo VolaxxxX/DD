@@ -7,6 +7,9 @@ func build(situation_id: StringName) -> void:
 	var kit_prop := _kayprop_for(situation_id)
 	if kit_prop != null:
 		add_child(kit_prop)
+		# Dress the scene so a lone prop never floats as a meaningless pillar:
+		# a grounding ring of small decor (rocks, grass, the odd tuft) around it.
+		_dress_around()
 		return
 	match String(situation_id):
 		"inscription":      _inscription()
@@ -47,6 +50,22 @@ func build(situation_id: StringName) -> void:
 		"star_map":         _star_map()
 		"caged_beast":      _caged_beast()
 		_:                  _shrine()
+
+# Grounding ring of small decor around a centrepiece prop so the scene reads as
+# a place, not a single floating object. Uses the real Kenney decor models.
+func _dress_around() -> void:
+	var rng := DRNG.new(int(Time.get_ticks_usec()) & 0x7FFFFFFF)
+	var props := ["rock_smallA", "rock_smallB", "rock_smallC", "plant_bush", "stump_round", "grass_large", "log", "mushroom_tanGroup"]
+	for i in 6:
+		var name: String = props[rng.range_i(0, props.size())]
+		var n := NatureLib.instance(name)
+		if n == null: continue
+		var ang := rng.range_i(0, 628) / 100.0
+		var dist := 1.4 + rng.range_i(0, 130) / 100.0
+		n.position = Vector3(cos(ang) * dist, 0, sin(ang) * dist - 0.3)
+		n.rotation.y = rng.range_i(0, 628) / 100.0
+		AssetLoader.normalize_height(n, 0.3 + rng.range_i(0, 60) / 100.0)
+		add_child(n)
 
 # Routes specific situations to a single KayKit prop scaled up + centered.
 func _kayprop_for(situation_id: StringName) -> Node3D:

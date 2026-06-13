@@ -6,32 +6,34 @@ class_name NatureLib extends RefCounted
 #   ground  — tiny detail (grass, flowers)
 # All models share one Kenney atlas, so they read as one consistent world.
 
-const _DIR := "res://assets/models/nature/%s.glb"
+# Props live in two folders: Kenney Nature Kit (nature/) and the curated
+# Graveyard/Survival/Town decor (decor/). _load searches both.
+const _DIRS := ["res://assets/models/nature/%s.glb", "res://assets/models/decor/%s.glb"]
 static var _cache: Dictionary = {}
 
 # biome -> { hero:[], scatter:[], ground:[], tint:Color (1,1,1 = none) }
 const POOLS := {
 	&"forest": {
-		"hero": ["tree_default", "tree_detailed", "tree_oak", "tree_fat", "tree_default_dark"],
-		"scatter": ["stump_round", "stump_old", "rock_smallA", "rock_smallB", "plant_bush", "plant_bushLarge", "mushroom_red", "mushroom_tanGroup", "log"],
+		"hero": ["tree_default", "tree_detailed", "tree_oak", "tree_fat", "tree_default_dark", "gy_pine", "gy_pine_crooked"],
+		"scatter": ["stump_round", "stump_old", "rock_smallA", "rock_smallB", "plant_bush", "plant_bushLarge", "mushroom_red", "mushroom_tanGroup", "log", "sv_rock_a", "sv_rock_b", "gy_trunk", "sv_resource_wood", "sv_campfire_pit"],
 		"ground": ["grass", "grass_large", "grass_leafs", "flower_redA", "flower_yellowA", "plant_bushSmall"],
 		"tint": Color(1, 1, 1),
 	},
 	&"city": {
-		"hero": ["statue_column", "statue_columnDamaged", "rock_largeA", "tree_default_dark"],
-		"scatter": ["rock_smallB", "rock_smallC", "plant_bush", "statue_block", "log"],
+		"hero": ["statue_column", "tn_fountain_round", "tn_fountain_square", "tn_cart_high", "tn_pillar_stone", "gy_lightpost_single"],
+		"scatter": ["tn_cart", "tn_barrel", "tn_planks", "tn_fence_broken", "rock_smallB", "statue_block", "tn_chimney", "tn_banner_red"],
 		"ground": ["grass_leafs", "plant_bushSmall"],
 		"tint": Color(0.85, 0.85, 0.88),
 	},
 	&"ruins": {
-		"hero": ["statue_column", "statue_columnDamaged", "statue_obelisk", "statue_ring", "rock_largeC"],
-		"scatter": ["rock_largeA", "rock_smallA", "statue_block", "statue_head", "stump_square"],
+		"hero": ["statue_column", "statue_columnDamaged", "statue_obelisk", "gy_altar_stone", "gy_pillar_large", "gy_stone_wall_damaged", "gy_brick_wall"],
+		"scatter": ["rock_largeA", "gy_debris", "gy_rocks", "gy_urn_square", "gy_bench_damaged", "statue_head", "gy_stone_wall_curve"],
 		"ground": ["grass", "plant_bushSmall", "flower_yellowA"],
 		"tint": Color(0.95, 0.9, 0.78),
 	},
 	&"corrupted": {
-		"hero": ["tree_default_dark", "tree_cone_dark", "tree_blocks", "statue_obelisk", "rock_tallC"],
-		"scatter": ["rock_tallA", "rock_tallE", "stump_oldTall", "mushroom_redTall", "mushroom_red"],
+		"hero": ["tree_default_dark", "gy_pine_crooked", "gy_pine_fall_crooked", "gy_cross", "rock_tallC", "gy_gravestone_broken"],
+		"scatter": ["rock_tallA", "stump_oldTall", "mushroom_redTall", "gy_debris", "gy_coffin_old", "gy_urn_round"],
 		"ground": ["flower_purpleA", "flower_purpleB", "plant_bushSmall"],
 		"tint": Color(0.62, 0.3, 0.6),
 	},
@@ -42,26 +44,26 @@ const POOLS := {
 		"tint": Color(0.5, 0.62, 1.0),
 	},
 	&"swamp": {
-		"hero": ["tree_default_dark", "tree_oak_dark", "stump_oldTall", "stump_old", "tree_thin"],
-		"scatter": ["stump_round", "rock_smallA", "plant_bush", "plant_bushLarge", "mushroom_tan", "mushroom_tanGroup", "log"],
+		"hero": ["tree_default_dark", "tree_oak_dark", "stump_oldTall", "gy_pine_fall", "tree_thin", "gy_trunk_long"],
+		"scatter": ["stump_round", "rock_smallA", "plant_bush", "plant_bushLarge", "mushroom_tan", "log", "sv_barrel", "sv_box", "gy_debris"],
 		"ground": ["grass_leafs", "plant_flatTall", "plant_bushSmall"],
 		"tint": Color(0.7, 0.85, 0.7),
 	},
 	&"highland": {
-		"hero": ["rock_largeA", "rock_largeC", "rock_largeD", "rock_tallA", "rock_tallC", "statue_obelisk"],
-		"scatter": ["rock_smallA", "rock_smallB", "rock_smallC", "stump_round", "plant_bush"],
+		"hero": ["rock_largeA", "rock_largeC", "rock_largeD", "rock_tallA", "rock_tallC", "statue_obelisk", "gy_rocks_tall"],
+		"scatter": ["rock_smallA", "rock_smallB", "rock_smallC", "stump_round", "plant_bush", "sv_rock_a", "sv_rock_b", "sv_signpost"],
 		"ground": ["grass", "grass_large", "flower_yellowA"],
 		"tint": Color(0.92, 0.95, 0.95),
 	},
 	&"crypt": {
-		"hero": ["statue_column", "statue_columnDamaged", "statue_head", "statue_block", "rock_largeB"],
-		"scatter": ["rock_smallA", "rock_smallB", "statue_block", "stump_square"],
-		"ground": ["plant_bushSmall"],
+		"hero": ["gy_crypt", "gy_crypt_large", "gy_crypt_small", "gy_gravestone_cross_large", "gy_pillar_obelisk", "gy_cross_column"],
+		"scatter": ["gy_gravestone_bevel", "gy_gravestone_broken", "gy_grave", "gy_coffin", "gy_urn_round", "gy_candle_multiple", "gy_iron_fence", "gy_gravestone_decorative"],
+		"ground": ["plant_bushSmall", "gy_candle"],
 		"tint": Color(0.6, 0.6, 0.72),
 	},
 	&"coast": {
-		"hero": ["tree_palmTall", "tree_palmShort", "rock_largeB", "rock_largeC", "rock_tallE"],
-		"scatter": ["rock_smallA", "rock_smallB", "rock_smallC", "log", "plant_bush"],
+		"hero": ["tree_palmTall", "tree_palmShort", "rock_largeB", "rock_largeC", "rock_tallE", "sv_signpost"],
+		"scatter": ["sv_rock_sand_a", "sv_rock_sand_b", "sv_rock_sand_c", "sv_rock_flat", "log", "sv_fish_large", "sv_barrel", "sv_bucket"],
 		"ground": ["grass", "flower_yellowA"],
 		"tint": Color(1.0, 0.96, 0.85),
 	},
@@ -69,13 +71,14 @@ const POOLS := {
 
 static func _load(name: String) -> PackedScene:
 	if _cache.has(name): return _cache[name]
-	var p := _DIR % name
-	if not ResourceLoader.exists(p):
-		_cache[name] = null
-		return null
-	var scn := load(p)
-	_cache[name] = scn
-	return scn
+	for fmt in _DIRS:
+		var p: String = fmt % name
+		if ResourceLoader.exists(p):
+			var scn := load(p)
+			_cache[name] = scn
+			return scn
+	_cache[name] = null
+	return null
 
 static func pool(biome: StringName) -> Dictionary:
 	return POOLS.get(biome, POOLS[&"forest"])
