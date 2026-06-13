@@ -26,6 +26,7 @@ var _pending_story_idx: int = -1
 func _ready() -> void:
 	_show_main_menu()
 
+
 # Signature stat per class kind (SOLDAT=force, ECLAIREUR=vivacite,
 # MYSTIQUE=esprit, VOLEUR=charisme). Used by class-mastery passives.
 func _signature_stat_for_class(kind: int) -> StringName:

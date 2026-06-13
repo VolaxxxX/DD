@@ -48,15 +48,16 @@ func _ready() -> void:
 	# Title.
 	var title := Label.new()
 	title.text = "AETHER DRIFT"
-	title.add_theme_font_size_override("font_size", 40)
-	title.add_theme_color_override("font_color", Color(0.95, 0.85, 0.55))
+	title.add_theme_font_size_override("font_size", 22)
+	title.add_theme_color_override("font_color", Color(0.85, 0.72, 0.45, 0.7))
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	# Full-width band near the top — set BOTH anchors+offsets or the rect
-	# collapses to (0,0) and the text ends up stuck in the top-left corner.
+	# Full-width band high up — set BOTH anchors+offsets or the rect collapses
+	# to (0,0) and the text ends up stuck in the top-left corner. Reduced size
+	# and offset so it never overlaps the central narration panel.
 	title.anchor_left = 0.0; title.anchor_right = 1.0
 	title.anchor_top = 0.0; title.anchor_bottom = 0.0
 	title.offset_left = 0.0; title.offset_right = 0.0
-	title.offset_top = 70.0; title.offset_bottom = 130.0
+	title.offset_top = 16.0; title.offset_bottom = 56.0
 	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(title)
 	# Card panel. Everything here must let taps fall through to this Control's

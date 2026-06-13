@@ -58,11 +58,21 @@ func info(text: String) -> void:
 	var panel := PanelContainer.new()
 	panel.anchor_left = 0.5; panel.anchor_right = 0.5
 	panel.anchor_top = 0.0
-	panel.offset_left = -260
-	panel.offset_right = 260
-	panel.offset_top = -110
+	# Wider band so long localized lines (e.g. "Compagnon: Pip — son flair 🐾
+	# marque le choix le plus sûr") don't bleed off the right edge.
+	panel.offset_left = -340
+	panel.offset_right = 340
+	panel.offset_top = -130
 	panel.offset_bottom = -30
 	add_child(panel)
+	# Solid dark backdrop for legibility on light biomes.
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.06, 0.06, 0.09, 0.88)
+	sb.set_corner_radius_all(10)
+	sb.set_border_width_all(1)
+	sb.border_color = Color(0.85, 0.72, 0.4, 0.6)
+	sb.set_content_margin_all(14)
+	panel.add_theme_stylebox_override("panel", sb)
 	var lbl := Label.new()
 	lbl.text = text
 	lbl.add_theme_font_size_override("font_size", 17)

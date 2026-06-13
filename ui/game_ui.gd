@@ -57,6 +57,15 @@ func _ready() -> void:
 	narrative_box.visible = false
 	intro_label.text = ""
 	fade.modulate.a = 0.0
+	# Stats bar (top) needs a dark backdrop or the text vanishes on light biomes.
+	var stats_bg := ColorRect.new()
+	stats_bg.color = Color(0, 0, 0, 0.55)
+	stats_bg.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	stats_bg.offset_top = 0
+	stats_bg.offset_bottom = 56
+	stats_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	$Root.add_child(stats_bg)
+	$Root.move_child(stats_bg, 0)   # behind the stats labels
 	# In-game language switch — cycles FR -> EN -> ID at any moment.
 	_lang_btn = Button.new()
 	_lang_btn.text = Lang.code.to_upper()
@@ -65,6 +74,7 @@ func _ready() -> void:
 	_lang_btn.offset_left = -70.0; _lang_btn.offset_right = -12.0
 	_lang_btn.offset_top = 60.0; _lang_btn.offset_bottom = 100.0
 	_lang_btn.pressed.connect(_cycle_lang)
+	_style_hud_button(_lang_btn)
 	$Root.add_child(_lang_btn)
 	setup_pause_button()
 	# Responsive: pick up orientation changes (portrait toggle) and re-layout
@@ -120,15 +130,31 @@ signal pause_requested()
 
 func setup_pause_button() -> void:
 	var pb := Button.new()
-	pb.text = "❚❚"
-	pb.custom_minimum_size = Vector2(56, 40)
+	pb.text = "⚙"
+	pb.add_theme_font_size_override("font_size", 22)
+	pb.custom_minimum_size = Vector2(56, 44)
 	pb.anchor_left = 0.0; pb.anchor_right = 0.0
 	pb.offset_left = 12.0; pb.offset_right = 68.0
-	pb.offset_top = 60.0; pb.offset_bottom = 100.0
+	pb.offset_top = 60.0; pb.offset_bottom = 104.0
 	pb.pressed.connect(func():
 		Audio.play(&"click")
 		pause_requested.emit())
+	_style_hud_button(pb)
 	$Root.add_child(pb)
+
+# Solid dark pill so HUD buttons stay readable over light biomes (coast/highland)
+# and don't blend into bright backgrounds.
+func _style_hud_button(b: Button) -> void:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.06, 0.06, 0.09, 0.85)
+	sb.set_corner_radius_all(8)
+	sb.set_border_width_all(1)
+	sb.border_color = Color(0.85, 0.72, 0.4, 0.7)
+	sb.set_content_margin_all(6)
+	b.add_theme_stylebox_override("normal", sb)
+	b.add_theme_stylebox_override("hover", sb)
+	b.add_theme_stylebox_override("pressed", sb)
+	b.add_theme_color_override("font_color", Color(1, 0.96, 0.85))
 
 var _player: PlayerState = null
 
