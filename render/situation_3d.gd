@@ -1,16 +1,149 @@
 class_name Situation3D extends Node3D
-# 3D centerpiece for non-creature situations — the player always sees the scene.
+# 3D centerpiece for non-creature situations — built from REAL models (Kenney
+# decor / Nature kit / animated fauna), composed into a small grounded scene.
+# Procedural builds remain only for a few genuinely abstract cases.
+
+# situation id -> centerpiece spec. A spec is either:
+#   a model name loadable by NatureLib (nature/ or decor/), optionally with
+#   "*<scale_m>" for a target height, OR
+#   "@beast" / "@char" / "@undead" / "@fey" -> an animated FaunaLib model, OR
+#   "@proc" -> keep the bespoke procedural build (abstract scenes only).
+const CENTERPIECE := {
+	&"inscription": "gy_gravestone_decorative*1.4",
+	&"collapse": "gy_debris*1.2",
+	&"shrine": "gy_altar_stone*1.4",
+	&"lit_shrine": "gy_altar_stone*1.4",
+	&"old_monk": "gy_altar_stone*1.4",
+	&"stranger": "@char",
+	&"mad_vagabond": "@char",
+	&"tired_soldier": "@char",
+	&"beggar_child": "@char",
+	&"lost_child": "@char",
+	&"scholar": "@char",
+	&"ferryman": "@char",
+	&"old_hunter": "@char",
+	&"the_double": "@char",
+	&"storm": "gy_pine_crooked*4.0",
+	&"whispering_wind": "tree_thin*3.5",
+	&"whisper_dark": "gy_crypt*3.0",
+	&"blood_trail": "gy_debris*0.8",
+	&"deep_well": "tn_fountain_round*1.6",
+	&"old_well_treasure": "tn_fountain_round*1.6",
+	&"brackish_spring": "tn_fountain_round*1.4",
+	&"crossroads": "sv_signpost*2.0",
+	&"cold_fork": "sv_signpost*2.0",
+	&"wind_harp": "sv_signpost*2.2",
+	&"burning_tree": "gy_pine_fall*3.5",
+	&"burning_pyre": "sv_campfire_pit*1.0",
+	&"burning_scroll": "sv_campfire_pit*1.0",
+	&"night_fire": "sv_campfire_pit*1.0",
+	&"burning_library": "sv_box_large*1.2",
+	&"warm_carcass": "@beast",
+	&"wounded_animal": "@beast",
+	&"wandering_horse": "@beast",
+	&"dreaming_fish": "sv_fish_large*0.8",
+	&"friendly_raven": "@fey",
+	&"broken_statue": "statue_columnDamaged*3.0",
+	&"buried_pilgrim": "gy_grave*1.0",
+	&"sailor_grave": "gy_gravestone_cross*1.5",
+	&"iron_door": "gy_crypt*2.8",
+	&"ancient_gate": "gy_crypt*3.2",
+	&"wounded_merc": "gy_coffin*0.8",
+	&"echo_cave": "gy_rocks_tall*3.5",
+	&"sea_cave": "gy_rocks_tall*3.5",
+	&"underwater_shadow": "rock_largeC*2.5",
+	&"lost_letter": "gy_debris*0.6",
+	&"charred_map": "sv_box*0.6",
+	&"sleeping_giant": "rock_largeA*5.0",
+	&"cursed_coin": "sv_chest*0.9",
+	&"glowing_chest": "sv_chest*0.9",
+	&"snake_oil": "sv_chest*0.9",
+	&"scholar_chest": "sv_chest*0.9",
+	&"empty_shoes": "sv_box*0.5",
+	&"fallen_comet": "rock_tallG*2.5",
+	&"festival_lights": "tn_lantern*1.6",
+	&"breathing_earth": "gy_rocks*1.4",
+	&"carriage_wreck": "tn_cart*1.6",
+	&"singing_crowns": "gy_gravestone_cross*1.4",
+	&"wild_herbs": "mushroom_tanGroup*0.6",
+	&"glowing_fungi": "mushroom_redGroup*0.8",
+	&"blood_fruit": "tree_oak*3.5",
+	&"healer_cottage": "gy_crypt_small*2.6",
+	&"frozen_tower": "gy_crypt_large*4.0",
+	# Genuinely abstract scenes keep their procedural build:
+	&"caged_beast": "@proc",
+	&"hanging_cage": "@proc",
+	&"path_doll": "@proc",
+	&"bear_trap": "@proc",
+	&"head_pole": "@proc",
+	&"mirror_lake": "@proc",
+	&"frozen_pool": "@proc",
+	&"star_map": "@proc",
+}
 
 func build(situation_id: StringName) -> void:
 	for c in get_children(): c.queue_free()
-	# Try a KayKit prop centerpiece first so the situation reads cleanly.
-	var kit_prop := _kayprop_for(situation_id)
-	if kit_prop != null:
-		add_child(kit_prop)
-		# Dress the scene so a lone prop never floats as a meaningless pillar:
-		# a grounding ring of small decor (rocks, grass, the odd tuft) around it.
+	var spec: String = CENTERPIECE.get(situation_id, "")
+	if spec == "@proc" or (spec == "" and _has_proc(situation_id)):
+		_build_proc(situation_id)
 		_dress_around()
 		return
+	if spec == "":
+		spec = _infer_from_keywords(String(situation_id))
+	if not _make_centerpiece(spec):
+		_build_proc(situation_id)
+	_dress_around()
+
+# Builds + adds the centerpiece from a spec string. Returns true on success.
+# (Adds to the tree BEFORE normalize_height, which needs a global transform.)
+func _make_centerpiece(spec: String) -> bool:
+	if spec == "": return false
+	# Animated creature tokens.
+	if spec.begins_with("@"):
+		var fam := -1
+		match spec:
+			"@char": fam = 0
+			"@beast": fam = 1
+			"@undead": fam = 2
+			"@fey": fam = 6
+		if fam < 0: return false
+		var c := FaunaLib.instance_for(fam, StringName("sit_%d" % (Time.get_ticks_usec() % 9973)))
+		if c == null: return false
+		add_child(c)
+		AssetLoader.normalize_height(c, 1.6)
+		if fam == 6:
+			c.scale *= 0.6; c.position.y += 1.0
+		return true
+	# Model name, optional "*<height>".
+	var name := spec
+	var target := 1.6
+	if "*" in spec:
+		var parts := spec.split("*")
+		name = parts[0]
+		target = float(parts[1])
+	var n := NatureLib.instance(name)
+	if n == null: return false
+	add_child(n)
+	AssetLoader.normalize_height(n, target)
+	return true
+
+func _has_proc(id: StringName) -> bool:
+	return id in [&"inscription", &"collapse", &"shrine", &"stranger", &"storm",
+		&"blood_trail", &"deep_well", &"beggar_child", &"crossroads", &"burning_tree",
+		&"warm_carcass", &"the_double", &"broken_statue", &"caged_beast",
+		&"hanging_cage", &"path_doll", &"bear_trap", &"head_pole", &"mirror_lake",
+		&"frozen_pool", &"star_map"]
+
+func _infer_from_keywords(id: String) -> String:
+	if "fire" in id or "burn" in id or "pyre" in id or "ember" in id: return "sv_campfire_pit*1.0"
+	if "grave" in id or "tomb" in id or "dead" in id: return "gy_gravestone_bevel*1.4"
+	if "rock" in id or "stone" in id or "cave" in id: return "rock_largeC*2.0"
+	if "tree" in id or "wood" in id or "forest" in id: return "tree_default*3.0"
+	if "water" in id or "spring" in id or "pool" in id or "lake" in id: return "tn_fountain_round*1.4"
+	if "chest" in id or "coin" in id or "gold" in id or "treasure" in id: return "sv_chest*0.9"
+	return "gy_gravestone_decorative*1.4"
+
+func _build_proc(situation_id: StringName) -> void:
 	match String(situation_id):
 		"inscription":      _inscription()
 		"collapse":         _collapse()
@@ -60,12 +193,12 @@ func _dress_around() -> void:
 		var name: String = props[rng.range_i(0, props.size())]
 		var n := NatureLib.instance(name)
 		if n == null: continue
+		add_child(n)   # in-tree before normalize_height (needs global xform)
+		AssetLoader.normalize_height(n, 0.3 + rng.range_i(0, 60) / 100.0)
 		var ang := rng.range_i(0, 628) / 100.0
 		var dist := 1.4 + rng.range_i(0, 130) / 100.0
-		n.position = Vector3(cos(ang) * dist, 0, sin(ang) * dist - 0.3)
+		n.position = Vector3(cos(ang) * dist, n.position.y, sin(ang) * dist - 0.3)
 		n.rotation.y = rng.range_i(0, 628) / 100.0
-		AssetLoader.normalize_height(n, 0.3 + rng.range_i(0, 60) / 100.0)
-		add_child(n)
 
 # Routes specific situations to a single KayKit prop scaled up + centered.
 func _kayprop_for(situation_id: StringName) -> Node3D:
