@@ -31,6 +31,13 @@ static func instance_for_creature(id: StringName, family: int) -> Node3D:
 	if scn == null: return null
 	return scn.instantiate()
 
+# Only the bespoke per-id model, never the generic family fallback. Lets the
+# caller try a higher-quality animated source before the static family GLB.
+static func instance_for_creature_id_only(id: StringName) -> Node3D:
+	var scn := _load("res://assets/models/%s.glb" % String(id))
+	if scn == null: return null
+	return scn.instantiate()
+
 static func instance_for_dragon(id: StringName) -> Node3D:
 	# Per-dragon file first (both naming conventions), then generic fallback.
 	var scn := _load("res://assets/models/%s.glb" % String(id))

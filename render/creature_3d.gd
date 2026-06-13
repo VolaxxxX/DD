@@ -155,10 +155,18 @@ func build(_arch: Archetype) -> void:
 	# remodelled procedural versions (vortex column / ethereal hovering sprite)
 	# have far stronger, more readable silhouettes.
 	var force_procedural := int(archetype.family) in [Archetype.Family.ELEMENTAL, Archetype.Family.FEY]
-	# External GLB (detailed skinned model) first. KayKit rigs have no animation
-	# clips, so bipeds would T-pose — we pose their skeleton into a rest stance
-	# instead of throwing the model away. Animated rigs just play idle.
-	var loaded: Node3D = null if force_procedural else AssetLoader.instance_for_creature(archetype.id, int(archetype.family))
+	# Priority for the model:
+	#  1. id-specific GLB (a bespoke creature model, if one exists)
+	#  2. animated FaunaLib model for BEAST/HUMANOID/UNDEAD (real idle/walk anims)
+	#  3. static family GLB fallback (posed out of T-pose)
+	#  4. procedural primitives
+	var loaded: Node3D = null
+	if not force_procedural:
+		loaded = AssetLoader.instance_for_creature_id_only(archetype.id)
+		if loaded == null:
+			loaded = FaunaLib.instance_for(int(archetype.family), archetype.id)
+		if loaded == null:
+			loaded = AssetLoader.instance_for_creature(archetype.id, int(archetype.family))
 	if loaded != null:
 		body.add_child(loaded)
 		_imported_root = loaded
