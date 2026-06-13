@@ -52,7 +52,22 @@ var _village_visits: int = 0
 var _langs_played: Array = []         # for polyglot tracking
 var second_chance_used_this_run: bool = false
 var run_start_msec: int = 0
-var fragments: int = 0                # village currency, persists across runs
+var fragments: int = 0                # currency, persists across runs
+var meta_level: int = 0               # permanent "Sanctuaire" upgrade, persists
+const META_MAX := 6                   # caps the permanent power creep
+
+# Cost in fragments to buy the next permanent upgrade level.
+func meta_cost() -> int:
+	return 30 + meta_level * 25
+
+# Spend fragments to gain one permanent level (+1 to every starting stat).
+# Returns true on success.
+func buy_meta() -> bool:
+	if meta_level >= META_MAX: return false
+	if not spend(meta_cost()): return false
+	meta_level += 1
+	save()
+	return true
 var fragment_scale: float = 1.0       # route multiplier (set per zone, not saved)
 var npc_meetings: Dictionary = {}     # npc_id -> times met (persists: they remember you)
 var next_zone_blessing: StringName = &""   # buff applied at next zone start
@@ -82,6 +97,7 @@ func _load() -> void:
 	achievements = v.get("achievements", [])
 	_langs_played = v.get("langs", [])
 	fragments = int(v.get("fragments", 0))
+	meta_level = int(v.get("meta_level", 0))
 	_classes_played = v.get("classes_played", [])
 	_village_visits = int(v.get("village_visits", 0))
 	npc_meetings = v.get("npc_meetings", {})
@@ -93,7 +109,7 @@ func save() -> void:
 		"kills": kills, "dragons_seen": dragons_seen, "bosses_seen": bosses_seen,
 		"runs_completed": runs_completed, "runs_total": runs_total,
 		"deepest_zone": deepest_zone, "achievements": achievements,
-		"langs": _langs_played, "fragments": fragments,
+		"langs": _langs_played, "fragments": fragments, "meta_level": meta_level,
 		"classes_played": _classes_played, "village_visits": _village_visits,
 		"npc_meetings": npc_meetings,
 	})

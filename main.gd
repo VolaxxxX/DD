@@ -140,6 +140,11 @@ func _on_characters_ready(player_defs: Array) -> void:
 	for d in player_defs:
 		var p := PlayerState.new()
 		p.setup(String(d.name), int(d.kind), d.stats)
+		# Permanent "Sanctuaire" upgrade: every level adds +1 to each stat, so the
+		# fragments you bank across runs make you measurably stronger over time.
+		if Progress.meta_level > 0:
+			for k in p.stats.keys():
+				p.stats[k] = int(p.stats[k]) + Progress.meta_level
 		players.append(p)
 		Progress.record_class_played(int(d.kind))
 	player_state = players[0]

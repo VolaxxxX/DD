@@ -18,6 +18,8 @@ signal open_achievements()
 @onready var anchor: Node3D = $Anchor
 
 var _dragon: Dragon3D
+var _sanctum_btn: Button
+var _stats_label: Label
 
 func _ready() -> void:
 	Lang.load_pref()
@@ -56,6 +58,15 @@ func _ready() -> void:
 		open_settings.emit())
 	box.add_child(sett)
 	box.move_child(sett, ach.get_index() + 1)
+	# Sanctuaire: spend banked fragments on a PERMANENT upgrade (+1 to every
+	# starting stat per level). Makes the fragments you keep across runs matter.
+	_sanctum_btn = Button.new()
+	_sanctum_btn.custom_minimum_size = Vector2(0, 50)
+	_sanctum_btn.add_theme_font_size_override("font_size", 17)
+	_sanctum_btn.pressed.connect(_buy_sanctum)
+	box.add_child(_sanctum_btn)
+	box.move_child(_sanctum_btn, sett.get_index() + 1)
+	_refresh_sanctum()
 	fr_btn.pressed.connect(func(): _set_lang("fr"))
 	en_btn.pressed.connect(func(): _set_lang("en"))
 	id_btn.pressed.connect(func(): _set_lang("id"))
@@ -83,21 +94,51 @@ func _ready() -> void:
 	tpulse.tween_property(title_label, "modulate", Color(1.0, 0.97, 0.85), 2.2).set_trans(Tween.TRANS_SINE)
 	tpulse.tween_property(title_label, "modulate", Color(0.85, 0.75, 0.55), 2.2).set_trans(Tween.TRANS_SINE)
 	# Progression record — a "beat your best" hook so each run has a goal.
-	if Progress.runs_total > 0:
-		var stats := Label.new()
-		stats.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		stats.add_theme_font_size_override("font_size", 15)
-		stats.add_theme_color_override("font_color", Color(0.88, 0.82, 0.6))
-		var dz: int = Progress.deepest_zone + 1
-		stats.text = Lang.t({
-			"fr": "🏔 Record : zone %d   ·   ⚔ %d traversées   ·   💎 %d fragments" % [dz, Progress.runs_completed, Progress.fragments],
-			"en": "🏔 Best: zone %d   ·   ⚔ %d runs   ·   💎 %d fragments" % [dz, Progress.runs_completed, Progress.fragments],
-			"id": "🏔 Rekor: zona %d   ·   ⚔ %d penjelajahan   ·   💎 %d fragmen" % [dz, Progress.runs_completed, Progress.fragments],
-		})
-		var stats_box: VBoxContainer = $UI/Root/Buttons
-		stats_box.add_child(stats)
-		stats_box.move_child(stats, 0)
+	_stats_label = Label.new()
+	_stats_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_stats_label.add_theme_font_size_override("font_size", 15)
+	_stats_label.add_theme_color_override("font_color", Color(0.88, 0.82, 0.6))
+	var stats_box: VBoxContainer = $UI/Root/Buttons
+	stats_box.add_child(_stats_label)
+	stats_box.move_child(_stats_label, 0)
+	_refresh_stats()
 	_refresh_lang()
+
+func _refresh_stats() -> void:
+	if _stats_label == null: return
+	var dz: int = Progress.deepest_zone + 1
+	_stats_label.text = Lang.t({
+		"fr": "🏔 Record zone %d   ·   ⚔ %d traversées   ·   💎 %d   ·   🔯 niv. %d" % [dz, Progress.runs_completed, Progress.fragments, Progress.meta_level],
+		"en": "🏔 Best zone %d   ·   ⚔ %d runs   ·   💎 %d   ·   🔯 lv %d" % [dz, Progress.runs_completed, Progress.fragments, Progress.meta_level],
+		"id": "🏔 Rekor zona %d   ·   ⚔ %d run   ·   💎 %d   ·   🔯 lv %d" % [dz, Progress.runs_completed, Progress.fragments, Progress.meta_level],
+	})
+
+func _refresh_sanctum() -> void:
+	if _sanctum_btn == null: return
+	if Progress.meta_level >= Progress.META_MAX:
+		_sanctum_btn.text = Lang.t({"fr": "🔯 Sanctuaire — MAX (+%d à tout)" % Progress.meta_level,
+			"en": "🔯 Sanctuary — MAX (+%d all)" % Progress.meta_level,
+			"id": "🔯 Sanctuari — MAKS (+%d semua)" % Progress.meta_level})
+		_sanctum_btn.disabled = true
+		return
+	var cost := Progress.meta_cost()
+	_sanctum_btn.text = Lang.t({
+		"fr": "🔯 Sanctuaire : +1 à tout  (💎 %d)" % cost,
+		"en": "🔯 Sanctuary: +1 all stats  (💎 %d)" % cost,
+		"id": "🔯 Sanctuari: +1 semua  (💎 %d)" % cost})
+	_sanctum_btn.disabled = Progress.fragments < cost
+
+func _buy_sanctum() -> void:
+	Audio.play(&"click")
+	if Progress.buy_meta():
+		Toast.info(Lang.t({
+			"fr": "🔯 Bénédiction permanente ! Niveau %d — +1 à toutes tes statistiques de départ." % Progress.meta_level,
+			"en": "🔯 Permanent blessing! Level %d — +1 to all starting stats." % Progress.meta_level,
+			"id": "🔯 Berkat permanen! Level %d — +1 semua statistik awal." % Progress.meta_level}))
+		_refresh_sanctum()
+		_refresh_stats()
+	else:
+		Toast.info(Lang.t({"fr": "Pas assez de fragments 💎", "en": "Not enough fragments 💎", "id": "Fragmen kurang 💎"}))
 
 func _dragon_flyby_loop() -> void:
 	if not is_instance_valid(_dragon): return
