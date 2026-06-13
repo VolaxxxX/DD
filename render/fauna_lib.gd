@@ -39,6 +39,11 @@ const BEAST_KEYWORDS := [
 	["hound", "beast_dog"], ["dog", "beast_dog"], ["mastiff", "beast_dog"], ["cur", "beast_dog"],
 	["mammoth", "beast_elephant"], ["elephant", "beast_elephant"], ["tusker", "beast_elephant"], ["behemoth", "beast_elephant"],
 	["hare", "beast_bunny"], ["rabbit", "beast_bunny"], ["lapin", "beast_bunny"],
+	["leech", "beast_caterpillar"], ["sangsue", "beast_caterpillar"], ["slug", "beast_caterpillar"],
+	["stalker", "beast_tiger"], ["rodeur", "beast_tiger"], ["prowler", "beast_tiger"], ["lurker", "beast_tiger"],
+	["crow", "beast_bee"], ["raven", "beast_bee"], ["swarm", "beast_bee"], ["nuee", "beast_bee"], ["corbeau", "beast_bee"], ["flock", "beast_bee"],
+	["toad", "beast_hog"], ["frog", "beast_hog"], ["crapaud", "beast_hog"],
+	["lizard", "beast_crab"], ["reptile", "beast_crab"], ["scuttle", "beast_crab"],
 ]
 
 static func _load(name: String) -> PackedScene:
@@ -77,10 +82,21 @@ static func instance_for(family: int, id: StringName) -> Node3D:
 			pool = FEY
 			tint = Color(0.8, 0.9, 1.0)
 			emissive = true
-		5:  # ABERRATION — a Quaternius slime mesh, tinted eldritch + glow.
+		5:  # ABERRATION — a Quaternius slime mesh dressed as an eldritch horror
+			# (deep violet, faint inner glow) instead of a cartoon green blob.
 			var slm := _obj_mesh("res://assets/models/qmonsters/Slime.obj")
-			if slm != null:
-				_tint(slm, Color(0.7, 0.4, 0.9), true)
+			if slm != null and slm is MeshInstance3D:
+				var m := StandardMaterial3D.new()
+				m.albedo_color = Color(0.30, 0.11, 0.42)
+				m.roughness = 0.45
+				m.metallic = 0.0
+				m.emission_enabled = true
+				m.emission = Color(0.55, 0.18, 0.78)
+				m.emission_energy_multiplier = 0.7
+				m.rim_enabled = true
+				m.rim = 0.6
+				m.rim_tint = 0.5
+				(slm as MeshInstance3D).material_override = m
 				return slm
 			pool = ["beast_crab", "beast_caterpillar", "beast_bee"]
 			tint = Color(0.7, 0.35, 0.85)
@@ -139,16 +155,20 @@ static func _make(name: String, tint: Color, emissive: bool) -> Node3D:
 	return n
 
 static func _tint(node: Node, tint: Color, emissive: bool = false) -> void:
+	# Tint the node itself when it IS the mesh (OBJ-wrapped meshes are a bare
+	# MeshInstance3D with no children — they were being skipped before).
+	if node is MeshInstance3D:
+		_tint_mesh(node as MeshInstance3D, tint, emissive)
 	for c in node.get_children():
-		if c is MeshInstance3D:
-			var mi := c as MeshInstance3D
-			var base := mi.get_active_material(0)
-			var m: StandardMaterial3D = (base as StandardMaterial3D).duplicate() if base is StandardMaterial3D else StandardMaterial3D.new()
-			m.albedo_color = m.albedo_color * tint
-			m.metallic = minf(m.metallic, 0.1)
-			if emissive:
-				m.emission_enabled = true
-				m.emission = tint
-				m.emission_energy_multiplier = 1.2
-			mi.material_override = m
 		_tint(c, tint, emissive)
+
+static func _tint_mesh(mi: MeshInstance3D, tint: Color, emissive: bool) -> void:
+	var base := mi.get_active_material(0)
+	var m: StandardMaterial3D = (base as StandardMaterial3D).duplicate() if base is StandardMaterial3D else StandardMaterial3D.new()
+	m.albedo_color = m.albedo_color * tint
+	m.metallic = minf(m.metallic, 0.1)
+	if emissive:
+		m.emission_enabled = true
+		m.emission = tint
+		m.emission_energy_multiplier = 1.2
+	mi.material_override = m

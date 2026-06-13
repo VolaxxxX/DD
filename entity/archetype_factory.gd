@@ -15,9 +15,14 @@ static func roster(rng: DRNG, biome: StringName, chaos: float) -> Array[Archetyp
 	var size := 4 + int(chaos * 6.0)
 	for i in size:
 		var tier := _tier_roll(rng, chaos)
+		# ALWAYS use a real, named creature when one exists — procedural mobs
+		# (generic ids + mismatched auto-names like a "lion" that renders as a
+		# llama) are only a last resort if a biome has no template at all.
 		var named: Array = CreatureRegistry.for_biome_and_tier(biome, tier)
+		if named.is_empty():
+			named = CreatureRegistry.for_biome(biome)   # any tier in this biome
 		var a: Archetype
-		if not named.is_empty() and rng.range_i(0, 100) < 75:
+		if not named.is_empty():
 			a = _from_template(named[rng.range_i(0, named.size())])
 		else:
 			a = _procedural(rng, families, tier, chaos)

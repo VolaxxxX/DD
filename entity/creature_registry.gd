@@ -109,6 +109,15 @@ static func for_biome_and_tier(biome: StringName, tier: int) -> Array:
 			out.append(t)
 	return out
 
+# All named creatures that can appear in a biome, any tier — used as a fallback
+# so sparse biomes still spawn REAL creatures instead of procedural ones.
+static func for_biome(biome: StringName) -> Array:
+	var out: Array = []
+	for t in templates():
+		if biome in t.biomes:
+			out.append(t)
+	return out
+
 static func fallback_family_for_biome(biome: StringName) -> int:
 	match String(biome):
 		"forest":    return F_BEAST
