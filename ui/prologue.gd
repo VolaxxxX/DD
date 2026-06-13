@@ -87,7 +87,7 @@ func _ready() -> void:
 	_panel.add_child(_label)
 	# Tap hint.
 	_hint = Label.new()
-	_hint.text = Lang.t({"fr": "Touche pour continuer  ›", "en": "Tap to continue  ›", "id": "Sentuh untuk lanjut  ›"})
+	_hint.text = Lang.t({"fr": "Touche pour avancer  ›   ·   « Passer ⏭ » en haut à droite", "en": "Tap to continue  ›   ·   \"Skip ⏭\" top-right", "id": "Sentuh untuk lanjut  ›   ·   \"Lewati ⏭\" kanan atas"})
 	_hint.add_theme_font_size_override("font_size", 16)
 	_hint.add_theme_color_override("font_color", Color(0.8, 0.8, 0.85, 0.8))
 	_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -98,13 +98,24 @@ func _ready() -> void:
 	_hint.offset_top = -110.0; _hint.offset_bottom = -60.0
 	_hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_hint)
-	# Skip button — skips the WHOLE intro instantly, always responsive.
+	# Skip button — skips the WHOLE intro instantly, always responsive, and
+	# clearly visible (solid pill, top-right).
 	var skip := Button.new()
-	skip.text = Lang.t({"fr": "Passer ⏭", "en": "Skip ⏭", "id": "Lewati ⏭"})
+	skip.text = Lang.t({"fr": "Passer l'intro ⏭", "en": "Skip intro ⏭", "id": "Lewati intro ⏭"})
 	skip.add_theme_font_size_override("font_size", 18)
+	skip.add_theme_color_override("font_color", Color(1, 0.96, 0.85))
+	var skip_sb := StyleBoxFlat.new()
+	skip_sb.bg_color = Color(0.12, 0.10, 0.06, 0.92)
+	skip_sb.set_corner_radius_all(10)
+	skip_sb.set_border_width_all(2)
+	skip_sb.border_color = Color(0.85, 0.72, 0.4, 0.9)
+	skip_sb.set_content_margin_all(8)
+	skip.add_theme_stylebox_override("normal", skip_sb)
+	skip.add_theme_stylebox_override("hover", skip_sb)
+	skip.add_theme_stylebox_override("pressed", skip_sb)
 	skip.anchor_left = 1.0; skip.anchor_right = 1.0
-	skip.offset_left = -150; skip.offset_right = -20
-	skip.offset_top = 22; skip.offset_bottom = 70
+	skip.offset_left = -190; skip.offset_right = -18
+	skip.offset_top = 20; skip.offset_bottom = 70
 	skip.focus_mode = Control.FOCUS_NONE
 	skip.pressed.connect(_finish)
 	add_child(skip)
@@ -117,11 +128,11 @@ func _show_card(i: int) -> void:
 	var t := create_tween()
 	t.tween_property(_panel, "modulate:a", 1.0, 0.3)
 	t.tween_callback(func(): _busy = false)
-	# Auto-advance failsafe: each card moves on by itself after 4s so the intro
+	# Auto-advance failsafe: each card moves on by itself after 3s so the intro
 	# can NEVER leave the player stuck, even if a tap is somehow missed.
 	_card_token += 1
 	var token: int = _card_token
-	get_tree().create_timer(4.0).timeout.connect(func() -> void:
+	get_tree().create_timer(3.0).timeout.connect(func() -> void:
 		if is_instance_valid(self) and token == _card_token:
 			_next())
 

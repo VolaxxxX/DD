@@ -20,8 +20,12 @@ const POOLS := {
 		"tint": Color(1, 1, 1),
 	},
 	&"city": {
-		"hero": ["ct_tower_square_base", "ct_tower_square_mid", "ct_gate", "ct_wall", "tn_fountain_round", "tn_cart_high"],
-		"scatter": ["ct_wall_half", "ct_flag", "ct_stairs_stone", "tn_cart", "tn_barrel", "tn_planks", "tn_chimney", "tn_banner_red", "gy_lightpost_single"],
+		# Town-square props (fountains, carts, lamps, market clutter). The old
+		# pool scattered huge CASTLE WALL/TOWER pieces as landmarks, which read
+		# as big flat planes slicing across the view (the "black triangle" /
+		# "stuck in a model" bug) — removed.
+		"hero": ["tn_fountain_round", "tn_fountain_square", "tn_pillar_stone", "gy_lightpost_single", "tn_cart_high", "tn_chimney"],
+		"scatter": ["sv_barrel", "sv_box", "sv_box_large", "tn_cart", "tn_planks", "gy_bench", "tn_hedge", "tn_banner_red", "tn_lantern", "sv_resource_planks"],
 		"ground": ["grass_leafs", "plant_bushSmall"],
 		"tint": Color(0.85, 0.85, 0.88),
 	},

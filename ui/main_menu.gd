@@ -82,6 +82,21 @@ func _ready() -> void:
 	var tpulse := create_tween().set_loops()
 	tpulse.tween_property(title_label, "modulate", Color(1.0, 0.97, 0.85), 2.2).set_trans(Tween.TRANS_SINE)
 	tpulse.tween_property(title_label, "modulate", Color(0.85, 0.75, 0.55), 2.2).set_trans(Tween.TRANS_SINE)
+	# Progression record — a "beat your best" hook so each run has a goal.
+	if Progress.runs_total > 0:
+		var stats := Label.new()
+		stats.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		stats.add_theme_font_size_override("font_size", 15)
+		stats.add_theme_color_override("font_color", Color(0.88, 0.82, 0.6))
+		var dz: int = Progress.deepest_zone + 1
+		stats.text = Lang.t({
+			"fr": "🏔 Record : zone %d   ·   ⚔ %d traversées   ·   💎 %d fragments" % [dz, Progress.runs_completed, Progress.fragments],
+			"en": "🏔 Best: zone %d   ·   ⚔ %d runs   ·   💎 %d fragments" % [dz, Progress.runs_completed, Progress.fragments],
+			"id": "🏔 Rekor: zona %d   ·   ⚔ %d penjelajahan   ·   💎 %d fragmen" % [dz, Progress.runs_completed, Progress.fragments],
+		})
+		var stats_box: VBoxContainer = $UI/Root/Buttons
+		stats_box.add_child(stats)
+		stats_box.move_child(stats, 0)
 	_refresh_lang()
 
 func _dragon_flyby_loop() -> void:

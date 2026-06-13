@@ -364,20 +364,34 @@ func _consequences(tone: int, outcome: int) -> Dictionary:
 				PhrasePool.Tone.DECEPTIVE:  c.creature_flees = true; c.injury = InjuryRegistry.pick_for(rng, tone, zone.biome)
 				PhrasePool.Tone.MYSTICAL:   c.stat_delta = 1; c.injury = InjuryRegistry.pick_for(rng, tone, zone.biome)
 		FateEngine.Outcome.FAIL:
-			c.injury = InjuryRegistry.pick_for(rng, tone, zone.biome)
-			if tone == PhrasePool.Tone.CURIOUS: c.stat_delta = -1
+			# If you did NOT choose to fight, a failure does not wound you — the
+			# attempt simply falls flat and the creature slips away. Only an
+			# AGGRESSIVE choice (you started the violence) risks an injury.
+			if tone == PhrasePool.Tone.AGGRESSIVE:
+				c.injury = InjuryRegistry.pick_for(rng, tone, zone.biome)
+			else:
+				c.creature_flees = true
+				if tone == PhrasePool.Tone.CURIOUS: c.stat_delta = -1
 		FateEngine.Outcome.CRIT_FAIL:
-			c.mutate = (tone == PhrasePool.Tone.CURIOUS or tone == PhrasePool.Tone.MYSTICAL)
-			c.injury = InjuryRegistry.pick_for(rng, tone, zone.biome)
-			c.fatal = _roll_fatal(tone)
-			# Second-chance: once per run, a fatal blow drops the player to
-			# critical (TERROR + the injury) instead of killing them outright.
-			if c.fatal and Progress.can_use_second_chance():
-				Progress.consume_second_chance()
-				c.fatal = false
-				c["second_chance"] = true
-				if not (&"terror" in player.injuries):
-					c.injury = &"terror"
+			if tone == PhrasePool.Tone.AGGRESSIVE:
+				c.injury = InjuryRegistry.pick_for(rng, tone, zone.biome)
+				c.fatal = _roll_fatal(tone)
+				# Second-chance: once per run, a fatal blow drops the player to
+				# critical (TERROR + the injury) instead of killing them outright.
+				if c.fatal and Progress.can_use_second_chance():
+					Progress.consume_second_chance()
+					c.fatal = false
+					c["second_chance"] = true
+					if not (&"terror" in player.injuries):
+						c.injury = &"terror"
+			elif tone == PhrasePool.Tone.CURIOUS or tone == PhrasePool.Tone.MYSTICAL or tone == PhrasePool.Tone.DECEPTIVE:
+				# Meddling with danger can still backfire into an injury, but a
+				# non-violent approach is NEVER fatal.
+				c.mutate = (tone == PhrasePool.Tone.CURIOUS or tone == PhrasePool.Tone.MYSTICAL)
+				c.injury = InjuryRegistry.pick_for(rng, tone, zone.biome)
+			else:
+				# Pure diplomacy / caution: no wound, the creature just escapes.
+				c.creature_flees = true
 	return c
 
 # Pure-chaos resolution for the WILD choice. Ignores stats, rolls on a flat

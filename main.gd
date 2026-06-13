@@ -525,22 +525,16 @@ func _walk_in_avatars() -> void:
 # Sells forward travel between encounters: the ground texture scrolls toward
 # the camera (we walked forward) and the backdrop props sweep past, then settle.
 func _advance_world() -> void:
-	# Ground scroll (photo-texture biomes only; the energy shader is world-mapped).
-	var gnd: MeshInstance3D = backdrop.ground if backdrop and is_instance_valid(backdrop) else null
-	if gnd and is_instance_valid(gnd) and gnd.material_override is StandardMaterial3D:
-		var m: StandardMaterial3D = gnd.material_override
-		var from_off := m.uv1_offset
-		var t := create_tween()
-		t.tween_method(func(o: Vector3): m.uv1_offset = o,
-			from_off, from_off + Vector3(0, -0.6, 0), 1.0).set_trans(Tween.TRANS_SINE)
-	# Backdrop props sweep toward the camera a touch then ease back — parallax
-	# of walking through the area.
+	# NOTE: the ground used to scroll its UVs after every choice to fake forward
+	# travel, but it read as the floor "sliding" and was distracting — removed.
+	# A very subtle, slow prop drift is kept so the world still feels alive
+	# without the ground appearing to move under the player.
 	if backdrop and is_instance_valid(backdrop):
 		var np = backdrop.get_node_or_null("NatureProps")
 		if np:
 			var t2 := np.create_tween()
-			t2.tween_property(np, "position:z", 1.2, 0.7).set_trans(Tween.TRANS_SINE)
-			t2.tween_property(np, "position:z", 0.0, 1.2).set_trans(Tween.TRANS_SINE)
+			t2.tween_property(np, "position:z", 0.4, 1.2).set_trans(Tween.TRANS_SINE)
+			t2.tween_property(np, "position:z", 0.0, 1.6).set_trans(Tween.TRANS_SINE)
 
 func _refresh_avatars_injuries() -> void:
 	for i in players.size():
